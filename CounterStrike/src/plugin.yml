@@ -1,0 +1,5 @@
+name: TestMain
+version: 1.0
+main: me.Romindous.CounterStrike.Main
+api-version: 1.16
+authors: [ Romindous ]
