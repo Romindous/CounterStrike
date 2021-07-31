@@ -3,20 +3,24 @@ package me.Romindous.CounterStrike.Enums;
 import org.bukkit.inventory.ItemStack;
 
 public enum NadeType {
-	FRAG(true, true, "§f鉬"),
-	FIRE(false, true, "§f鉫"),
-	SMOKE(true, false, "§f鉪"),
-	FLASH(true, false, "§f鉩"),
-	DECOY(true, false, "§f鉭");
+	FRAG(true, true, (short)350, "§f鉬", (byte)36),
+	FIRE(false, true, (short)500, "§f鉫", (byte)37),
+	SMOKE(true, false, (short)200, "§f鉪", (byte)46),
+	FLASH(true, false, (short)100, "§f鉩", (byte)38),
+	DECOY(true, false, (short)50, "§f鉭", (byte)47);
 	
 	public final boolean flrbnc;
 	public final boolean prm;
+	public final short prc;
 	public final String icn;
+	public final byte slt;
 	
-	NadeType(boolean flrbnc, boolean prm, String icn) {
+	NadeType(final boolean flrbnc, final boolean prm, final short prc, final String icn, final byte slt) {
 		this.flrbnc = flrbnc;
 		this.prm = prm;
+		this.prc = prc;
 		this.icn = icn;
+		this.slt = slt;
 	}
   
 	public static NadeType getNdTp(ItemStack it) {

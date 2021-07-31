@@ -1,10 +1,12 @@
 package me.Romindous.CounterStrike;
 
+import java.io.File;
+import java.io.IOException;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
@@ -16,7 +18,8 @@ import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
-import org.bukkit.block.data.BlockData;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
@@ -24,62 +27,87 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffect;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scoreboard.DisplaySlot;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.ScoreboardManager;
+import org.bukkit.scoreboard.Team;
 
+import com.mojang.datafixers.util.Pair;
+
+import me.Romindous.CounterStrike.Commands.CSCmd;
 import me.Romindous.CounterStrike.Enums.GunType;
+import me.Romindous.CounterStrike.Game.Arena;
+import me.Romindous.CounterStrike.Game.Defusal;
 import me.Romindous.CounterStrike.Listeners.DmgLis;
 import me.Romindous.CounterStrike.Listeners.InterrLis;
 import me.Romindous.CounterStrike.Listeners.InventLis;
 import me.Romindous.CounterStrike.Listeners.MainLis;
-import me.Romindous.CounterStrike.Objects.DmgdEnt;
-import me.Romindous.CounterStrike.Objects.EntityShootAtEntityEvent;
 import me.Romindous.CounterStrike.Objects.Nade;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.SmplLoc;
-import me.Romindous.CounterStrike.Objects.TripWire;
+import me.Romindous.CounterStrike.Utils.Inventories;
 import me.Romindous.CounterStrike.Utils.PacketUtils;
-import net.minecraft.core.BlockPosition;
+import net.minecraft.EnumChatFormat;
+import net.minecraft.core.BaseBlockPosition;
 import net.minecraft.network.chat.ChatMessage;
+import net.minecraft.network.protocol.game.PacketPlayOutEntityDestroy;
 import net.minecraft.network.protocol.game.PacketPlayOutEntityMetadata;
 import net.minecraft.network.protocol.game.PacketPlayOutSpawnEntity;
-import net.minecraft.world.entity.Entity;
+import net.minecraft.server.network.PlayerConnection;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.decoration.EntityArmorStand;
  
-	public final class Main extends JavaPlugin implements Listener {
+public final class Main extends JavaPlugin implements Listener {
+	
+	public static Main plug;
+	public static File folder;
+	public static World lbbyW;
+	public static BaseBlockPosition lobby;
+	public static ScoreboardManager smg;
+	public static YamlConfiguration ars;
+	public static YamlConfiguration config;
+	public static final SecureRandom srnd = new SecureRandom();
+	public static final ItemStack cp = new ItemStack(Material.CARVED_PUMPKIN);
+	
+	public static final HashSet<Arena> actvarns = new HashSet<>();
+	public static final HashSet<String> nnactvarns = new HashSet<>();
+	
 	public static final HashSet<SmplLoc> crckd = new HashSet<>();
-	public static final HashSet<SmplLoc> bmbs = new HashSet<>();
 	public static final LinkedHashMap<Block, Byte> ndBlks = new LinkedHashMap<>();
-	public static final LinkedHashMap<Player, Location> plnts = new LinkedHashMap<>();
+	public static final LinkedHashMap<Player, BaseBlockPosition> plnts = new LinkedHashMap<>();
 	public static final HashSet<Nade> nades = new HashSet<>();
 	public static final HashSet<Shooter> shtrs = new HashSet<>();
-	public static final LinkedList<DmgdEnt> htEnts = new LinkedList<>();
-	public static final HashSet<Block> htBlks = new HashSet<>();
-	public static final SecureRandom srnd = new SecureRandom();
 	public static final HashSet<Location> dcs = new HashSet<>();
-	public static final HashSet<TripWire> tws = new HashSet<>();
-	public static final ItemStack cp = new ItemStack(Material.CARVED_PUMPKIN);
-	   
-	public static Main plug;
-	 
-	   
+
+	public static short hlmtPrc;
+	public static short chstPrc;
+	public static short twrPrc;
+	public static short dfktPrc;
+	
 	public void onEnable() {
+		
 		plug = this;
+		folder = getDataFolder();
+		smg = getServer().getScoreboardManager();
 	     
 		getServer().getPluginManager().registerEvents(new DmgLis(), this);
 		getServer().getPluginManager().registerEvents(new InterrLis(), this);
 		getServer().getPluginManager().registerEvents(new MainLis(), this);
 		getServer().getPluginManager().registerEvents(new InventLis(), this);
+		
+		getCommand("cs").setExecutor(new CSCmd());
 	     
-		for (final Player p : getServer().getOnlinePlayers()) {
-			p.getInventory().clear();
-			p.getInventory().setItem(8, mkItm(Material.GHAST_TEAR, "§5Магазин", 1));
-		} 
-	     
-		PacketUtils.v = getServer().getClass().getPackage().getName().split("\\.")[3];  
+		PacketUtils.v = getServer().getClass().getPackage().getName().split("\\.")[3];
+		
+		loadConfigs();
      
+		//game stuff (5 tick)
 		new BukkitRunnable() {
 			public void run() {
+				
 				final Iterator<Location> li = Main.dcs.iterator();
 	            while (li.hasNext()) {
 	            	final Location loc = li.next();
@@ -88,7 +116,7 @@ import net.minecraft.world.entity.decoration.EntityArmorStand;
 	                if (loc.getYaw() == 0.0F) {
 	                	li.remove();
 	                }
-	            } 
+	            }
 	
 	            final Iterator<SmplLoc> ci = Main.crckd.iterator();
 	            while (ci.hasNext()) {
@@ -97,21 +125,13 @@ import net.minecraft.world.entity.decoration.EntityArmorStand;
 	                if (lc.cnt >> 3 == 0) {
 	                ci.remove();
 	                }
-	            } 
-	           
-	            for (final SmplLoc s : Main.bmbs) {
-	            	Main.this.getServer().broadcastMessage(String.valueOf(s.cnt));
-	                s.cnt = (short) (s.cnt - 1);
-	                if (s.cnt == 0) {
-	                	s.expldBmb();
-	                }
-	            } 
-	           
-	            final Iterator<Entry<Player, Location>> pi = Main.plnts.entrySet().iterator();
+	            }
+	            
+	            final Iterator<Entry<Player, BaseBlockPosition>> pi = Main.plnts.entrySet().iterator();
 	            while (pi.hasNext()) {
-	            	final Entry<Player, Location> e = pi.next();
+	            	final Entry<Player, BaseBlockPosition> e = pi.next();
 	            	final Location loc = e.getKey().getLocation();
-	            	if (e.getKey().getInventory().getHeldItemSlot() == 7 && loc.getBlockX() == e.getValue().getBlockX() && loc.getBlockY() == e.getValue().getBlockY() && loc.getBlockZ() == e.getValue().getBlockZ()) {
+	            	if (e.getKey().getInventory().getHeldItemSlot() == 7 && loc.getBlockX() == e.getValue().getX() && loc.getBlockY() == e.getValue().getY() && loc.getBlockZ() == e.getValue().getZ()) {
 	            		continue;
 	            	}
 	            	PacketUtils.sendAcBr(e.getKey(), "§c§lВы вышли из режима установки", 20);
@@ -128,15 +148,15 @@ import net.minecraft.world.entity.decoration.EntityArmorStand;
 	            			switch (b & 0x1) {
 	            			case 0:
 	            				bl.getKey().setType(Material.FIRE, false);
-	            				bl.setValue((byte)30);
+	            				bl.setValue((byte) 30);
 	            				continue;
 	            			case 1:
 	            				bl.getKey().setType(Material.POWDER_SNOW, false);
-	            				bl.setValue((byte)50);
+	            				bl.setValue((byte) 50);
 	            				continue;
 	            			default:
 	            				bl.getKey().setType(Material.FIRE, false);
-	            				bl.setValue((byte)20);
+	            				bl.setValue((byte) 20);
 	            				continue;
 	            			}
 	            		} 
@@ -165,27 +185,16 @@ import net.minecraft.world.entity.decoration.EntityArmorStand;
 	            } 
 			}
 		}.runTaskTimer(this, 5L, 5L);
-	
+		
+		//shooting mechanics (1 tick)
 		new BukkitRunnable() {
 			public void run() {
-				try {
-					dlDmg();
-				} catch (NullPointerException e) {
-					Main.htEnts.clear();
-				} 
-				Main.htEnts.clear();
-	           
-				for (final Block b : Main.htBlks) {
-					plcBck(b, b.getType(), b.getBlockData());
-					b.setType(Material.AIR);
-				} 
-				Main.htBlks.clear();
 	    	      
 				InterrLis.ents.clear();
-				for (final World w : Bukkit.getWorlds()) {
+				for (final World w : getServer().getWorlds()) {
 					InterrLis.ents.addAll(w.getLivingEntities());
 				}
-	           
+				
 				for (final Shooter sh : Main.shtrs) {
 					sh.cld = (byte)(sh.cld - (sh.cld == 0 ? 0 : 1));
 					final ItemStack it = sh.inv.getItemInMainHand();
@@ -196,12 +205,13 @@ import net.minecraft.world.entity.decoration.EntityArmorStand;
 					boolean ps = ((Damageable)it.getItemMeta()).hasDamage();
 					if (ps) {
 						sh.cnt = (short)(sh.cnt + 1);
-						if ((sh.cnt & 0x7) == 0) {
-							HumanEntity p = sh.inv.getHolder();
+						final HumanEntity p = sh.inv.getHolder();
+						if ((sh.cnt & 0x3) == 0) {
 							p.getWorld().playSound(p.getLocation(), Sound.BLOCK_CHAIN_FALL, 0.5f, 2f);
 						} 
 						Main.setDmg(it, it.getType().getMaxDurability() * sh.cnt / gt.rtm);
 						if (sh.cnt >= gt.rtm) {
+							p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 0.8f, 2f);
 							sh.inv.getItemInMainHand().setAmount(gt.amo);
 							sh.cnt = 0;
 						} 
@@ -236,57 +246,193 @@ import net.minecraft.world.entity.decoration.EntityArmorStand;
 								PacketUtils.fkHlmtClnt(p, p.getInventory().getHelmet());
 								PacketUtils.zoom(p, false);
 								p.setSneaking(false);
-							} 
+							}
 							p.setVelocity(p.getVelocity().subtract(p.getEyeLocation().getDirection().multiply(gt.kb)));
-						}  continue;
-					}  if (sh.cnt != 0 && !ps) {
+						}
+						continue;
+					}
+					if (sh.cnt != 0 && !ps) {
 						sh.cnt = sh.cnt > sh.rctm + 1 ? sh.rctm : (short) ((sh.cnt - 2 < 0) ? 0 : (sh.cnt - 2));
+					}
+				}
+				
+				for (final Arena ar : Main.actvarns) {
+					for (final Shooter sh : ar.shtrs.keySet()) {
+						sh.cld = (byte)(sh.cld - (sh.cld == 0 ? 0 : 1));
+						final ItemStack it = sh.inv.getItemInMainHand();
+						final GunType gt = GunType.getGnTp(sh.inv.getItemInMainHand());
+						if (gt == null) {
+							continue;
+						}
+						boolean ps = ((Damageable)it.getItemMeta()).hasDamage();
+						if (ps) {
+							sh.cnt = (short)(sh.cnt + 1);
+							final HumanEntity p = sh.inv.getHolder();
+							if ((sh.cnt & 0x3) == 0) {
+								p.getWorld().playSound(p.getLocation(), Sound.BLOCK_CHAIN_FALL, 0.5f, 2f);
+							} 
+							Main.setDmg(it, it.getType().getMaxDurability() * sh.cnt / gt.rtm);
+							if (sh.cnt >= gt.rtm) {
+								p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 0.8f, 2f);
+								sh.inv.getItemInMainHand().setAmount(gt.amo);
+								sh.cnt = 0;
+							} 
+						} 
+		             
+						if (sh.is) {
+							sh.cnt = (short)(sh.cnt + (ps ? 0 : 1));
+							if ((sh.cnt & 0x3) == 0) {
+								sh.is = false;
+							}
+							if (sh.cnt % gt.cld == 0) {
+								if (it.getAmount() == 1) {
+									if (ps) {
+										continue;
+									}
+									Main.setDmg(it, 0);
+									sh.cnt = 0;
+								} else {
+									if (ps) {
+										Main.setDmg(it, it.getType().getMaxDurability());
+										sh.cnt = 0;
+									} 
+									it.setAmount(it.getAmount() - 1);
+								} 
+								sh.cld = gt.cld;
+								final Player p = (Player) sh.inv.getHolder();
+								final boolean iw = (gt.snp && p.isSneaking()); byte i;
+								for (i = gt.brst == 0 ? 1 : gt.brst; i > 0; i--) {
+									sh.shoot(InterrLis.ents, gt, Main.this.getPlug(), p, !iw);
+								}
+								if (iw) {
+									PacketUtils.fkHlmtClnt(p, p.getInventory().getHelmet());
+									PacketUtils.zoom(p, false);
+									p.setSneaking(false);
+								}
+								p.setVelocity(p.getVelocity().subtract(p.getEyeLocation().getDirection().multiply(gt.kb)));
+							}
+							continue;
+						}
+						if (sh.cnt != 0 && !ps) {
+							sh.cnt = sh.cnt > sh.rctm + 1 ? sh.rctm : (short) ((sh.cnt - 2 < 0) ? 0 : (sh.cnt - 2));
+						}
 					}
 				}
 			}
 		}.runTaskTimer(this, 1L, 1L);
    	}
-   
-	private void dlDmg() {
-		for (final DmgdEnt e : htEnts) {
-			if (e.dmgr.isValid() && e.ent.isValid()) {
-				final String nm;
-				if (e.hst) {
-					e.dmgr.playSound(e.dmgr.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 2f);
-					e.dmg *= 2f * ((e.ent.getEquipment().getHelmet() == null) ? 1f : 0.5f);
-					nm = "§c銑 " + String.valueOf((int)(e.dmg * 5.0F));
-				} else {
-					e.dmg *= (e.ent.getEquipment().getChestplate() == null) ? 1f : 0.6f;
-					nm = "§6" + String.valueOf((int)(e.dmg * 5.0f));
-				}
-				getServer().getPluginManager().callEvent(new EntityShootAtEntityEvent(e));
-				dmgArm(e.dmgr, e.ent.getEyeLocation(), nm);
-			}
-			/*
-			 */
-		} 
-	}
 	
-	public static void killPl(final Player p) {
-		if (p.getGameMode() == GameMode.SURVIVAL) {
-			p.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(20);
-			p.setHealth(20);
-			p.getActivePotionEffects().clear();
-			PacketUtils.zoom(p, false);
-			p.closeInventory();
-			BlockPosition sp = PacketUtils.getNMSPlr(p).getSpawn();
-			p.teleport(new Location(p.getWorld(), sp.getX() + 0.5D, sp.getY() + 0.5D, sp.getZ() + 0.5D));
-		} 
+	public void onDisable() {
+	}
+
+	public void loadConfigs() {
+		try {
+			File file = new File(getDataFolder() + File.separator + "config.yml");
+	        if (!file.exists() || !getConfig().contains("spawns")) {
+	        	getServer().getConsoleSender().sendMessage("Config for WarZone not found, creating a new one...");
+	    		getConfig().options().copyDefaults(true);
+	    		getConfig().save(file);
+	        }
+	        //значения из конфига
+	        //tbl = getConfig().getString("setup.table");
+	        //арены
+	        file = new File(getDataFolder() + File.separator + "arenas.yml");
+	        file.createNewFile();
+	        ars = YamlConfiguration.loadConfiguration(file);
+	        
+	    	hlmtPrc = 150;
+	    	chstPrc = 250;
+	    	twrPrc = 200;
+	    	dfktPrc = 250;
+	        Inventories.fillLbbInv();
+	        Inventories.fillTsInv();
+	        Inventories.fillCTsInv();
+	        
+	        nnactvarns.clear();
+	        if (!ars.contains("arenas")) {
+	        	ars.createSection("arenas");
+		        ars.save(file);
+	        } else {
+				for(final String s : ars.getConfigurationSection("arenas").getKeys(false)) {
+					if (ars.contains("arenas." + s + ".fin")) {
+						//ApiOstrov.sendArenaData(s, ru.komiss77.enums.GameState.ОЖИДАНИЕ, "§7[§2Поле Брани§7]", "§2Ожидание", " ", "§7Игроков: §20§7/§2" + ars.get("arenas." + s + ".min"), "", 0);
+						nnactvarns.add(s);
+					}
+				}
+			}
+	        if (ars.contains("lobby")) {
+	        	lbbyW = getServer().getWorld(ars.getString("lobby.world"));
+	        	lobby = new BaseBlockPosition(ars.getInt("lobby.x"), ars.getInt("lobby.y"), ars.getInt("lobby.z"));
+	        }
+	        
+        }
+        catch (IOException | NullPointerException e) {
+        	e.printStackTrace();
+            return;
+        }
+	}
+
+	public static void lobbyPl(final Player p) {
+		nrmlzPl(p, true);
+		final Pair<Shooter, Arena> pr = Shooter.getPlShtrArena(p.getName());
+		pr.getFirst().inv = p.getInventory();
+		if (p.isInsideVehicle()) {
+			p.getVehicle().remove();
+		}
+		if (Main.lobby != null) {
+			p.teleport(getNrLoc(Main.lobby, lbbyW));
+		}
+		p.getInventory().setItem(8, Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 1));
+		lobbyScore(p);
+		for (final Player pl : Bukkit.getOnlinePlayers()) {
+			if (p.getWorld().getName().equals(pl.getWorld().getName())) {
+				pl.showPlayer(Main.plug, p);
+				p.showPlayer(Main.plug, pl);
+			} else {
+				pl.hidePlayer(Main.plug, p);
+				p.hidePlayer(Main.plug, pl);
+			}
+		}
+		for (final Shooter sh : shtrs) {
+			PacketUtils.sendNmTg(new Pair<Shooter, Arena>(sh, null), "§7<§5ЛОББИ§7> ", " §7[-.-]", EnumChatFormat.h);
+		}
+	}
+   
+	public static void lobbyScore(final Player p) {
+		final Scoreboard sb = Main.smg.getNewScoreboard();
+		final Objective ob = sb.registerNewObjective("CS:GO", "", "§7[§5CS:GO§7]");
+		ob.setDisplaySlot(DisplaySlot.SIDEBAR);
+		ob.getScore("    ")
+		.setScore(10);
+		ob.getScore("§7Карта: §dЛОББИ")
+		.setScore(9);
+		ob.getScore("   ")
+		.setScore(8);
+		ob.getScore("§5Раундов §7сиграно: " + "")
+		.setScore(7);
+		ob.getScore("§7Из них, §3выйграно§7: " + "")
+		.setScore(6);
+		ob.getScore("§7И §4проиграно§7: " + "")
+		.setScore(5);
+		ob.getScore("  ")
+		.setScore(4);
+		ob.getScore("§7Киллы / Смерти")
+		.setScore(3);
+		ob.getScore("§7(§dК§7/§dД§7):")
+		.setScore(2);
+		ob.getScore(" ")
+		.setScore(1);
+		
+		ob.getScore("§e   ostrov77.su")
+		.setScore(0);
+		p.setScoreboard(sb);
 	}
    
 	public Main getPlug() {
 		return this;
 	}
 	
-	private void dmgArm(final Player p, final Location loc, final String nm) {
-		if (!p.isValid()) {
-			return;
-		}
+	public static void dmgArm(final Player p, final Location loc, final String nm) {
 		final EntityArmorStand arm = new EntityArmorStand(EntityTypes.c, PacketUtils.getNMSWrld(loc.getWorld()));
 		arm.setInvisible(true);
 		arm.setNoGravity(true);
@@ -295,41 +441,27 @@ import net.minecraft.world.entity.decoration.EntityArmorStand;
 		arm.setCustomName(new ChatMessage(nm));
 		arm.setCustomNameVisible(true);
 		arm.setPosition(loc.getX() + srnd.nextDouble() - 0.5D, loc.getY() + srnd.nextDouble() - 0.5D, loc.getZ() + srnd.nextDouble() - 0.5D);
-     
-		PacketUtils.getNMSPlr(p).b.sendPacket(new PacketPlayOutSpawnEntity((Entity)arm));
-		PacketUtils.getNMSPlr(p).b.sendPacket(new PacketPlayOutEntityMetadata(arm.getId(), arm.getDataWatcher(), true));
+
+		if (!p.isValid()) {
+			return;
+		}
+		final PlayerConnection pc = PacketUtils.getNMSPlr(p).b;
+		pc.sendPacket(new PacketPlayOutSpawnEntity(arm));
+		pc.sendPacket(new PacketPlayOutEntityMetadata(arm.getId(), arm.getDataWatcher(), true));
 		
 		new BukkitRunnable() {
 			public void run() {
-				arm.setCustomNameVisible(false);
-				arm.killEntity();
-				PacketUtils.getNMSPlr(p).b.sendPacket(new PacketPlayOutSpawnEntity((Entity)arm));
-				PacketUtils.getNMSPlr(p).b.sendPacket(new PacketPlayOutEntityMetadata(arm.getId(), arm.getDataWatcher(), true));
+				pc.sendPacket(new PacketPlayOutEntityDestroy(arm.getId()));
 			}
-		}.runTaskLater(this, 20L);
+		}.runTaskLater(Main.plug, 20L);
    }
    
-   private void plcBck(final Block b, final Material m, final BlockData bd) {
-	   new BukkitRunnable() {
-		   public void run() {
-			   if (b.getType() == Material.AIR) {
-				   b.setType(m, false);
-				   b.setBlockData(bd);
-				} 
-			}
-       }.runTaskLater(this, 100L);
-   }
- 
- 
-   
-   public void onDisable() {}
- 
-   
-   public static ItemStack mkItm(final Material mt, final String nm, final int mdl) {
+   public static ItemStack mkItm(final Material mt, final String nm, final int mdl, final String... lr) {
 	   final ItemStack it = new ItemStack(mt);
 	   final ItemMeta im = it.getItemMeta();
 	   im.setDisplayName(nm);
        im.setCustomModelData(Integer.valueOf(mdl));
+       im.setLore(Arrays.asList(lr));
 	   it.setItemMeta(im);
 	   return it;
    }
@@ -345,6 +477,68 @@ import net.minecraft.world.entity.decoration.EntityArmorStand;
    }
    
    public static String prf() {
-       return "§8[§5CS§8] ";
+       return "§7[§5CS§7] ";
    }
- }
+
+	public static void nrmlzPl(final Player p, final boolean clrinv) {
+		p.setFireTicks(0);
+		for (final PotionEffect ef : p.getActivePotionEffects()) {
+	        p.removePotionEffect(ef.getType());
+		}
+		p.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(20);
+		p.setHealth(20);
+		p.setExp(0);
+		p.setLevel(0);
+		p.setGameMode(GameMode.SURVIVAL);
+		p.closeInventory();
+		if (clrinv) {
+			p.getInventory().clear();
+		}
+	}
+	
+	public static void crtSbdTm(final Scoreboard sb, final String nm, final String prf, final String val, final String sfx) {
+		final Team tm = sb.registerNewTeam(nm);
+		tm.addEntry(val);
+		tm.setPrefix(prf);
+		tm.setSuffix(sfx);
+	}
+	
+	public static void chgSbdTm(final Scoreboard sb, final String nm, final String prf, final String sfx) {
+		final Team tm = sb.getTeam(nm);
+		tm.setPrefix(prf);
+		tm.setSuffix(sfx);
+	}
+
+	public Arena crtArena(final String nm) {
+		final ConfigurationSection cs = Main.ars.getConfigurationSection("arenas." + nm);
+		final World w = getServer().getWorld(cs.getString("world"));
+		final String[] tx = cs.getString("tspawns.x").split(":");
+		final String[] ty = cs.getString("tspawns.y").split(":");
+		final String[] tz = cs.getString("tspawns.z").split(":");
+		final BaseBlockPosition[] ts = new BaseBlockPosition[tx.length];
+		for (byte i = (byte) (tx.length - 1); i >= 0; i--) {
+			ts[i] = new BaseBlockPosition(Integer.parseInt(tx[i]), Integer.parseInt(ty[i]), Integer.parseInt(tz[i]));
+		}
+		final String[] ctx = cs.getString("ctspawns.x").split(":");
+		final String[] cty = cs.getString("ctspawns.y").split(":");
+		final String[] ctz = cs.getString("ctspawns.z").split(":");
+		final BaseBlockPosition[] cts = new BaseBlockPosition[ctx.length];
+		for (byte i = (byte) (ctx.length - 1); i >= 0; i--) {
+			cts[i] = new BaseBlockPosition(Integer.parseInt(ctx[i]), Integer.parseInt(cty[i]), Integer.parseInt(ctz[i]));
+		}
+		final Arena ar;
+		if (cs.getString("type").equals("defusal")) {
+			final BaseBlockPosition ast = new BaseBlockPosition(cs.getInt("asite.x"), cs.getInt("asite.y"), cs.getInt("asite.z"));
+			final BaseBlockPosition bst = new BaseBlockPosition(cs.getInt("bsite.x"), cs.getInt("bsite.y"), cs.getInt("bsite.z"));
+			ar = new Defusal(cs.getName(), (byte) cs.getInt("min"), (byte) cs.getInt("max"), ts, cts, w, ast, bst, (byte) 6);
+			actvarns.add((Defusal) ar);
+		} else {
+			ar = new Arena(cs.getName(), (byte) cs.getInt("min"), (byte) cs.getInt("max"), ts, cts, w);
+		}
+		return ar;
+	}
+
+	public static Location getNrLoc(final BaseBlockPosition loc, final World w) {
+		return new Location(w, (Main.srnd.nextBoolean() ? -1 : 1) +  loc.getX() + 0.5d, loc.getY() + 0.1d, (Main.srnd.nextBoolean() ? -1 : 1) + loc.getZ() + 0.5d);
+	}
+}

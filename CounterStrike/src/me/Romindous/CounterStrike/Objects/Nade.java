@@ -1,5 +1,4 @@
 package me.Romindous.CounterStrike.Objects;
-import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
@@ -21,8 +20,12 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
+import com.mojang.datafixers.util.Pair;
+
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Enums.NadeType;
+import me.Romindous.CounterStrike.Game.Arena;
+import me.Romindous.CounterStrike.Listeners.DmgLis;
 
 public class Nade {
 	
@@ -43,26 +46,19 @@ public class Nade {
 		final int Z;
 		switch (nt) {
 			case FRAG:
-				w.spawnParticle(Particle.EXPLOSION_HUGE, loc, 10, 1d, 1d, 1d);
+				w.spawnParticle(Particle.EXPLOSION_HUGE, loc, 1, 0d, 0d, 0d);
 				w.playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 2f, 1.5f);
-				for (final Entity ent : prj.getNearbyEntities(7d, 7d, 7d)) {
-					if (ent instanceof LivingEntity) {
-						final double d = 20d - ent.getLocation().distance(loc) * 2d;
-						if (((LivingEntity) ent).getHealth() - d < 0d) {
-							dmgr.playSound(dmgr.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, 1f, 2f);
-							final String klfd = dmgr.getName() + " " + NadeType.FRAG.icn + " §f" + ent.getName();
-							for (final Player p : Bukkit.getOnlinePlayers()) {
-								p.sendMessage(klfd);
-							}
-							if (ent.getType() == EntityType.PLAYER) {
-								Main.killPl((Player) ent);
-							} else {
-								ent.remove();
-							}
-						} else {
-							((LivingEntity) ent).damage(d);
-							((LivingEntity) ent).setNoDamageTicks(0);
+				for (final Entity e : prj.getNearbyEntities(7d, 7d, 7d)) {
+					if (e instanceof LivingEntity && e.getType() != EntityType.ARMOR_STAND) {
+						final LivingEntity le = (LivingEntity) e;
+						final double d = 20d - e.getLocation().distance(loc) * 2d * (le.getEquipment().getChestplate() == null ? 1d : 0.4d);
+						final Pair<Shooter, Arena> pr = Shooter.getPlShtrArena(dmgr.getName());
+						if (pr.getSecond() != null) {
+							DmgLis.prcDmg(le, pr, d, le.getHealth() - d <= 0d ? 
+								pr.getSecond().getShtrNm(dmgr.getName()) + " " + NadeType.FRAG.icn + " " + pr.getSecond().getShtrNm(e.getName()) 
+								: null, (byte) 2, (short) (le.getName().equals(dmgr.getName()) ? 0 : 150));
 						}
+						Main.dmgArm(dmgr, le.getEyeLocation(), "§6" + String.valueOf((int)(d * 5.0f)));
 					}
 				}
 				break;
@@ -102,7 +98,7 @@ public class Nade {
 									final Block b = w.getBlockAt(x, y, z);
 									if (b.getType().isAir()) {
 										Main.ndBlks.put(b, (byte) (r - 1 << 2 ^ 0x1));
-									}else if (b.getType() == Material.FIRE) {
+									} else if (b.getType() == Material.FIRE) {
 										b.setType(Material.AIR, false);
 										Main.ndBlks.remove(b);
 										Main.ndBlks.put(b, (byte) (r - 1 << 2 ^ 0x1));
@@ -129,7 +125,9 @@ public class Nade {
 					double dl = Math.sqrt(dx * dx + dz * dz);
 					if (Math.abs((px / pl - dx / dl) * (px / pl - dx / dl) + (pz / pl - dz / dl) * (pz / pl - dz / dl)) < 1 && dl < 20) {
 						if (flshRT(loc, ploc)) {
-							dmgr.playSound(ploc, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 2f, 1f);
+							if (dmgr != null) {
+								dmgr.playSound(ploc, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 2f, 1f);
+							}
 							p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 50, 1, true, false));
 						}
 					}

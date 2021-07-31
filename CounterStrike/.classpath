@@ -7,5 +7,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="C:/Users/Romindous/Downloads/serv2/spigot-1.17.1.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Romindous/Downloads/ZH/plugins/Ostrov.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

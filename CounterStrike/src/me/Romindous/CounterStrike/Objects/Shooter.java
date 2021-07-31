@@ -3,27 +3,40 @@ package me.Romindous.CounterStrike.Objects;
 import java.util.HashSet;
 
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Particle;
+import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
+import com.mojang.datafixers.util.Pair;
+
 import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Enums.GameState;
 import me.Romindous.CounterStrike.Enums.GunType;
+import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Utils.PacketUtils;
 
 public class Shooter {
+	
 	public final String nm;
 	public PlayerInventory inv;
 	public byte rctm;
 	public byte cld;
+	public byte kls;
+	public byte dths;
 	public short cnt;
+	public short money;
 	public boolean is;
+	private final int shc;
 	
 	public Shooter(final Player pl) {
 		this.nm = pl.getName();
@@ -32,17 +45,28 @@ public class Shooter {
 		this.cld = 0;
 		this.cnt = 0;
 		this.is = false;
+		this.shc = nm.hashCode();
+		this.money = 0;
+		this.kls = 0;
+		this.dths = 0;
 	}
   
-	public static Shooter getPlShtr(final String nm) {
+	public static Pair<Shooter, Arena> getPlShtrArena(final String nm) {
+		for (final Arena ar : Main.actvarns) {
+			for (final Shooter s : ar.shtrs.keySet()) {
+				if (s.nm.equals(nm)) {
+					return new Pair<Shooter, Arena>(s, ar);
+				}
+			}
+		}
 		for (final Shooter s : Main.shtrs) {
 			if (s.nm.equals(nm)) {
-				return s;
+				return new Pair<Shooter, Arena>(s, null);
 			}
-		} 
+		}
 		final Shooter sh = new Shooter(Bukkit.getPlayer(nm));
 		Main.shtrs.add(sh);
-		return sh;
+		return new Pair<Shooter, Arena>(sh, null);
 	}
 	
 	public void shoot(final HashSet<LivingEntity> ents, final GunType gt, final Main plug, final Player pl, final boolean dff) {
@@ -58,16 +82,31 @@ public class Shooter {
 		}
 		final double lkx = -Math.sin(Math.toRadians((180f - loc.getYaw())));
 		final double lkz = -Math.cos(Math.toRadians((180f - loc.getYaw())));
-		DmgdEnt srch = null;
+		
+		LivingEntity srch = null;
+		boolean h = false;
 		
 		for (final LivingEntity e : ents) {
+			switch (e.getType()) {
+			case PLAYER:
+				if (((HumanEntity) e).getGameMode() != GameMode.SURVIVAL) {
+					continue;
+				}
+				break;
+			case ARMOR_STAND:
+			case TURTLE:
+				continue;
+			default:
+				break;
+			}
 			final double dx = e.getLocation().getX() - loc.getX();
 			final double dz = e.getLocation().getZ() - loc.getZ();
 			final double ln = Math.sqrt(dx * dx + dz * dz);
 			if (Math.sqrt(Math.pow(lkx - dx / ln, 2) + Math.pow(lkz - dz / ln, 2d)) * ln < 0.4d) {
 				final double pty = loc.getY() + Math.tan(Math.toRadians(-loc.getPitch())) * ln;
 				if (pty < e.getBoundingBox().getMaxY() && pty > e.getBoundingBox().getMinY()) {
-					srch = new DmgdEnt(e, gt.dmg, pl, (pty - e.getBoundingBox().getMinY() > e.getBoundingBox().getHeight() * 0.75d));
+					srch = e;
+					h = pty - e.getBoundingBox().getMinY() > e.getBoundingBox().getHeight() * 0.75d;
 					break;
 				} 
 			} 
@@ -75,16 +114,17 @@ public class Shooter {
 		
 		final Vector vec = loc.getDirection().normalize().multiply(0.05d);
 		final boolean ex = srch != null;
-		final DmgdEnt tgt = srch;
-		final Location el = ex ? srch.ent.getLocation() : null;
-		new BukkitRunnable() {
-			public void run() {
+		final boolean hst = h;
+		final LivingEntity tgt = srch;
+		final Location el = ex ? tgt.getLocation() : null;
+		/*new BukkitRunnable() {
+			public void run() {*/
 				int i = 800;
 				final HashSet<Block> wls = new HashSet<>();
 				final World w = pl.getWorld();
-				double x = loc.getX();
-				double y = loc.getY();
-				double z = loc.getZ();
+				double x = 20d * vec.getX() + loc.getX();
+				double y = 20d * vec.getY() + loc.getY();
+				double z = 20d * vec.getZ() + loc.getZ();
 				
 				while(true) {
 					x += vec.getX();
@@ -94,7 +134,7 @@ public class Shooter {
 						pl.spawnParticle(Particle.ASH, x, y, z, 1);
 					}
 
-					Block b = w.getBlockAt((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
+					final Block b = w.getBlockAt((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
 					switch(b.getType()) {
 					case OAK_LEAVES:
 					case ACACIA_LEAVES:
@@ -109,7 +149,16 @@ public class Shooter {
 					case COAL_ORE:
 					case IRON_ORE:
 					case EMERALD_ORE:
-						Main.htBlks.add(b);
+						final Arena ar = getPlShtrArena(pl.getName()).getSecond();
+						if (ar != null && ar.gst == GameState.ROUND) {
+							ar.brkn.add(new BrknBlck(b));
+							new BukkitRunnable() {
+								@Override
+								public void run() {
+									b.setType(Material.AIR, false);
+								}
+							}.runTask(plug);
+						}
 						wls.add(b);
 						break;
 					case ACACIA_SLAB:
@@ -211,10 +260,26 @@ public class Shooter {
 					}
 					
 					if (ex && Math.pow(x - el.getX(), 2d) + Math.pow(z - el.getZ(), 2d) < 0.2d) {
-						tgt.dmg *= (float) Math.pow(0.5d, wls.size());
-						tgt.nscp = dff && gt.snp;
-						tgt.wb = wls.size() > 0;
-						Main.htEnts.add(tgt);
+						/*new BukkitRunnable() {
+							@Override
+							public void run() {*/
+								if (pl.isValid() && tgt.isValid()) {
+									double dmg = gt.dmg * Math.pow(0.5d, wls.size());
+									final String nm;
+									if (hst) {
+										pl.playSound(pl.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 2f);
+										dmg *= 2f * (tgt.getEquipment().getHelmet() == null ? 1f : 0.5f);
+										nm = "§c銑 " + String.valueOf((int)(dmg * 5.0F));
+									} else {
+										dmg *= tgt.getEquipment().getChestplate() == null ? 1f : 0.6f;
+										nm = "§6" + String.valueOf((int)(dmg * 5.0f));
+									}
+									pl.playSound(pl.getLocation(), Sound.BLOCK_END_PORTAL_FRAME_FILL, 1f, 2f);
+									Bukkit.getPluginManager().callEvent(new EntityShootAtEntityEvent(pl, tgt, dmg, hst, wls.size() > 0, dff && gt.snp));
+									Main.dmgArm(pl, tgt.getEyeLocation(), nm);
+								}
+							/*}
+						}.runTask(plug);*/
 						return;
 					}
 
@@ -224,7 +289,17 @@ public class Shooter {
 
 					i--;
 				}
-			}
-		}.runTaskAsynchronously(plug);
+			/*}
+		}.runTaskAsynchronously(plug);*/
+	}
+	
+	@Override
+	public int hashCode() {
+		return shc;
+	}
+	
+	@Override
+	public boolean equals(final Object o) {
+		return o instanceof Shooter ? ((Shooter) o).nm.equals(nm) : false;
 	}
 }
