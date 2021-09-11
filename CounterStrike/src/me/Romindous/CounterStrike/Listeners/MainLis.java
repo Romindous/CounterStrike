@@ -8,6 +8,16 @@ import me.Romindous.CounterStrike.Game.Arena.Team;
 import me.Romindous.CounterStrike.Game.Defusal;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Utils.PacketUtils;
+import me.clip.deluxechat.events.DeluxeChatEvent;
+import net.md_5.bungee.api.chat.TextComponent;
+import ru.komiss77.ApiOstrov;
+import ru.komiss77.enums.Data;
+import ru.komiss77.events.BungeeDataRecieved;
+import ru.komiss77.modules.player.Oplayer;
+
+import java.util.Random;
+import java.util.Iterator;
+import java.util.Map.Entry;
 
 import org.bukkit.GameMode;
 import org.bukkit.Material;
@@ -15,11 +25,13 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.ItemMergeEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerExpChangeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -35,16 +47,72 @@ import com.mojang.datafixers.util.Pair;
  
 public class MainLis implements Listener {
 	
-	@EventHandler
+	@EventHandler(priority = EventPriority.MONITOR)
+	public void onBungee(final BungeeDataRecieved e) {
+		final Oplayer op = e.getOplayer();
+        final String wa = op.getDataString(Data.WANT_ARENA_JOIN);
+        if (!wa.isEmpty()) {
+        	if (Main.nnactvarns.contains(wa)) {
+        		final Arena ar;
+            	if (Arena.getNameArena(wa) == null) {
+            		ar = Main.plug.crtArena(wa);
+                } else {
+                	ar = Arena.getNameArena(wa);
+				}
+            	new BukkitRunnable() {
+					@Override
+					public void run() {
+						if (ApiOstrov.hasParty(e.getPlayer()) && ApiOstrov.isPartyLeader(e.getPlayer())) {
+							for (final String pl : ApiOstrov.getPartyPlayers(e.getPlayer())) {
+								//ApiOstrov.sendToServer(null, pl, wa);
+							}
+						} else {
+							ar.addPl(Shooter.getPlShtrArena(op.nik).getFirst());
+						}
+					}
+				}.runTaskLater(Main.plug, 5);
+        	}
+        }
+	}
+
+	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onJoin(final PlayerJoinEvent e) {
 		new BukkitRunnable() {
 			@Override
 			public void run() {
 				Main.lobbyPl(e.getPlayer());
+				final String title;
+				switch (new Random().nextInt(4)) {
+				case 0:
+					title = "Добро пожаловать!";
+					break;
+				case 1:
+					title = "Приятной игры!";
+					break;
+				case 2:
+					title = "Желаем удачи!";
+					break;
+				case 3:
+					title = "Развлекайтесь!";
+					break;
+				default:
+					title = "";
+					break;
+				}
+				e.getPlayer().setPlayerListHeaderFooter("§7<§5Counter Strike§7>\n" + title, "§7Сейчас в игре: §d" + getPlaying() + "§7 человек!");
+				e.getPlayer().setResourcePack(Main.rplnk);
 			}
 		}.runTaskLater(Main.plug, 2);
 	}
 	
+	public static byte getPlaying() {
+		byte in = 0;
+		for (final Arena ar : Main.actvarns) {
+			in += ar.shtrs.size();
+		}
+		return in;
+	}
+
 	@EventHandler
 	public void onQuit(final PlayerQuitEvent e) {
 		final Pair<Shooter, Arena> pr = Shooter.getPlShtrArena(e.getPlayer().getName());
@@ -57,7 +125,13 @@ public class MainLis implements Listener {
 	public void onDrop(final PlayerDropItemEvent e) {
 		final Player p = e.getPlayer();
 		final ItemStack it = e.getItemDrop().getItemStack();
+		final Pair<Shooter, Arena> pr = Shooter.getPlShtrArena(p.getName());
 		if (GunType.getGnTp(it) != null) {
+			if (pr.getSecond() == null) {
+				e.getItemDrop().remove();
+				p.getInventory().setItemInMainHand(new ItemStack(Material.AIR));
+				return;
+			}
 			e.getItemDrop().setItemStack(it);
 			p.getInventory().setItemInMainHand(null);
 		} else {
@@ -69,16 +143,25 @@ public class MainLis implements Listener {
 				e.setCancelled(e.getPlayer().getGameMode() != GameMode.CREATIVE);
 				break;
 			case GOLDEN_APPLE:
-				final Pair<Shooter, Arena> pr = Shooter.getPlShtrArena(p.getName());
 				final Defusal ar = (Defusal) pr.getSecond();
-				if (ar != null && ar.indon) {
-					ar.indSts(PacketUtils.getNMSPlr(p).b);
+				if (ar != null) {
+					for (final Entry<Shooter, Team> n : ar.shtrs.entrySet()) {
+						((Player) n.getKey().inv.getHolder()).playSound(n.getKey().inv.getHolder().getLocation(), "cs.info." + (n.getValue() == Team.Ts ? "tdropbmb" : "ctdropbmb"), 1f, 1f);
+					}
+					if (ar.indon) {
+						ar.indSts(PacketUtils.getNMSPlr(p).b);
+					}
 				}
 				break;
 			case SHEARS:
 				p.getInventory().setItemInMainHand(new ItemStack(Material.GOLD_NUGGET));
 				break;
 			default:
+				if (pr.getSecond() == null) {
+					e.getItemDrop().remove();
+					p.getInventory().setItemInMainHand(new ItemStack(Material.AIR));
+					return;
+				}
 				break;
 			}
 		}
@@ -123,9 +206,18 @@ public class MainLis implements Listener {
 				final Pair<Shooter, Arena> pr = Shooter.getPlShtrArena(e.getEntity().getName());
 				switch (it.getType()) {
 				case GOLDEN_APPLE:
-					if (pr.getSecond() != null && pr.getSecond().shtrs.get(pr.getFirst()) == Team.Ts) {
+					final Defusal ar = (Defusal) pr.getSecond();
+					if (ar != null && ar.shtrs.get(pr.getFirst()) == Team.Ts) {
 						inv.setItem(7, it);
 						e.getItem().remove();
+						for (final Entry<Shooter, Team> n : ar.shtrs.entrySet()) {
+							if (n.getValue() == Team.Ts) {
+								((Player) n.getKey().inv.getHolder()).playSound(n.getKey().inv.getHolder().getLocation(), "cs.info.tpkpbmb", 1f, 1f);
+							}
+						}
+						if (!ar.indon) {
+							ar.indSts(PacketUtils.getNMSPlr((Player) e.getEntity()).b);
+						}
 					} else if (((HumanEntity) e.getEntity()).getGameMode() != GameMode.CREATIVE) {
 						e.getItem().setPickupDelay(10);
 					}
@@ -189,5 +281,84 @@ public class MainLis implements Listener {
 				PacketUtils.zoom(p, false);
 			}
 		}
+	}
+	
+	@EventHandler
+	public void onChat(final AsyncPlayerChatEvent e) {
+		if (e.getMessage().startsWith("/")) {
+			return;
+		}
+		final Player snd = e.getPlayer();
+		final Pair<Shooter, Arena> pr = Shooter.getPlShtrArena(snd.getName());
+		final Arena ar = pr.getSecond();
+		//если на арене
+		if (ar == null) {
+			return;
+		} else {
+			final Team tm = ar.shtrs.get(pr.getFirst());
+			switch (ar.gst) {
+			case WAITING:
+			case BEGINING:
+			case FINISH:
+				final Iterator<Player> pl = e.getRecipients().iterator();
+				while (pl.hasNext()) {
+					final Player rec = pl.next();
+					sendSpigotMsg(Main.prf().replace('[', '<').replace(']', '>') + snd.getName() + " §7[§d" + ar.name + "§7] ≫ " + e.getMessage(), rec);
+					if (rec.getServer().getMotd().equals(snd.getServer().getMotd())) {
+						pl.remove();
+					}
+		        }
+				return;
+			case BUYTIME:
+			case ROUND:
+			case ENDRND:
+				if (e.getMessage().startsWith("!")) {
+					if (e.getMessage().length() > 1) {
+						for (final Shooter sh : ar.shtrs.keySet()) {
+							sendSpigotMsg("§7[Всем] " + tm.clr + 
+								snd.getName() + " §7≫ " + e.getMessage().replaceFirst("!", ""), (Player) sh.inv.getHolder());
+						}
+					}
+				} else {
+					for (final Entry<Shooter, Team> n : ar.shtrs.entrySet()) {
+						if (n.getValue() == tm) {
+							sendSpigotMsg("§7[" + tm.icn + "§7] " + 
+								snd.getName() + " §7≫ " + e.getMessage().replaceFirst("!", ""), (Player) n.getKey().inv.getHolder());
+						}
+					}
+				}
+				break;
+			}
+		}
+        e.getRecipients().clear();
+    }
+	
+	@EventHandler
+    public void Dchat(final DeluxeChatEvent e) {
+        final Arena ar = Shooter.getPlShtrArena(e.getPlayer().getName()).getSecond();
+        if (ar != null) {
+			switch (ar.gst) {
+			case WAITING:
+			case BEGINING:
+			case FINISH:
+	            e.getDeluxeFormat().setPrefix(Main.prf() + "§7<§5" + ar.name + "§7> ");
+			case BUYTIME:
+			case ROUND:
+			case ENDRND:
+	            e.setCancelled(true);
+	            return;
+			}
+        }
+        /*final Iterator<Player> recipients = e.getRecipients().iterator();
+        while (recipients.hasNext()) {
+            final Player recipient = recipients.next();
+            if (!recipient.getWorld().getName().equalsIgnoreCase(p.getWorld().getName())) {
+                recipients.remove();
+            }
+        }*/
+    }
+	
+	public static void sendSpigotMsg(final String msg, final Player p) {
+		p.spigot().sendMessage(new TextComponent(msg));
 	}
 }

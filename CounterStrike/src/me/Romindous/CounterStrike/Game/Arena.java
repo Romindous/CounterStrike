@@ -3,17 +3,23 @@ package me.Romindous.CounterStrike.Game;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
-
+import org.bukkit.ChatColor;
 import org.bukkit.Difficulty;
+import org.bukkit.GameRule;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
 
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Enums.GameState;
 import me.Romindous.CounterStrike.Objects.BrknBlck;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.TripWire;
+import me.Romindous.CounterStrike.Utils.Inventories;
+import me.Romindous.CounterStrike.Utils.PacketUtils;
 import net.minecraft.EnumChatFormat;
 import net.minecraft.core.BaseBlockPosition;
 
@@ -28,12 +34,17 @@ public class Arena {
 	public final byte max;
 	protected final BaseBlockPosition[] TSps;
 	protected final BaseBlockPosition[] CTSps;
+	protected BukkitTask tsk;
 	protected short tm;
 	public GameState gst;
 	
 	public Arena(final String name, final byte min, final byte max, final BaseBlockPosition[] TSps, final BaseBlockPosition[] CTSps, final World w) {
 		this.w = w;
-		w.setDifficulty(Difficulty.PEACEFUL);
+		w.setTime(6000L);
+		w.setDifficulty(Difficulty.EASY);
+		w.setGameRule(GameRule.DO_MOB_SPAWNING, false);
+		w.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+		w.setGameRule(GameRule.NATURAL_REGENERATION, false);
 		this.gst = GameState.WAITING;
 		this.TSps = TSps;
 		this.CTSps = CTSps;
@@ -83,8 +94,8 @@ public class Arena {
 		CTs(EnumChatFormat.d, "§3\u9264"),
 		NA(EnumChatFormat.h, "");
 		
-		protected final String icn;
-		protected final EnumChatFormat clr;
+		public final String icn;
+		public final EnumChatFormat clr;
 		
 		Team(final EnumChatFormat clr, final String icn) {
 			this.clr = clr;
@@ -105,11 +116,18 @@ public class Arena {
 	}
 
 	public static void end(Arena ar) {
+		ar.gst = GameState.WAITING;
 		Main.actvarns.remove(ar);
 		for (final Shooter sh : ar.shtrs.keySet()) {
 			Main.lobbyPl((Player) sh.inv.getHolder());
 		}
-		//ApiOstrov.sendArenaData(ar.name, ru.komiss77.enums.GameState.ОЖИДАНИЕ, "§7[§5CS§7]", "§dОжидание", " ", "§7Игроков: §50§7/§5" + ar.min, "", 0);
+		ar.shtrs.clear();
+		Inventories.updtGm(ar);
+		for (final Entity e : ar.w.getEntities()) {
+			if (e.getType() != EntityType.PLAYER) {
+				e.remove();
+			}
+		}
 		ar = null;
 	}
 
@@ -126,9 +144,11 @@ public class Arena {
 	public void killPl(final Shooter sh) {
 		sh.inv.getHolder().sendMessage(Main.prf() + "Что то пошло не так...");
 	}
-
+	
 	public void chngMn(final Shooter sh, final int n) {
 		sh.money += n;
+		PacketUtils.sendAcBr((Player) sh.inv.getHolder(), (n < 0 ? "§5" : "§d+") + String.valueOf(n) + " §6⛃", 20);
+		Main.chgSbdTm(((Player) sh.inv.getHolder()).getScoreboard(), "mn", "", "§d" + String.valueOf(sh.money) + " §6⛃");
 	}
 
 	public void addKll(final Shooter sh) {
@@ -141,18 +161,7 @@ public class Arena {
 	
 	public String getShtrNm(final String nm) {
 		final Team tm = shtrs.get(getShtr(nm));
-		if (tm == null) {
-			return "§f" + nm;
-		}
-		switch (tm) {
-		case Ts:
-			return "§4" + nm;
-		case CTs:
-			return "§3" + nm;
-		case NA:
-		default:
-			return "§f" + nm;
-		}
+		return (tm == null ? Team.NA.clr : tm.clr) + nm;
 	}
 
 	public boolean isSmTm(final Shooter org, final String cmp) {
@@ -184,5 +193,11 @@ public class Arena {
 			break;
 		}
 		return false;
+	}
+
+	public static String getTime(final short t, final ChatColor cc) {
+		return String.valueOf(cc) + (t / 60 > 9 ? t / 60 : "0" + (t / 60))
+			+ "§7:"
+			+ String.valueOf(cc) + (t % 60 > 9 ? t % 60 : "0" + (t % 60));
 	}
 }

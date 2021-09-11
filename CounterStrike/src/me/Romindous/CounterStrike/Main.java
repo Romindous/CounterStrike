@@ -10,22 +10,26 @@ import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.World;
+import org.bukkit.World.Environment;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.HumanEntity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -38,9 +42,11 @@ import org.bukkit.scoreboard.Team;
 import com.mojang.datafixers.util.Pair;
 
 import me.Romindous.CounterStrike.Commands.CSCmd;
+import me.Romindous.CounterStrike.Enums.GameState;
 import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Game.Defusal;
+import me.Romindous.CounterStrike.Game.Invasion;
 import me.Romindous.CounterStrike.Listeners.DmgLis;
 import me.Romindous.CounterStrike.Listeners.InterrLis;
 import me.Romindous.CounterStrike.Listeners.InventLis;
@@ -59,18 +65,26 @@ import net.minecraft.network.protocol.game.PacketPlayOutSpawnEntity;
 import net.minecraft.server.network.PlayerConnection;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.decoration.EntityArmorStand;
+import net.minecraft.world.phys.Vec3D;
+import ru.komiss77.ApiOstrov;
+import ru.komiss77.modules.world.WorldManager;
+import ru.komiss77.modules.world.WorldManager.Generator;
  
 public final class Main extends JavaPlugin implements Listener {
 	
 	public static Main plug;
 	public static File folder;
 	public static World lbbyW;
+	public static String rplnk;
 	public static BaseBlockPosition lobby;
 	public static ScoreboardManager smg;
 	public static YamlConfiguration ars;
 	public static YamlConfiguration config;
 	public static final SecureRandom srnd = new SecureRandom();
-	public static final ItemStack cp = new ItemStack(Material.CARVED_PUMPKIN);
+    public static final LivingEntity[] a = new LivingEntity[0];
+	public static ItemStack cp;
+	public static ItemStack thlmt;
+	public static ItemStack cthlmt;
 	
 	public static final HashSet<Arena> actvarns = new HashSet<>();
 	public static final HashSet<String> nnactvarns = new HashSet<>();
@@ -78,6 +92,7 @@ public final class Main extends JavaPlugin implements Listener {
 	public static final HashSet<SmplLoc> crckd = new HashSet<>();
 	public static final LinkedHashMap<Block, Byte> ndBlks = new LinkedHashMap<>();
 	public static final LinkedHashMap<Player, BaseBlockPosition> plnts = new LinkedHashMap<>();
+	public static final LinkedHashMap<World, LivingEntity[]> wlents = new LinkedHashMap<>();
 	public static final HashSet<Nade> nades = new HashSet<>();
 	public static final HashSet<Shooter> shtrs = new HashSet<>();
 	public static final HashSet<Location> dcs = new HashSet<>();
@@ -107,16 +122,6 @@ public final class Main extends JavaPlugin implements Listener {
 		//game stuff (5 tick)
 		new BukkitRunnable() {
 			public void run() {
-				
-				final Iterator<Location> li = Main.dcs.iterator();
-	            while (li.hasNext()) {
-	            	final Location loc = li.next();
-	            	loc.getWorld().spawnParticle(Particle.SOUL, loc, 4, 0.4D, 0.4D, 0.4D, 0.0D, null, false);
-	                loc.setYaw(loc.getYaw() - 1.0F);
-	                if (loc.getYaw() == 0.0F) {
-	                	li.remove();
-	                }
-	            }
 	
 	            final Iterator<SmplLoc> ci = Main.crckd.iterator();
 	            while (ci.hasNext()) {
@@ -135,7 +140,7 @@ public final class Main extends JavaPlugin implements Listener {
 	            		continue;
 	            	}
 	            	PacketUtils.sendAcBr(e.getKey(), "§c§lВы вышли из режима установки", 20);
-	            	e.getKey().getInventory().setItem(7, new ItemStack(Material.GOLDEN_APPLE));
+	            	e.getKey().getInventory().setItem(7, Main.mkItm(Material.GOLDEN_APPLE, "§4§lС*4 §c\u926e", 1, "§dПКМ §7- Заложить бомбу", "§7Можно установить на точку §5A §7или §5B"));
 	            	pi.remove();
 	            } 
 	           
@@ -189,20 +194,36 @@ public final class Main extends JavaPlugin implements Listener {
 		//shooting mechanics (1 tick)
 		new BukkitRunnable() {
 			public void run() {
-	    	      
-				InterrLis.ents.clear();
-				for (final World w : getServer().getWorlds()) {
-					InterrLis.ents.addAll(w.getLivingEntities());
+				
+				final Iterator<Location> li = Main.dcs.iterator();
+	            while (li.hasNext()) {
+	            	final Location loc = li.next();
+	            	loc.getWorld().spawnParticle(Particle.SOUL, loc, 4, 0.4D, 0.4D, 0.4D, 0.0D, null, false);
+	                loc.setYaw(loc.getYaw() - 1.0F);
+	            	final GunType gt = GunType.values()[(int) loc.getPitch()];
+	            	if (((int) loc.getYaw() & 31) < 16 && (int) loc.getYaw() % gt.cld == 0) {
+	            		Main.plyWrldSht(loc, gt.snd);
+	            	}
+	                if (loc.getYaw() == 0.0F) {
+	                	li.remove();
+	                }
+	            }
+	            
+				for (final Entry<World, LivingEntity[]> we : wlents.entrySet()) {
+					we.setValue(we.getKey().getLivingEntities().toArray(a));
 				}
 				
 				for (final Shooter sh : Main.shtrs) {
+					sh.pss.poll();
+					sh.pss.add(vcFrmLc(sh.inv.getHolder().getLocation()));
+					
 					sh.cld = (byte)(sh.cld - (sh.cld == 0 ? 0 : 1));
 					final ItemStack it = sh.inv.getItemInMainHand();
 					final GunType gt = GunType.getGnTp(sh.inv.getItemInMainHand());
 					if (gt == null) {
 						continue;
 					}
-					boolean ps = ((Damageable)it.getItemMeta()).hasDamage();
+					final boolean ps = ((Damageable)it.getItemMeta()).hasDamage();
 					if (ps) {
 						sh.cnt = (short)(sh.cnt + 1);
 						final HumanEntity p = sh.inv.getHolder();
@@ -211,18 +232,17 @@ public final class Main extends JavaPlugin implements Listener {
 						} 
 						Main.setDmg(it, it.getType().getMaxDurability() * sh.cnt / gt.rtm);
 						if (sh.cnt >= gt.rtm) {
-							p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 0.8f, 2f);
+							p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 2f);
 							sh.inv.getItemInMainHand().setAmount(gt.amo);
 							sh.cnt = 0;
 						} 
 					} 
 	             
-					if (sh.is) {
+					if (sh.stm != 0) {
+						sh.stm--;
 						sh.cnt = (short)(sh.cnt + (ps ? 0 : 1));
-						if ((sh.cnt & 0x3) == 0) {
-							sh.is = false;
-						}
 						if (sh.cnt % gt.cld == 0) {
+							final short tr = sh.cnt < sh.rctm ? sh.cnt : sh.rctm;
 							if (it.getAmount() == 1) {
 								if (ps) {
 									continue;
@@ -238,33 +258,35 @@ public final class Main extends JavaPlugin implements Listener {
 							} 
 							sh.cld = gt.cld;
 							final Player p = (Player) sh.inv.getHolder();
-							final boolean iw = (gt.snp && p.isSneaking()); byte i;
-							for (i = gt.brst == 0 ? 1 : gt.brst; i > 0; i--) {
-								sh.shoot(InterrLis.ents, gt, Main.this.getPlug(), p, !iw);
+							final boolean iw = (gt.snp && p.isSneaking());
+							for (byte i = gt.brst == 0 ? 1 : gt.brst; i > 0; i--) {
+								sh.shoot(gt, Main.this.getPlug(), p, !iw, tr);
 							}
+							plyWrldSht(p.getLocation(), gt.snd);
 							if (iw) {
 								PacketUtils.fkHlmtClnt(p, p.getInventory().getHelmet());
 								PacketUtils.zoom(p, false);
 								p.setSneaking(false);
 							}
-							p.setVelocity(p.getVelocity().subtract(p.getEyeLocation().getDirection().multiply(gt.kb)));
+							//p.setVelocity(p.getVelocity().subtract(p.getEyeLocation().getDirection().multiply(gt.kb)));
 						}
-						continue;
-					}
-					if (sh.cnt != 0 && !ps) {
+					} else if (sh.cnt != 0 && !ps) {
 						sh.cnt = sh.cnt > sh.rctm + 1 ? sh.rctm : (short) ((sh.cnt - 2 < 0) ? 0 : (sh.cnt - 2));
 					}
 				}
 				
 				for (final Arena ar : Main.actvarns) {
 					for (final Shooter sh : ar.shtrs.keySet()) {
+						sh.pss.poll();
+						sh.pss.add(vcFrmLc(sh.inv.getHolder().getLocation()));
+						
 						sh.cld = (byte)(sh.cld - (sh.cld == 0 ? 0 : 1));
 						final ItemStack it = sh.inv.getItemInMainHand();
 						final GunType gt = GunType.getGnTp(sh.inv.getItemInMainHand());
 						if (gt == null) {
 							continue;
 						}
-						boolean ps = ((Damageable)it.getItemMeta()).hasDamage();
+						final boolean ps = ((Damageable)it.getItemMeta()).hasDamage();
 						if (ps) {
 							sh.cnt = (short)(sh.cnt + 1);
 							final HumanEntity p = sh.inv.getHolder();
@@ -273,18 +295,17 @@ public final class Main extends JavaPlugin implements Listener {
 							} 
 							Main.setDmg(it, it.getType().getMaxDurability() * sh.cnt / gt.rtm);
 							if (sh.cnt >= gt.rtm) {
-								p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 0.8f, 2f);
+								p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 2f);
 								sh.inv.getItemInMainHand().setAmount(gt.amo);
 								sh.cnt = 0;
 							} 
 						} 
 		             
-						if (sh.is) {
+						if (sh.stm != 0) {
+							sh.stm--;
 							sh.cnt = (short)(sh.cnt + (ps ? 0 : 1));
-							if ((sh.cnt & 0x3) == 0) {
-								sh.is = false;
-							}
 							if (sh.cnt % gt.cld == 0) {
+								final short tr = sh.cnt < sh.rctm ? sh.cnt : sh.rctm;
 								if (it.getAmount() == 1) {
 									if (ps) {
 										continue;
@@ -300,20 +321,19 @@ public final class Main extends JavaPlugin implements Listener {
 								} 
 								sh.cld = gt.cld;
 								final Player p = (Player) sh.inv.getHolder();
-								final boolean iw = (gt.snp && p.isSneaking()); byte i;
-								for (i = gt.brst == 0 ? 1 : gt.brst; i > 0; i--) {
-									sh.shoot(InterrLis.ents, gt, Main.this.getPlug(), p, !iw);
+								final boolean iw = (gt.snp && p.isSneaking());
+								for (byte i = gt.brst == 0 ? 1 : gt.brst; i > 0; i--) {
+									sh.shoot(gt, Main.this.getPlug(), p, !iw, tr);
 								}
+								plyWrldSht(p.getLocation(), gt.snd);
 								if (iw) {
 									PacketUtils.fkHlmtClnt(p, p.getInventory().getHelmet());
 									PacketUtils.zoom(p, false);
 									p.setSneaking(false);
 								}
-								p.setVelocity(p.getVelocity().subtract(p.getEyeLocation().getDirection().multiply(gt.kb)));
+								//p.setVelocity(p.getVelocity().subtract(p.getEyeLocation().getDirection().multiply(gt.kb)));
 							}
-							continue;
-						}
-						if (sh.cnt != 0 && !ps) {
+						} else if (sh.cnt != 0 && !ps) {
 							sh.cnt = sh.cnt > sh.rctm + 1 ? sh.rctm : (short) ((sh.cnt - 2 < 0) ? 0 : (sh.cnt - 2));
 						}
 					}
@@ -321,7 +341,7 @@ public final class Main extends JavaPlugin implements Listener {
 			}
 		}.runTaskTimer(this, 1L, 1L);
    	}
-	
+
 	public void onDisable() {
 	}
 
@@ -344,6 +364,21 @@ public final class Main extends JavaPlugin implements Listener {
 	    	chstPrc = 250;
 	    	twrPrc = 200;
 	    	dfktPrc = 250;
+	    	rplnk = "https://download.mc-packs.net/pack/5b99bf3147118bbcfd6351455ea47c4cdaac2456.zip";
+	    	cp = new ItemStack(Material.CARVED_PUMPKIN);
+	    	thlmt = new ItemStack(Material.LEATHER_HELMET);
+			final LeatherArmorMeta hm = (LeatherArmorMeta) thlmt.getItemMeta();
+			hm.setColor(Color.RED);
+			hm.setDisplayName("§cШапка Террориста §f\u9267");
+			hm.setLore(Arrays.asList("§7Цена: §d" + Main.hlmtPrc + " §6⛃"));
+			thlmt.setItemMeta(hm);
+	    	cthlmt = new ItemStack(Material.LEATHER_HELMET);
+			final LeatherArmorMeta chm = (LeatherArmorMeta) cthlmt.getItemMeta();
+			chm.setColor(Color.TEAL);
+			chm.setDisplayName("§3Шлем Спецназа §f\u9267");
+			chm.setLore(Arrays.asList("§7Цена: §d" + Main.hlmtPrc + " §6⛃"));
+			cthlmt.setItemMeta(chm);
+	        Inventories.fillGmInv();
 	        Inventories.fillLbbInv();
 	        Inventories.fillTsInv();
 	        Inventories.fillCTsInv();
@@ -355,7 +390,21 @@ public final class Main extends JavaPlugin implements Listener {
 	        } else {
 				for(final String s : ars.getConfigurationSection("arenas").getKeys(false)) {
 					if (ars.contains("arenas." + s + ".fin")) {
-						//ApiOstrov.sendArenaData(s, ru.komiss77.enums.GameState.ОЖИДАНИЕ, "§7[§2Поле Брани§7]", "§2Ожидание", " ", "§7Игроков: §20§7/§2" + ars.get("arenas." + s + ".min"), "", 0);
+						WorldManager.load(getServer().getConsoleSender(), ars.getString("arenas." + s + ".world"), Environment.NORMAL, Generator.Empty);
+						final String tp;
+						switch (ars.getString("arenas." + s + ".type")) {
+							case "gungame":
+								tp = "§dЭстафета";
+								break;
+							case "invasion":
+								tp = "§dВторжение";
+								break;
+							case "defusal":
+							default:
+								tp = "§dКлассика";
+								break;
+						}
+						ApiOstrov.sendArenaData(s, ru.komiss77.enums.GameState.ОЖИДАНИЕ, "§7[§5CS§7]", tp, " ", "§7Игроков: §50§7/§5" + ars.getString("arenas." + s + ".min"), "", 0);
 						nnactvarns.add(s);
 					}
 				}
@@ -365,6 +414,10 @@ public final class Main extends JavaPlugin implements Listener {
 	        	lobby = new BaseBlockPosition(ars.getInt("lobby.x"), ars.getInt("lobby.y"), ars.getInt("lobby.z"));
 	        }
 	        
+	        wlents.clear();
+	        for (final World w : getServer().getWorlds()) {
+	        	wlents.put(w, w.getLivingEntities().toArray(a));
+	        }
         }
         catch (IOException | NullPointerException e) {
         	e.printStackTrace();
@@ -382,9 +435,14 @@ public final class Main extends JavaPlugin implements Listener {
 		if (Main.lobby != null) {
 			p.teleport(getNrLoc(Main.lobby, lbbyW));
 		}
-		p.getInventory().setItem(8, Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 1));
+		p.getInventory().setItem(2, Main.mkItm(Material.CAMPFIRE, "§dВыбор Игры", 1));
+		p.getInventory().setItem(6, Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 1));
+		p.getInventory().setItem(8, Main.mkItm(Material.MAGMA_CREAM, "§4Выход в Лобби", 1));
+		p.getInventory().setHeldItemSlot(0);
 		lobbyScore(p);
+		final byte n = MainLis.getPlaying();
 		for (final Player pl : Bukkit.getOnlinePlayers()) {
+			pl.setPlayerListFooter("§7Сейчас в игре: §d" + String.valueOf(n) + "§7 человек!");
 			if (p.getWorld().getName().equals(pl.getWorld().getName())) {
 				pl.showPlayer(Main.plug, p);
 				p.showPlayer(Main.plug, pl);
@@ -395,6 +453,13 @@ public final class Main extends JavaPlugin implements Listener {
 		}
 		for (final Shooter sh : shtrs) {
 			PacketUtils.sendNmTg(new Pair<Shooter, Arena>(sh, null), "§7<§5ЛОББИ§7> ", " §7[-.-]", EnumChatFormat.h);
+		}
+		for (final Arena ar : Main.actvarns) {
+			if (ar.gst == GameState.WAITING) {
+				for (final Entry<Shooter, me.Romindous.CounterStrike.Game.Arena.Team> e : ar.shtrs.entrySet()) {
+					PacketUtils.sendNmTg(new Pair<Shooter, Arena>(e.getKey(), null), "§7<§d" + ar.name + "§7> ", " §7[-.-]", e.getValue().clr);
+				}
+			}
 		}
 	}
    
@@ -511,7 +576,7 @@ public final class Main extends JavaPlugin implements Listener {
 
 	public Arena crtArena(final String nm) {
 		final ConfigurationSection cs = Main.ars.getConfigurationSection("arenas." + nm);
-		final World w = getServer().getWorld(cs.getString("world"));
+		final World w = getServer().getWorld(cs.getString("world")) == null ? WorldManager.load(getServer().getConsoleSender(), cs.getString("world"), Environment.NORMAL, Generator.Empty) : getServer().getWorld(cs.getString("world"));
 		final String[] tx = cs.getString("tspawns.x").split(":");
 		final String[] ty = cs.getString("tspawns.y").split(":");
 		final String[] tz = cs.getString("tspawns.z").split(":");
@@ -527,18 +592,76 @@ public final class Main extends JavaPlugin implements Listener {
 			cts[i] = new BaseBlockPosition(Integer.parseInt(ctx[i]), Integer.parseInt(cty[i]), Integer.parseInt(ctz[i]));
 		}
 		final Arena ar;
-		if (cs.getString("type").equals("defusal")) {
-			final BaseBlockPosition ast = new BaseBlockPosition(cs.getInt("asite.x"), cs.getInt("asite.y"), cs.getInt("asite.z"));
-			final BaseBlockPosition bst = new BaseBlockPosition(cs.getInt("bsite.x"), cs.getInt("bsite.y"), cs.getInt("bsite.z"));
+		final BaseBlockPosition ast;
+		final BaseBlockPosition bst;
+		switch (cs.getString("type")) {
+		case "defusal":
+			ast = new BaseBlockPosition(cs.getInt("asite.x"), cs.getInt("asite.y"), cs.getInt("asite.z"));
+			bst = new BaseBlockPosition(cs.getInt("bsite.x"), cs.getInt("bsite.y"), cs.getInt("bsite.z"));
 			ar = new Defusal(cs.getName(), (byte) cs.getInt("min"), (byte) cs.getInt("max"), ts, cts, w, ast, bst, (byte) 6);
 			actvarns.add((Defusal) ar);
-		} else {
+			break;
+		case "invasion":
+			ast = new BaseBlockPosition(cs.getInt("asite.x"), cs.getInt("asite.y"), cs.getInt("asite.z"));
+			bst = new BaseBlockPosition(cs.getInt("bsite.x"), cs.getInt("bsite.y"), cs.getInt("bsite.z"));
+			ar = new Invasion(cs.getName(), (byte) cs.getInt("min"), (byte) cs.getInt("max"), ts, cts, w, ast, bst);
+			actvarns.add((Invasion) ar);
+			break;
+		default:
 			ar = new Arena(cs.getName(), (byte) cs.getInt("min"), (byte) cs.getInt("max"), ts, cts, w);
+			break;
 		}
 		return ar;
 	}
 
 	public static Location getNrLoc(final BaseBlockPosition loc, final World w) {
-		return new Location(w, (Main.srnd.nextBoolean() ? -1 : 1) +  loc.getX() + 0.5d, loc.getY() + 0.1d, (Main.srnd.nextBoolean() ? -1 : 1) + loc.getZ() + 0.5d);
+		return new Location(w, (Main.srnd.nextBoolean() ? -1 : 1) + loc.getX() + 0.5d, loc.getY() + 0.1d, (Main.srnd.nextBoolean() ? -1 : 1) + loc.getZ() + 0.5d);
+	}
+
+	public static Block getBBlock(final BaseBlockPosition loc, final World w) {
+		return w.getBlockAt(loc.getX(), loc.getY(), loc.getZ());
+	}
+	
+	public static void plyWrldSht(final Location org, final String snd) {
+		new BukkitRunnable() {
+			@Override
+			public void run() {
+				for (final Player p : org.getWorld().getPlayers()) {
+					final float d = (float) p.getLocation().distanceSquared(org);
+					p.playSound(org, snd, d < 1f ? 1f : 400f / d, 1f);
+				}
+			}
+		}.runTaskAsynchronously(plug);
+	}
+	
+	public static void clsLbPls() {
+		for (final Player p : lbbyW.getPlayers()) {
+			p.closeInventory();
+		}
+	}
+	
+	public static void shwHdPls(final Player p) {
+		for (final Player pl : Bukkit.getOnlinePlayers()) {
+			if (p.getWorld().getName().equals(pl.getWorld().getName())) {
+				pl.showPlayer(Main.plug, p);
+				p.showPlayer(Main.plug, pl);
+			} else {
+				pl.hidePlayer(Main.plug, p);
+				p.hidePlayer(Main.plug, pl);
+			}
+		}
+	}
+
+	protected Vec3D vcFrmLc(final Location loc) {
+		return new Vec3D(loc.getX(), loc.getY(), loc.getZ());
+	}
+
+	public static LivingEntity[] getWLnts(final String wnm) {
+		for (final Entry<World, LivingEntity[]> we : wlents.entrySet()) {
+			if (we.getKey().getName().equals(wnm)) {
+				return we.getValue();
+			}
+		}
+		return a;
 	}
 }

@@ -28,14 +28,17 @@ import net.minecraft.server.network.PlayerConnection;
 import net.minecraft.world.entity.player.EntityHuman;
 import net.minecraft.world.entity.player.PlayerAbilities;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.World;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.scores.ScoreboardTeam;
 import net.minecraft.world.scores.ScoreboardTeamBase.EnumNameTagVisibility;
 
+import org.bukkit.Color;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
 
 import com.mojang.datafixers.util.Pair;
 
@@ -209,7 +212,24 @@ public class PacketUtils {
  	}
   
  	public static void fkHlmtClnt(final Player p, final org.bukkit.inventory.ItemStack it) {
- 		final PacketPlayOutSetSlot ps = new PacketPlayOutSetSlot(-2, 10, 39, getNMSIt(it == null ? new org.bukkit.inventory.ItemStack(Material.AIR) : it));
+ 		final ItemStack ii;
+ 		if (it == null) {
+ 			ii = new ItemStack(Items.a);
+ 		} else {
+			if (it.getType() == Material.LEATHER_HELMET) {
+				final Color clr = ((LeatherArmorMeta) it.getItemMeta()).getColor();
+				if (clr == Color.RED) {
+					ii = getNMSIt(Main.thlmt);
+				} else if (clr == Color.TEAL) {
+					ii = getNMSIt(Main.cthlmt);
+				} else {
+					ii = getNMSIt(new org.bukkit.inventory.ItemStack(Material.LEATHER_HELMET));
+				}
+			} else {
+	 			ii = getNMSIt(new org.bukkit.inventory.ItemStack(it.getType()));
+			}
+		}
+ 		final PacketPlayOutSetSlot ps = new PacketPlayOutSetSlot(-2, 10, 39, ii);
  		getNMSPlr(p).b.sendPacket(ps);
  	}
   

@@ -6,17 +6,23 @@ import me.Romindous.CounterStrike.Enums.NadeType;
 import me.Romindous.CounterStrike.Enums.GameState;
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Game.Arena.Team;
+import me.Romindous.CounterStrike.Mobs.Mobber;
 import me.Romindous.CounterStrike.Game.Defusal;
+import me.Romindous.CounterStrike.Game.Invasion;
 import me.Romindous.CounterStrike.Objects.Nade;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.TripWire;
 import me.Romindous.CounterStrike.Utils.Inventories;
 import me.Romindous.CounterStrike.Utils.PacketUtils;
 
-import java.util.HashSet;
 import java.util.Iterator;
 
 import net.minecraft.core.BaseBlockPosition;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.monster.EntityShulker;
+import ru.komiss77.ApiOstrov;
+import ru.komiss77.enums.Stat;
+
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -24,13 +30,15 @@ import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Snowball;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityInteractEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.inventory.Inventory;
@@ -39,8 +47,51 @@ import org.bukkit.inventory.meta.Damageable;
 import com.mojang.datafixers.util.Pair;
 
 public class InterrLis implements Listener {
-	
-	public static final HashSet<LivingEntity> ents = new HashSet<>();
+
+	@EventHandler(priority = EventPriority.HIGHEST)
+	public void onEntIntr(final EntityInteractEvent e) {
+		final Block b = e.getBlock();
+		if (e.getEntity() instanceof Mob && b != null) {
+			e.setCancelled(true);
+			final Invasion ar = Invasion.getMobInvasion(e.getEntity().getUniqueId());
+			if (ar != null && ar.gst == GameState.ROUND) {
+				switch (b.getType()) {
+				case WARPED_PRESSURE_PLATE:
+					if (ar.ast.getChunkCoordinates().equals(new BaseBlockPosition(b.getX(), b.getY() - 1, b.getZ()))) {
+						ar.hrtSt(true, e.getEntity().getName().charAt(0));
+						e.getEntity().remove();
+					} else if (ar.bst.getChunkCoordinates().equals(new BaseBlockPosition(b.getX(), b.getY() - 1, b.getZ()))) {
+						ar.hrtSt(false, e.getEntity().getName().charAt(0));
+						e.getEntity().remove();
+					}
+					break;
+				case TRIPWIRE:
+					final Iterator<TripWire> i = ar.tws.iterator();
+					while (i.hasNext()) {
+						final TripWire tn = i.next();
+						for (final Block bl : tn.bs) {
+							if (b.getX() == bl.getX() && b.getY() == bl.getY() && b.getZ() == bl.getZ()) {
+								e.setCancelled(true);
+								for (final Block r : tn.bs) {
+									r.setType(Material.AIR, false);
+								}
+								tn.hdNdAll(ar);
+								tn.trgr(bl.getLocation().add(0.5d, 0d, 0.5d));
+								i.remove();
+								return;
+							}
+						}
+					}
+					break;
+				default:
+					break;
+				}
+			}
+		}
+		if (e.getEntityType() != EntityType.PLAYER && e.getBlock() != null && e.getBlock().getType() == Material.WARPED_PRESSURE_PLATE) {
+			e.setCancelled(true);
+		}
+	}
 	
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onInter(final PlayerInteractEvent e) {
@@ -54,13 +105,14 @@ public class InterrLis implements Listener {
 		case LEFT_CLICK_BLOCK:
 			if (gt != null) {
 				e.setCancelled(true);
-				Shooter sh = Shooter.getPlShtrArena(e.getPlayer().getName()).getFirst();
-				if ((!sh.is || it.getAmount() == 1) && !((Damageable)it.getItemMeta()).hasDamage()) {
+				final Shooter sh = Shooter.getPlShtrArena(e.getPlayer().getName()).getFirst();
+				if (!((Damageable)it.getItemMeta()).hasDamage()) {
 					Main.setDmg(it, 0);
+					sh.stm = 0;
 					sh.cnt = 0;
 				}
 			} else if (nt != null) {
-				e.getPlayer().setExp((e.getPlayer().getExp() == 1f) ? 0f : (e.getPlayer().getExp() + 0.5F));
+				e.getPlayer().setExp((e.getPlayer().getExp() == 1f) ? 0f : (e.getPlayer().getExp() + 0.5F > 1f ? 1f : e.getPlayer().getExp() + 0.5F));
 			}
 			break;
 		case RIGHT_CLICK_AIR:
@@ -68,11 +120,12 @@ public class InterrLis implements Listener {
 			e.setCancelled(true);
 			final Player p = e.getPlayer();
 			if (gt != null) {
-				final Shooter sh = Shooter.getPlShtrArena(p.getName()).getFirst();
+				pr = Shooter.getPlShtrArena(p.getName());
+				final Shooter sh = pr.getFirst();
 				final boolean hd = ((Damageable)it.getItemMeta()).hasDamage();
-				if (!sh.is) {
-					sh.is = true;
+				if (sh.stm == 0) {
 					if ((sh.cnt == 0 || hd) && sh.cld == 0) {
+						final short tr = sh.cnt < sh.rctm ? sh.cnt : sh.rctm;
 						if (it.getAmount() == 1) {
 							if (hd) {
 								return;
@@ -88,17 +141,19 @@ public class InterrLis implements Listener {
 						}
 						sh.cld = gt.cld;
 						final boolean iw = gt.snp && p.isSneaking();
+						for (byte i = gt.brst == 0 ? 1 : gt.brst; i > 0; i--) {
+							sh.shoot(gt, Main.plug, p, !iw, tr);
+						}
+						Main.plyWrldSht(p.getLocation(), gt.snd);
 						if (iw) {
 							PacketUtils.fkHlmtClnt(p, p.getInventory().getHelmet());
 							PacketUtils.zoom(p, false);
 							p.setSneaking(false);
 						}
-						for (byte i = gt.brst == 0 ? 1 : gt.brst; i > 0; i--) {
-							sh.shoot(ents, gt, Main.plug, p, !iw);
-						}
-						p.setVelocity(p.getVelocity().subtract(p.getEyeLocation().getDirection().multiply(gt.kb)));
+						//p.setVelocity(p.getVelocity().subtract(p.getEyeLocation().getDirection().multiply(gt.kb)));
 					}
 				}
+				sh.stm = 5;
 			} else if (nt != null) {
 				pr = Shooter.getPlShtrArena(p.getName());
 				if (pr.getSecond() != null) {
@@ -135,7 +190,8 @@ public class InterrLis implements Listener {
 				it.setAmount(it.getAmount() - 1);
 				p.getInventory().setItemInMainHand(it);
 				sb.setVelocity(sb.getVelocity().multiply(0.75f * p.getExp() + 0.25f));
-				Main.nades.add(new Nade(sb, (byte) (nt.flrbnc ? 10f * p.getExp() + 5f : 40)));
+				Main.nades.add(new Nade(sb, (byte) (nt.flrbnc ? 12f * p.getExp() + 6f : 40)));
+				Main.plyWrldSht(p.getLocation(), "cs.rand.nadethrow");
 			} else if (it != null) {
 				b = e.getClickedBlock();
 				e.setCancelled((e.getPlayer().getGameMode() != GameMode.CREATIVE));
@@ -143,15 +199,18 @@ public class InterrLis implements Listener {
 				case GHAST_TEAR:
 					pr = Shooter.getPlShtrArena(p.getName());
 					if (pr.getSecond() == null) {
+						p.playSound(p.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 2f);
 						p.openInventory(Inventories.LBShop);
 					} else {
 						final Team tm = pr.getSecond().shtrs.get(pr.getFirst());
 						switch (pr.getSecond().gst) {
 						case BEGINING:
 						case WAITING:
+							p.playSound(p.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 2f);
 							p.openInventory(Inventories.LBShop);
 							break;
 						case BUYTIME:
+							p.playSound(p.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 2f);
 							switch (tm) {
 							case Ts:
 								p.openInventory(Inventories.TShop);
@@ -168,6 +227,7 @@ public class InterrLis implements Listener {
 							if (pr.getSecond() instanceof Defusal && ((Defusal) pr.getSecond()).isBmbOn()) {
 								PacketUtils.sendAcBr(p, "§c§lВремя закупки вышло, бомба постовлена!", 30);
 							} else if (pr.getSecond().canOpnShp(p.getLocation(), tm)) {
+								p.playSound(p.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 2f);
 								switch (tm) {
 								case Ts:
 									p.openInventory(Inventories.TShop);
@@ -194,20 +254,32 @@ public class InterrLis implements Listener {
 					e.setCancelled(false);
 					break;
 				case STICK:
-					final Inventory df = Bukkit.createInventory(null, 54, "§3§lРазминировка бомбы");
-					p.getWorld().playSound(p.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 0.5f);
-					df.setContents(Inventories.fillDefInv(b, (byte) 54));
-					p.openInventory(df);
+					final EntityShulker ind = new EntityShulker(EntityTypes.ay, PacketUtils.getNMSWrld(p.getWorld()));
+					ind.setPosition(p.getLocation().getX() + 0.5d, p.getLocation().getY(), p.getLocation().getZ() + 0.5d);
+					PacketUtils.getNMSWrld(p.getWorld()).addEntity(ind);
 					break;
 				case GOLD_NUGGET:
 				case SHEARS:
 					final boolean bg = it.getType() == Material.GOLD_NUGGET;
-					if (b != null && b.getType() == Material.CRIMSON_BUTTON) {
+					pr = Shooter.getPlShtrArena(p.getName());
+					if (b != null && pr.getSecond() != null) {
 						e.setCancelled(true);
-						final Inventory def = Bukkit.createInventory(null, bg ? 54 : 27, "§3§lРазминировка бомбы");
-						p.getWorld().playSound(p.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 0.5f);
-						def.setContents(Inventories.fillDefInv(b, (byte) (bg ? 54 : 27)));
-						p.openInventory(def);
+						if (b.getType() == Material.CRIMSON_BUTTON) {
+							final Inventory def = Bukkit.createInventory(null, bg ? 54 : 27, "§3§lРазминировка Бомбы");
+							p.getWorld().playSound(b.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 0.5f);
+							def.setContents(Inventories.fillDfsInv(b, (byte) (bg ? 54 : 27)));
+							p.openInventory(def);
+						} else if (b.getType() == Material.SPAWNER && pr.getSecond() instanceof Invasion) {
+							for (final Mobber m : ((Invasion) pr.getSecond()).sis) {
+								if (m.ind.getChunkCoordinates().equals(new BaseBlockPosition(b.getX(), b.getY(), b.getZ()))) {
+									final Inventory def = Bukkit.createInventory(null, 54, "§3§lОбезвреживание Спавнера");
+									p.getWorld().playSound(b.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 0.5f);
+									def.setContents(Inventories.fillDfSpInv(b, (byte) 54, bg));
+									p.openInventory(def);
+									((Invasion) pr.getSecond()).dfs.put(pr.getFirst(), m);
+								}
+							}
+						}
 					}
 					break;
 				case SUGAR:
@@ -238,6 +310,31 @@ public class InterrLis implements Listener {
 						}
 					}
 					break;
+				case CAMPFIRE:
+					if (it.hasItemMeta() && it.getItemMeta().getDisplayName().equals("§dВыбор Игры")) {
+						p.playSound(p.getLocation(), Sound.BLOCK_BEEHIVE_ENTER, 1f, 2f);
+						p.openInventory(Inventories.GmInv);
+					}
+					break;
+				case NETHER_STAR:
+					if (it.hasItemMeta() && it.getItemMeta().getDisplayName().equals("§eВыбор Комманды")) {
+						pr = Shooter.getPlShtrArena(p.getName());
+						p.playSound(p.getLocation(), Sound.BLOCK_CONDUIT_ATTACK_TARGET, 1f, 2f);
+						if (pr.getSecond() != null && pr.getSecond() instanceof Defusal) {
+							p.openInventory(((Defusal) pr.getSecond()).tms);
+						}
+					}
+					break;
+				case MAGMA_CREAM:
+					if (it.hasItemMeta() && it.getItemMeta().getDisplayName().equals("§4Выход в Лобби")) {
+						ApiOstrov.sendToServer(p, "lobby2", "");
+					}
+					break;
+				case SLIME_BALL:
+					if (it.hasItemMeta() && it.getItemMeta().getDisplayName().equals("§cВыход")) {
+						p.performCommand("cs leave");
+					}
+					break;
 				default:
 					break;
 				}
@@ -245,34 +342,38 @@ public class InterrLis implements Listener {
 			break;   
 		case PHYSICAL:
 			b = e.getClickedBlock();
-			if (b != null && b.getType() == Material.TRIPWIRE) {
-				e.setCancelled(true);
-				for (final Arena ar : Main.actvarns) {
-					final Iterator<TripWire> i = ar.tws.iterator();
-					while (i.hasNext()) {
-						final TripWire tn = i.next();
-						for (final Block bl : tn.bs) {
-							if (b.getX() == bl.getX() && b.getY() == bl.getY() && b.getZ() == bl.getZ()) {
-								pr = Shooter.getPlShtrArena(e.getPlayer().getName());
-								if (ar.name.equals(pr.getSecond().name) && ar.shtrs.get(pr.getFirst()) != tn.tm) {
-									for (final Block r : tn.bs) {
-										r.setType(Material.AIR, false);
+			if (b != null) {
+				if (b.getType() == Material.TRIPWIRE) {
+					for (final Arena ar : Main.actvarns) {
+						final Iterator<TripWire> i = ar.tws.iterator();
+						while (i.hasNext()) {
+							final TripWire tn = i.next();
+							for (final Block bl : tn.bs) {
+								if (b.getX() == bl.getX() && b.getY() == bl.getY() && b.getZ() == bl.getZ()) {
+									e.setCancelled(true);
+									pr = Shooter.getPlShtrArena(e.getPlayer().getName());
+									if (ar.name.equals(pr.getSecond().name) && ar.shtrs.get(pr.getFirst()) != tn.tm) {
+										for (final Block r : tn.bs) {
+											r.setType(Material.AIR, false);
+										}
+										tn.hdNdAll(ar);
+										tn.trgr(bl.getLocation().add(0.5d, 0d, 0.5d));
+										i.remove();
 									}
-									tn.hdNdAll(ar);
-									tn.trgr(e.getPlayer(), bl.getLocation().add(0.5d, 0d, 0.5d));
-									i.remove();
+									return;
 								}
-								return;
 							}
 						}
 					}
+				} else if (b.getType() == Material.WARPED_PRESSURE_PLATE) {
+					e.setCancelled(true);
 				}
 			}
 			break;
 		}
 	}
 
-	@EventHandler
+	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlc(final BlockPlaceEvent e) {
 		final Player p = e.getPlayer();
 		final Arena ar = Shooter.getPlShtrArena(p.getName()).getSecond();
@@ -281,6 +382,8 @@ public class InterrLis implements Listener {
 				Main.plnts.remove(p);
 				((Defusal) ar).plant(e.getBlockPlaced());
 				((Defusal) ar).indSts(PacketUtils.getNMSPlr(p).b);
+				ApiOstrov.addStat(p, Stat.CS_bomb);
+            	e.setCancelled(false);
 			} else {
             	PacketUtils.sendAcBr(p, "§c§lУ вас не дотягиваются руки!", 20);
             	e.setCancelled(true);

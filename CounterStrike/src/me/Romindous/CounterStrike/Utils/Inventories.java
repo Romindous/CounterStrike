@@ -4,16 +4,19 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
-import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.CreatureSpawner;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 
 import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Enums.GunType;
-import me.Romindous.CounterStrike.Enums.NadeType;
+import me.Romindous.CounterStrike.Game.Arena;
+import me.Romindous.CounterStrike.Game.Defusal;
+import me.Romindous.CounterStrike.Game.Invasion;
 
+import static org.bukkit.Material.*;
 import static me.Romindous.CounterStrike.Enums.GunType.*;
 import static me.Romindous.CounterStrike.Enums.NadeType.*;
 
@@ -22,8 +25,135 @@ public class Inventories {
 	public static Inventory TShop;
 	public static Inventory CTShop;
 	public static Inventory LBShop;
+	public static Inventory GmInv;
+
+	public static void fillGmInv() {
+		GmInv = Bukkit.createInventory(null, 54, "§5§lВыбор Игры");
+		final ItemStack[] its = new ItemStack[54];
+		for (byte i = 0; i < 54; i++) {
+			if (((i / 9) & 1) == 0) {
+				its[i] = Main.mkItm(LIGHT_GRAY_STAINED_GLASS_PANE, "§8-=-=-=-", 1);
+			}
+		}
+		its[4] = Main.mkItm(ENDER_EYE, "§5Быстрый Поиск", 1);
+		byte dfs = 9;
+		byte ggs = 27;
+		byte ivs = 45;
+		for (final String s : Main.ars.getConfigurationSection("arenas").getKeys(false)) {
+			final ConfigurationSection cs = Main.ars.getConfigurationSection("arenas." + s);
+			if (cs.contains("fin")) {
+				if (cs.getString("type").equals("defusal")) {
+					if (dfs < 18) {
+						its[dfs] = Main.mkItm(GREEN_CONCRETE_POWDER, "§d" + s, 1, "§2Ожидание", "§7Игроков: §20§7/§2" + cs.getString("min"), " ", "§7Режим: §dКлассика");
+						for (final Arena ar : Main.actvarns) {
+							if (ar instanceof Defusal && ar.name.equals(s)) {
+								switch (ar.gst) {
+								case WAITING:
+									its[dfs] = Main.mkItm(GREEN_CONCRETE_POWDER, "§d" + s, 1, "§2Ожидание", "§7Игроков: §2" + ar.shtrs.size() + "§7/§2" + ar.min, " ", "§7Режим: §dКлассика");
+									break;
+								case BEGINING:
+									its[dfs] = Main.mkItm(YELLOW_CONCRETE_POWDER, "§d" + s, 1, "§eНачало", "§7Игроков: §e" + ar.shtrs.size() + "§7/§e" + ar.max, " ", "§7Режим: §dКлассика");
+									break;
+								case BUYTIME:
+									its[dfs] = Main.mkItm(ORANGE_CONCRETE_POWDER, "§d" + s, 1, "§6Закупка", "§7Игроков: §6" + ar.shtrs.size() + "§7/§6" + ar.max, " ", "§7Режим: §dКлассика");
+									break;
+								case ROUND:
+								case ENDRND:
+									its[dfs] = Main.mkItm(ORANGE_CONCRETE_POWDER, "§d" + s, 1, "§6Бой", "§7Игроков: §6" + ar.shtrs.size() + "§7/§6" + ar.max, " ", "§7Режим: §dКлассика");
+									break;
+								case FINISH:
+									its[dfs] = Main.mkItm(PURPLE_CONCRETE_POWDER, "§d" + s, 1, "§5Финиш", "§7Игроков: §5" + ar.shtrs.size() + "§7/§5" + ar.max, " ", "§7Режим: §dКлассика");
+									break;
+								}
+							}
+						}
+						dfs++;
+					}
+				} else if (cs.getString("type").equals("gungame")) {
+					if (ggs < 36) {
+						its[ggs] = Main.mkItm(GREEN_CONCRETE_POWDER, "§d" + s, 1, "§2Ожидание", "§7Игроков: §20§7/§2" + cs.getString("min"), " ", "§7Режим: §dСражение");
+						ggs++;
+					}
+				} else if (cs.getString("type").equals("invasion")) {
+					if (ivs < 54) {
+						its[ivs] = Main.mkItm(GREEN_CONCRETE_POWDER, "§d" + s, 1, "§2Ожидание", "§7Игроков: §20§7/§2" + cs.getString("min"), " ", "§7Режим: §dВторжение");
+						for (final Arena ar : Main.actvarns) {
+							if (ar instanceof Invasion && ar.name.equals(s)) {
+								switch (ar.gst) {
+								case WAITING:
+									its[dfs] = Main.mkItm(GREEN_CONCRETE_POWDER, "§d" + s, 1, "§2Ожидание", "§7Игроков: §2" + ar.shtrs.size() + "§7/§2" + ar.min, " ", "§7Режим: §dВторжение");
+									break;
+								case BEGINING:
+									its[dfs] = Main.mkItm(YELLOW_CONCRETE_POWDER, "§d" + s, 1, "§eНачало", "§7Игроков: §e" + ar.shtrs.size() + "§7/§e" + ar.max, " ", "§7Режим: §dВторжение");
+									break;
+								case BUYTIME:
+									its[dfs] = Main.mkItm(ORANGE_CONCRETE_POWDER, "§d" + s, 1, "§6Закупка", "§7Игроков: §6" + ar.shtrs.size() + "§7/§6" + ar.max, " ", "§7Режим: §dВторжение");
+									break;
+								case ROUND:
+								case ENDRND:
+									its[dfs] = Main.mkItm(ORANGE_CONCRETE_POWDER, "§d" + s, 1, "§6Бой", "§7Игроков: §6" + ar.shtrs.size() + "§7/§6" + ar.max, " ", "§7Режим: §dВторжение");
+									break;
+								case FINISH:
+									its[dfs] = Main.mkItm(PURPLE_CONCRETE_POWDER, "§d" + s, 1, "§5Финиш", "§7Игроков: §5" + ar.shtrs.size() + "§7/§5" + ar.max, " ", "§7Режим: §dВторжение");
+									break;
+								}
+							}
+						}
+						ivs++;
+					}
+				}
+			}
+		}
+		GmInv.setContents(its);
+	}
+
+	public static void updtGm(final Arena ar) {
+		byte n = 0;
+		for (final ItemStack it : GmInv.getContents()) {
+			if (it != null && it.hasItemMeta() && it.getItemMeta().getDisplayName().substring(2).equals(ar.name)) {
+				final String md;
+				if (ar instanceof Defusal) {
+					md = "Классика";
+				} else if (ar instanceof Invasion) {
+					md = "Вторжение";
+				} else {
+					md = "Эстафета";
+				} 
+				switch (ar.gst) {
+				case WAITING:
+					GmInv.setItem(n, Main.mkItm(GREEN_CONCRETE_POWDER, "§d" + ar.name, 1, "§2Ожидание", "§7Игроков: §2" + ar.shtrs.size() + "§7/§2" + ar.min, " ", "§7Режим: §d" + md));
+					break;
+				case BEGINING:
+					GmInv.setItem(n, Main.mkItm(YELLOW_CONCRETE_POWDER, "§d" + ar.name, 1, "§eНачало", "§7Игроков: §e" + ar.shtrs.size() + "§7/§e" + ar.max, " ", "§7Режим: §d" + md));
+					break;
+				case BUYTIME:
+					GmInv.setItem(n, Main.mkItm(ORANGE_CONCRETE_POWDER, "§d" + ar.name, 1, "§6Закупка", "§7Игроков: §6" + ar.shtrs.size() + "§7/§6" + ar.max, " ", "§7Режим: §d" + md));
+					break;
+				case ROUND:
+				case ENDRND:
+					GmInv.setItem(n, Main.mkItm(ORANGE_CONCRETE_POWDER, "§d" + ar.name, 1, "§6Бой", "§7Игроков: §6" + ar.shtrs.size() + "§7/§6" + ar.max, " ", "§7Режим: §d" + md));
+					break;
+				case FINISH:
+					GmInv.setItem(n, Main.mkItm(PURPLE_CONCRETE_POWDER, "§d" + ar.name, 1, "§5Финиш", "§7Игроков: §5" + ar.shtrs.size() + "§7/§5" + ar.max, " ", "§7Режим: §d" + md));
+					break;
+				}
+			}
+			n++;
+		}
+	}
+
+	public static ItemStack[] fillTmInv() {
+		final ItemStack[] its = new ItemStack[9];
+		for (byte i = 0; i < 9; i++) {
+			its[i] = Main.mkItm(LIGHT_GRAY_STAINED_GLASS_PANE, "§8-=-=-=-", 1);
+		}
+		its[1] = Main.mkItm(CRIMSON_NYLIUM, "§4§lТеррористы", 1, " ");
+		its[4] = Main.mkItm(ENDER_EYE, "§5§lСлучайная", 1, " ");
+		its[7] = Main.mkItm(WARPED_NYLIUM, "§3§lСпецназ", 1, " ");
+		return its;
+	}
 	
-	public static ItemStack[] fillDefInv(final Block b, final byte sz) {
+	public static ItemStack[] fillDfsInv(final Block b, final byte sz) {
 		final ItemStack[] its = new ItemStack[sz];
 
 		final Byte[] slts = new Byte[sz - 3];
@@ -39,21 +169,59 @@ public class Inventories {
 		
 		final LinkedList<Byte> ls = new LinkedList<Byte>(Arrays.asList(slts));
 		for (byte i = 0; i < sz / 3; i++) {
-			its[ls.remove(Main.srnd.nextInt(ls.size()))] = Main.mkItm(Material.STRING, "§8~-~-~", clr);
+			its[ls.remove(Main.srnd.nextInt(ls.size()))] = Main.mkItm(STRING, "§8~-~-~", clr);
 		}
 		
 		for (byte i = (byte) (its.length - 1); i >= 0; i--) {
 			switch (i) {
 			case 1:
 			case 9:
-				its[i] = Main.mkItm(Material.LIGHT_GRAY_STAINED_GLASS_PANE, "§8-=-=-=-", 1);
+				its[i] = Main.mkItm(LIGHT_GRAY_STAINED_GLASS_PANE, "§8-=-=-=-", 1);
 				break;
 			case 0:
-				its[i] = Main.mkItm(Material.BOWL, "§5§lРазрежте провода этого цвета!", clr);
+				its[i] = Main.mkItm(BOWL, "§5§lРазрежте провода этого цвета!", clr);
 				break;
 			default:
 				if (its[i] == null) {
-					its[i] = Main.mkItm(Material.STRING, "§8~-~-~", chs[Main.srnd.nextInt(3)]);
+					its[i] = Main.mkItm(STRING, "§8~-~-~", chs[Main.srnd.nextInt(3)]);
+				}
+				break;
+			}
+		} 
+		return its;
+	}
+
+	public static ItemStack[] fillDfSpInv(final Block b, final byte sz, final boolean bg) {
+		final ItemStack[] its = new ItemStack[sz];
+		
+		final Byte[] slts = new Byte[sz - 3];
+		for (byte i = (byte) (slts.length - 1); i >= 0; i--) {
+			slts[i] = i;
+		}
+		slts[0] = (byte) (sz - 3);
+		slts[1] = (byte) (sz - 2);
+		slts[9] = (byte) (sz - 1);
+		
+		final int clr = 11 + Main.srnd.nextInt(4);
+		final int[] chs = new int[] {clr == 11 ? 12 : 11, clr <= 12 ? 13 : 12, clr <= 13 ? 14 : 13};
+		
+		final LinkedList<Byte> ls = new LinkedList<Byte>(Arrays.asList(slts));
+		for (byte i = (byte) ((bg ? 4 : 3) * getSpnrDf((CreatureSpawner) b.getState()) + 8); i >= 0; i--) {
+			its[ls.remove(Main.srnd.nextInt(ls.size()))] = Main.mkItm(STRING, "§8~-~-~", clr);
+		}
+		
+		for (byte i = (byte) (its.length - 1); i >= 0; i--) {
+			switch (i) {
+			case 1:
+			case 9:
+				its[i] = Main.mkItm(LIGHT_GRAY_STAINED_GLASS_PANE, "§8-=-=-=-", 1);
+				break;
+			case 0:
+				its[i] = Main.mkItm(BOWL, "§5§lРазрежте провода этого цвета!", clr);
+				break;
+			default:
+				if (its[i] == null) {
+					its[i] = Main.mkItm(STRING, "§8~-~-~", chs[Main.srnd.nextInt(3)]);
 				}
 				break;
 			}
@@ -61,100 +229,103 @@ public class Inventories {
 		return its;
 	}
 	   
+	private static int getSpnrDf(final CreatureSpawner sp) {
+		switch (sp.getSpawnedType()) {
+		case ZOMBIE_VILLAGER:
+		default:
+			return 1;
+		case STRAY:
+			return 2;
+		case VINDICATOR:
+			return 3;
+		case PIGLIN_BRUTE:
+			return 4;
+		}
+	}
+
 	public static void fillLbbInv() {
 		LBShop = Bukkit.createInventory(null, 54, "§5§lТренировка");
 		final ItemStack[] its = new ItemStack[54];
-		its[AK47.slt] = Main.mkItm(Material.IRON_HOE, "§5AK-47", 1);
-		its[P90.slt] = Main.mkItm(Material.GOLDEN_HOE, "§5P90", 1);
-		its[AWP.slt] = Main.mkItm(Material.NETHERITE_AXE, "§5AWP", 1);
-		its[MP5.slt] = Main.mkItm(Material.GOLDEN_AXE, "§5MP5", 1);
-		its[NOVA.slt] = Main.mkItm(Material.WOODEN_AXE, "§5NOVA", 1);
-		its[M4.slt] = Main.mkItm(Material.IRON_AXE, "§5M4A1", 1);
-		its[SCAR.slt] = Main.mkItm(Material.NETHERITE_HOE, "§5SCAR", 1);
-		its[NGV.slt] = Main.mkItm(Material.IRON_PICKAXE, "§5NEGEV", 1);
-		its[SG13.slt] = Main.mkItm(Material.WOODEN_HOE, "§5SG-13", 1);
-		its[31] = Main.mkItm(Material.BONE, "§fНож", 1);
-		its[USP.slt] = Main.mkItm(Material.STONE_AXE, "§dUSP", 1);
-		its[FRAG.slt] = Main.mkItm(Material.OAK_SAPLING, "§cОсколочная Граната", 1);
-		its[FIRE.slt] = Main.mkItm(Material.ACACIA_SAPLING, "§6Огненная Граната", 1);
-		its[FLASH.slt] = Main.mkItm(Material.BIRCH_SAPLING, "§8Свето-Шумовая Граната", 1);
-		its[TP7.slt] = Main.mkItm(Material.STONE_HOE, "§dTP-7", 1);
-		its[SMOKE.slt] = Main.mkItm(Material.DARK_OAK_SAPLING, "§7Дымовая Граната", 1);
-		its[DECOY.slt] = Main.mkItm(Material.JUNGLE_SAPLING, "§2Отвлекающая Граната", 1);
-		its[DGL.slt] = Main.mkItm(Material.STONE_PICKAXE, "§dDGL", 1);
+		its[AK47.slt] = Main.mkItm(IRON_HOE, "§5AK-47 " + AK47.icn, 1);
+		its[P90.slt] = Main.mkItm(GOLDEN_HOE, "§5P90 " + P90.icn, 1);
+		its[AWP.slt] = Main.mkItm(NETHERITE_AXE, "§5AWP " + AWP.icn, 1);
+		its[MP5.slt] = Main.mkItm(GOLDEN_AXE, "§5MP5 " + MP5.icn, 1);
+		its[NOVA.slt] = Main.mkItm(WOODEN_AXE, "§5NOVA " + NOVA.icn, 1);
+		its[M4.slt] = Main.mkItm(IRON_AXE, "§5M4A1 " + M4.icn, 1);
+		its[SCAR.slt] = Main.mkItm(NETHERITE_HOE, "§5SCAR " + SCAR.icn, 1);
+		its[NGV.slt] = Main.mkItm(IRON_PICKAXE, "§5NEGEV " + NGV.icn, 1);
+		its[SG13.slt] = Main.mkItm(WOODEN_HOE, "§5SG-13 " + SG13.icn, 1);
+		its[USP.slt] = Main.mkItm(STONE_AXE, "§dUSP " + USP.icn, 1);
+		its[FRAG.slt] = Main.mkItm(OAK_SAPLING, "§cОсколочная Граната " + FRAG.icn, 1);
+		its[FLAME.slt] = Main.mkItm(ACACIA_SAPLING, "§6Огненная Граната " + FLAME.icn, 1);
+		its[FLASH.slt] = Main.mkItm(BIRCH_SAPLING, "§8Свето-Шумовая Граната " + FLASH.icn, 1);
+		its[TP7.slt] = Main.mkItm(STONE_HOE, "§dTP-7 " + TP7.icn, 1);
+		its[SMOKE.slt] = Main.mkItm(DARK_OAK_SAPLING, "§7Дымовая Граната " + SMOKE.icn, 1);
+		its[DECOY.slt] = Main.mkItm(JUNGLE_SAPLING, "§2Отвлекающая Граната " + DECOY.icn, 1);
+		its[DGL.slt] = Main.mkItm(STONE_PICKAXE, "§dDGL " + DGL.icn, 1);
 		LBShop.setContents(its);
 	}
 	   
 	public static void fillTsInv() {
 		TShop = Bukkit.createInventory(null, 54, "§c§lМагазин Террористов");
 		final ItemStack[] its = new ItemStack[54];
-		its[AK47.slt] = Main.mkItm(Material.IRON_HOE, "§5AK-47", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.IRON_HOE)).prc + " §6⛃");
-		its[P90.slt] = Main.mkItm(Material.GOLDEN_HOE, "§5P90", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.GOLDEN_HOE)).prc + " §6⛃");
-		its[AWP.slt] = Main.mkItm(Material.NETHERITE_AXE, "§5AWP", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.NETHERITE_AXE)).prc + " §6⛃");
-		its[MP5.slt] = Main.mkItm(Material.GOLDEN_AXE, "§5MP5", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.GOLDEN_AXE)).prc + " §6⛃");
-		its[NOVA.slt] = Main.mkItm(Material.WOODEN_AXE, "§5NOVA", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.WOODEN_AXE)).prc + " §6⛃");
-		its[M4.slt] = Main.mkItm(Material.IRON_AXE, "§5M4A1", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.IRON_AXE)).prc + " §6⛃");
-		its[SCAR.slt] = Main.mkItm(Material.NETHERITE_HOE, "§5SCAR", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.NETHERITE_HOE)).prc + " §6⛃");
-		its[NGV.slt] = Main.mkItm(Material.IRON_PICKAXE, "§5NEGEV", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.IRON_PICKAXE)).prc + " §6⛃");
-		its[SG13.slt] = Main.mkItm(Material.WOODEN_HOE, "§5SG-13", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.WOODEN_HOE)).prc + " §6⛃");
-		its[28] = Main.mkItm(Material.SUGAR, "§9Растяжка", 1, "§7Цена: §d" + Main.twrPrc + " §6⛃");
-		its[USP.slt] = Main.mkItm(Material.STONE_AXE, "§dUSP", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.STONE_AXE)).prc + " §6⛃");
-		its[FRAG.slt] = Main.mkItm(Material.OAK_SAPLING, "§cОсколочная Граната", 1, "§7Цена: §d" + NadeType.getNdTp(new ItemStack(Material.OAK_SAPLING)).prc + " §6⛃");
-		its[FIRE.slt] = Main.mkItm(Material.ACACIA_SAPLING, "§6Огненная Граната", 1, "§7Цена: §d" + NadeType.getNdTp(new ItemStack(Material.ACACIA_SAPLING)).prc + " §6⛃");
-		its[FLASH.slt] = Main.mkItm(Material.BIRCH_SAPLING, "§8Свето-Шумовая Граната", 1, "§7Цена: §d" + NadeType.getNdTp(new ItemStack(Material.BIRCH_SAPLING)).prc + " §6⛃");
-		its[40] = new ItemStack(Material.LEATHER_HELMET);
-		final LeatherArmorMeta hm = (LeatherArmorMeta) its[40].getItemMeta();
-		hm.setColor(Color.RED);
-		hm.setDisplayName("§cШапка Террориста");
-		hm.setLore(Arrays.asList("§7Цена: §d" + Main.hlmtPrc + " §6⛃"));
-		its[40].setItemMeta(hm);
-		its[49] = new ItemStack(Material.LEATHER_CHESTPLATE);
+		its[AK47.slt] = Main.mkItm(IRON_HOE, "§5AK-47 " + AK47.icn, 1, "§7Цена: §d" + AK47.prc + " §6⛃");
+		its[P90.slt] = Main.mkItm(GOLDEN_HOE, "§5P90 " + P90.icn, 1, "§7Цена: §d" + P90.prc + " §6⛃");
+		its[AWP.slt] = Main.mkItm(NETHERITE_AXE, "§5AWP " + AWP.icn, 1, "§7Цена: §d" + AWP.prc + " §6⛃");
+		its[MP5.slt] = Main.mkItm(GOLDEN_AXE, "§5MP5 " + MP5.icn, 1, "§7Цена: §d" + MP5.prc + " §6⛃");
+		its[NOVA.slt] = Main.mkItm(WOODEN_AXE, "§5NOVA " + NOVA.icn, 1, "§7Цена: §d" + NOVA.prc + " §6⛃");
+		its[M4.slt] = Main.mkItm(IRON_AXE, "§5M4A1 " + M4.icn, 1, "§7Цена: §d" + M4.prc + " §6⛃");
+		its[SCAR.slt] = Main.mkItm(NETHERITE_HOE, "§5SCAR " + SCAR.icn, 1, "§7Цена: §d" + SCAR.prc + " §6⛃");
+		its[NGV.slt] = Main.mkItm(IRON_PICKAXE, "§5NEGEV " + NGV.icn, 1, "§7Цена: §d" + NGV.prc + " §6⛃");
+		its[SG13.slt] = Main.mkItm(WOODEN_HOE, "§5SG-13 " + SG13.icn, 1, "§7Цена: §d" + SG13.prc + " §6⛃");
+		its[28] = Main.mkItm(SUGAR, "§9Растяжка §f\u929b\u929c", 1, "§7Цена: §d" + Main.twrPrc + " §6⛃");
+		its[USP.slt] = Main.mkItm(STONE_AXE, "§dUSP " + USP.icn, 1, "§7Цена: §d" + USP.prc + " §6⛃");
+		its[FRAG.slt] = Main.mkItm(OAK_SAPLING, "§cОсколочная Граната " + FRAG.icn, 1, "§7Цена: §d" + FRAG.prc + " §6⛃");
+		its[FLAME.slt] = Main.mkItm(ACACIA_SAPLING, "§6Огненная Граната " + FLAME.icn, 1, "§7Цена: §d" + FLAME.prc + " §6⛃");
+		its[FLASH.slt] = Main.mkItm(BIRCH_SAPLING, "§8Свето-Шумовая Граната " + FLASH.icn, 1, "§7Цена: §d" + FLASH.prc + " §6⛃");
+		its[40] = Main.thlmt.clone();
+		its[49] = new ItemStack(LEATHER_CHESTPLATE);
 		final LeatherArmorMeta cm = (LeatherArmorMeta) its[49].getItemMeta();
 		cm.setColor(Color.RED);
-		cm.setDisplayName("§cКуртка Террориста");
+		cm.setDisplayName("§cКуртка Террориста §f\u9266");
 		cm.setLore(Arrays.asList("§7Цена: §d" + Main.chstPrc + " §6⛃"));
 		its[49].setItemMeta(cm);
-		its[TP7.slt] = Main.mkItm(Material.STONE_HOE, "§dTP-7", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.STONE_HOE)).prc + " §6⛃");
-		its[SMOKE.slt] = Main.mkItm(Material.DARK_OAK_SAPLING, "§7Дымовая Граната", 1, "§7Цена: §d" + NadeType.getNdTp(new ItemStack(Material.DARK_OAK_SAPLING)).prc + " §6⛃");
-		its[DECOY.slt] = Main.mkItm(Material.JUNGLE_SAPLING, "§2Отвлекающая Граната", 1, "§7Цена: §d" + NadeType.getNdTp(new ItemStack(Material.JUNGLE_SAPLING)).prc + " §6⛃");
-		its[DGL.slt] = Main.mkItm(Material.STONE_PICKAXE, "§dDGL", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.STONE_PICKAXE)).prc + " §6⛃");
+		its[TP7.slt] = Main.mkItm(STONE_HOE, "§dTP-7 " + TP7.icn, 1, "§7Цена: §d" + TP7.prc + " §6⛃");
+		its[SMOKE.slt] = Main.mkItm(DARK_OAK_SAPLING, "§7Дымовая Граната " + SMOKE.icn, 1, "§7Цена: §d" + SMOKE.prc + " §6⛃");
+		its[DECOY.slt] = Main.mkItm(JUNGLE_SAPLING, "§2Отвлекающая Граната " + DECOY.icn, 1, "§7Цена: §d" + DECOY.prc + " §6⛃");
+		its[DGL.slt] = Main.mkItm(STONE_PICKAXE, "§dDGL " + DGL.icn, 1, "§7Цена: §d" + DGL.prc + " §6⛃");
 		TShop.setContents(its);
 	}
 	   
 	public static void fillCTsInv() {
 		CTShop = Bukkit.createInventory(null, 54, "§9§lМагазин Спецназа");
 		final ItemStack[] its = new ItemStack[54];
-		its[AK47.slt] = Main.mkItm(Material.IRON_HOE, "§5AK-47", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.IRON_HOE)).prc + " §6⛃");
-		its[P90.slt] = Main.mkItm(Material.GOLDEN_HOE, "§5P90", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.GOLDEN_HOE)).prc + " §6⛃");
-		its[AWP.slt] = Main.mkItm(Material.NETHERITE_AXE, "§5AWP", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.NETHERITE_AXE)).prc + " §6⛃");
-		its[MP5.slt] = Main.mkItm(Material.GOLDEN_AXE, "§5MP5", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.GOLDEN_AXE)).prc + " §6⛃");
-		its[NOVA.slt] = Main.mkItm(Material.WOODEN_AXE, "§5NOVA", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.WOODEN_AXE)).prc + " §6⛃");
-		its[M4.slt] = Main.mkItm(Material.IRON_AXE, "§5M4A1", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.IRON_AXE)).prc + " §6⛃");
-		its[SCAR.slt] = Main.mkItm(Material.NETHERITE_HOE, "§5SCAR", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.NETHERITE_HOE)).prc + " §6⛃");
-		its[NGV.slt] = Main.mkItm(Material.IRON_PICKAXE, "§5NEGEV", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.IRON_PICKAXE)).prc + " §6⛃");
-		its[SG13.slt] = Main.mkItm(Material.WOODEN_HOE, "§5SG-13", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.WOODEN_HOE)).prc + " §6⛃");
-		its[28] = Main.mkItm(Material.SUGAR, "§9Растяжка", 1, "§7Цена: §d" + Main.twrPrc + " §6⛃");
-		its[33] = Main.mkItm(Material.SHEARS, "§3Набор Для Разминировки", 1, "§7Цена: §d" + Main.dfktPrc + " §6⛃");
-		its[USP.slt] = Main.mkItm(Material.STONE_AXE, "§dUSP", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.STONE_AXE)).prc + " §6⛃");
-		its[FRAG.slt] = Main.mkItm(Material.OAK_SAPLING, "§cОсколочная Граната", 1, "§7Цена: §d" + NadeType.getNdTp(new ItemStack(Material.OAK_SAPLING)).prc + " §6⛃");
-		its[FIRE.slt] = Main.mkItm(Material.ACACIA_SAPLING, "§6Огненная Граната", 1, "§7Цена: §d" + NadeType.getNdTp(new ItemStack(Material.ACACIA_SAPLING)).prc + " §6⛃");
-		its[FLASH.slt] = Main.mkItm(Material.BIRCH_SAPLING, "§8Свето-Шумовая Граната", 1, "§7Цена: §d" + NadeType.getNdTp(new ItemStack(Material.BIRCH_SAPLING)).prc + " §6⛃");
-		its[40] = new ItemStack(Material.LEATHER_HELMET);
-		final LeatherArmorMeta hm = (LeatherArmorMeta) its[40].getItemMeta();
-		hm.setColor(Color.TEAL);
-		hm.setDisplayName("§3Шлем Спецназа");
-		hm.setLore(Arrays.asList("§7Цена: §d" + Main.hlmtPrc + " §6⛃"));
-		its[40].setItemMeta(hm);
-		its[49] = new ItemStack(Material.LEATHER_CHESTPLATE);
+		its[AK47.slt] = Main.mkItm(IRON_HOE, "§5AK-47 " + AK47.icn, 1, "§7Цена: §d" + AK47.prc + " §6⛃");
+		its[P90.slt] = Main.mkItm(GOLDEN_HOE, "§5P90 " + P90.icn, 1, "§7Цена: §d" + P90.prc + " §6⛃");
+		its[AWP.slt] = Main.mkItm(NETHERITE_AXE, "§5AWP " + AWP.icn, 1, "§7Цена: §d" + AWP.prc + " §6⛃");
+		its[MP5.slt] = Main.mkItm(GOLDEN_AXE, "§5MP5 " + MP5.icn, 1, "§7Цена: §d" + MP5.prc + " §6⛃");
+		its[NOVA.slt] = Main.mkItm(WOODEN_AXE, "§5NOVA " + NOVA.icn, 1, "§7Цена: §d" + NOVA.prc + " §6⛃");
+		its[M4.slt] = Main.mkItm(IRON_AXE, "§5M4A1 " + M4.icn, 1, "§7Цена: §d" + M4.prc + " §6⛃");
+		its[SCAR.slt] = Main.mkItm(NETHERITE_HOE, "§5SCAR " + SCAR.icn, 1, "§7Цена: §d" + SCAR.prc + " §6⛃");
+		its[NGV.slt] = Main.mkItm(IRON_PICKAXE, "§5NEGEV " + NGV.icn, 1, "§7Цена: §d" + NGV.prc + " §6⛃");
+		its[SG13.slt] = Main.mkItm(WOODEN_HOE, "§5SG-13 " + SG13.icn, 1, "§7Цена: §d" + SG13.prc + " §6⛃");
+		its[28] = Main.mkItm(SUGAR, "§9Растяжка §f\u929b\u929c", 1, "§7Цена: §d" + Main.twrPrc + " §6⛃");
+		its[33] = Main.mkItm(SHEARS, "§3Набор Для Разминировки §f\u9268", 1, "§7Цена: §d" + Main.dfktPrc + " §6⛃");
+		its[USP.slt] = Main.mkItm(STONE_AXE, "§dUSP " + USP.icn, 1, "§7Цена: §d" + USP.prc + " §6⛃");
+		its[FRAG.slt] = Main.mkItm(OAK_SAPLING, "§cОсколочная Граната " + FRAG.icn, 1, "§7Цена: §d" + FRAG.prc + " §6⛃");
+		its[FLAME.slt] = Main.mkItm(ACACIA_SAPLING, "§6Огненная Граната " + FLAME.icn, 1, "§7Цена: §d" + FLAME.prc + " §6⛃");
+		its[FLASH.slt] = Main.mkItm(BIRCH_SAPLING, "§8Свето-Шумовая Граната " + FLASH.icn, 1, "§7Цена: §d" + FLASH.prc + " §6⛃");
+		its[40] = Main.cthlmt.clone();
+		its[49] = new ItemStack(LEATHER_CHESTPLATE);
 		final LeatherArmorMeta cm = (LeatherArmorMeta) its[49].getItemMeta();
 		cm.setColor(Color.TEAL);
-		cm.setDisplayName("§3Жилет Спецназа");
+		cm.setDisplayName("§3Жилет Спецназа §f\u9266");
 		cm.setLore(Arrays.asList("§7Цена: §d" + Main.chstPrc + " §6⛃"));
 		its[49].setItemMeta(cm);
-		its[TP7.slt] = Main.mkItm(Material.STONE_HOE, "§dTP-7", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.STONE_HOE)).prc + " §6⛃");
-		its[SMOKE.slt] = Main.mkItm(Material.DARK_OAK_SAPLING, "§7Дымовая Граната", 1, "§7Цена: §d" + NadeType.getNdTp(new ItemStack(Material.DARK_OAK_SAPLING)).prc + " §6⛃");
-		its[DECOY.slt] = Main.mkItm(Material.JUNGLE_SAPLING, "§2Отвлекающая Граната", 1, "§7Цена: §d" + NadeType.getNdTp(new ItemStack(Material.JUNGLE_SAPLING)).prc + " §6⛃");
-		its[DGL.slt] = Main.mkItm(Material.STONE_PICKAXE, "§dDGL", 1, "§7Цена: §d" + GunType.getGnTp(new ItemStack(Material.STONE_PICKAXE)).prc + " §6⛃");
+		its[TP7.slt] = Main.mkItm(STONE_HOE, "§dTP-7 " + TP7.icn, 1, "§7Цена: §d" + TP7.prc + " §6⛃");
+		its[SMOKE.slt] = Main.mkItm(DARK_OAK_SAPLING, "§7Дымовая Граната " + SMOKE.icn, 1, "§7Цена: §d" + SMOKE.prc + " §6⛃");
+		its[DECOY.slt] = Main.mkItm(JUNGLE_SAPLING, "§2Отвлекающая Граната " + DECOY.icn, 1, "§7Цена: §d" + DECOY.prc + " §6⛃");
+		its[DGL.slt] = Main.mkItm(STONE_PICKAXE, "§dDGL " + DGL.icn, 1, "§7Цена: §d" + DGL.prc + " §6⛃");
 		CTShop.setContents(its);
 	}
 }

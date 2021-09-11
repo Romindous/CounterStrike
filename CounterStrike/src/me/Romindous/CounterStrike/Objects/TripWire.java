@@ -63,18 +63,18 @@ public class TripWire {
 		}
 	}
 	
-	public void trgr(final Player p, final Location loc) {
+	public void trgr(final Location loc) {
 		loc.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, loc, 10, 0.4d, 0.4d, 0.4d);
 		loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_BREAK_BLOCK, 2f, 0.8f);
 		if (this.nt != null) {
 			final Material m; 
-			final World w = PacketUtils.getNMSWrld(p.getWorld());
+			final World w = PacketUtils.getNMSWrld(loc.getWorld());
 			final EntitySnowball sb = new EntitySnowball(EntityTypes.aG, w);
 			switch (this.nt) {
 				case FRAG:
 					m = Material.OAK_SAPLING;
 					break;
-				case FIRE:
+				case FLAME:
 					m = Material.ACACIA_SAPLING;
 					break;
 				case SMOKE:

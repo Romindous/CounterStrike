@@ -3,9 +3,10 @@ package me.Romindous.CounterStrike.Enums;
 import org.bukkit.inventory.ItemStack;
 
 public enum NadeType {
-	FRAG(true, true, (short)350, "§f鉬", (byte)36),
-	FIRE(false, true, (short)500, "§f鉫", (byte)37),
-	SMOKE(true, false, (short)200, "§f鉪", (byte)46),
+	
+	FRAG(true, true, (short)250, "§f鉬", (byte)36),
+	FLAME(false, true, (short)400, "§f鉫", (byte)37),
+	SMOKE(true, false, (short)150, "§f鉪", (byte)46),
 	FLASH(true, false, (short)100, "§f鉩", (byte)38),
 	DECOY(true, false, (short)50, "§f鉭", (byte)47);
 	
@@ -23,7 +24,7 @@ public enum NadeType {
 		this.slt = slt;
 	}
   
-	public static NadeType getNdTp(ItemStack it) {
+	public static NadeType getNdTp(final ItemStack it) {
 		if (it == null) {
 			return null;
 		}
@@ -31,7 +32,7 @@ public enum NadeType {
 			case OAK_SAPLING:
 				return FRAG;
 			case ACACIA_SAPLING:
-				return FIRE;
+				return FLAME;
 			case DARK_OAK_SAPLING:
 				return SMOKE;
 			case BIRCH_SAPLING:

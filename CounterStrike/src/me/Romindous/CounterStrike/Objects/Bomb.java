@@ -14,13 +14,9 @@ import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import com.mojang.datafixers.util.Pair;
-
 import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Game.Arena.Team;
 import me.Romindous.CounterStrike.Game.Defusal;
-import me.Romindous.CounterStrike.Listeners.DmgLis;
 import me.Romindous.CounterStrike.Utils.PacketUtils;
 import net.minecraft.core.BaseBlockPosition;
 import net.minecraft.network.chat.IChatBaseComponent;
@@ -92,19 +88,19 @@ public class Bomb extends BaseBlockPosition {
 			final Location loc = pl.getLocation();
 			final int dx = 50 - loc.getBlockX() + X > 0 ? 50 - loc.getBlockX() + X : 0;
 			final int dz = 50 - loc.getBlockZ() + Z > 0 ? 50 - loc.getBlockZ() + Z : 0;
-			final double d = (dx * dx + dz * dz) * 0.01d;
+			final double d = (dx * dx + dz * dz) * 0.002d;
 			if (pl.getHealth() - d <= 0) {
 				ar.addDth(sh);
 				final Team tm = ar.shtrs.get(sh);
 				ar.dropIts(sh.inv, loc, tm);
 				pl.setGameMode(GameMode.SPECTATOR);
+				for (final Player p : w.getPlayers()) {
+					p.sendMessage("§c\u926e\u9299 " + ar.getShtrNm(sh.nm));
+				}
 			} else {
 				pl.setHealth(pl.getHealth() - d);
 				pl.playEffect(EntityEffect.HURT_EXPLOSION);
 			}
-			DmgLis.prcDmg(sh.inv.getHolder(), new Pair<Shooter, Arena>(sh, ar), d, sh.inv.getHolder().getHealth() - d <= 0d ? 
-				"§c\u926e\u9299 " + ar.getShtrNm(sh.nm) 
-				: null, (byte) 2, (short) 0);
 		}
 		new BukkitRunnable() {
 			public void run() {
@@ -124,5 +120,9 @@ public class Bomb extends BaseBlockPosition {
 
 	public Block getBlock() {
 		return w.getBlockAt(getX(), getY(), getZ());
+	}
+
+	public Location getLoc() {
+		return new Location(w, getX(), getY(), getZ());
 	}
 }

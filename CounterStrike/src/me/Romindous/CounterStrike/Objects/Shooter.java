@@ -1,7 +1,7 @@
 package me.Romindous.CounterStrike.Objects;
 
 import java.util.HashSet;
-
+import java.util.LinkedList;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -15,6 +15,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
 import com.mojang.datafixers.util.Pair;
@@ -24,31 +25,42 @@ import me.Romindous.CounterStrike.Enums.GameState;
 import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Utils.PacketUtils;
+import net.minecraft.core.BaseBlockPosition;
+import net.minecraft.world.phys.Vec3D;
 
 public class Shooter {
 	
 	public final String nm;
+	public final LinkedList<Vec3D> pss;
 	public PlayerInventory inv;
+	public byte stm;
 	public byte rctm;
 	public byte cld;
-	public byte kls;
 	public byte dths;
+	public short kls;
 	public short cnt;
 	public short money;
-	public boolean is;
 	private final int shc;
 	
 	public Shooter(final Player pl) {
 		this.nm = pl.getName();
 		this.inv = pl.getInventory();
+		this.pss = new LinkedList<>();
 		this.rctm = 50;
 		this.cld = 0;
 		this.cnt = 0;
-		this.is = false;
+		this.stm = 0;
 		this.shc = nm.hashCode();
 		this.money = 0;
 		this.kls = 0;
 		this.dths = 0;
+		final Location loc = pl.getLocation();
+		final Vec3D vc = new Vec3D(loc.getX(), loc.getY(), loc.getZ());
+		this.pss.add(vc);
+		this.pss.add(vc);
+		this.pss.add(vc);
+		this.pss.add(vc);
+		this.pss.add(vc);
 	}
   
 	public static Pair<Shooter, Arena> getPlShtrArena(final String nm) {
@@ -69,14 +81,14 @@ public class Shooter {
 		return new Pair<Shooter, Arena>(sh, null);
 	}
 	
-	public void shoot(final HashSet<LivingEntity> ents, final GunType gt, final Main plug, final Player pl, final boolean dff) {
+	public void shoot(final GunType gt, final Main plug, final Player pl, final boolean dff, final short tr) {
 		final Location loc = pl.getEyeLocation();
 		if (dff) {
 			if (gt.brst == 0) {
-				loc.setPitch(loc.getPitch() - (this.cnt < this.rctm ? this.cnt : this.rctm) * gt.yrcl + ((float) pl.getVelocity().getY() + (pl.isInWater() ? 0.005f : 0.0784f)) * 40f);
-				loc.setYaw((Main.srnd.nextFloat() - 0.5f) * gt.xsprd * (this.cnt < this.rctm ? this.cnt : this.rctm) + loc.getYaw());
+				loc.setPitch(loc.getPitch() - tr * gt.yrcl + ((float) pl.getVelocity().getY() + (pl.isInWater() ? 0.005f : 0.0784f)) * 40f);
+				loc.setYaw((Main.srnd.nextFloat() - 0.5f) * gt.xsprd * tr + loc.getYaw());
 			} else {
-				loc.setPitch((Main.srnd.nextFloat() - 0.5f) * gt.xsprd * this.rctm + loc.getPitch() - (this.cnt < this.rctm ? this.cnt : this.rctm) * 0.1F + ((float) pl.getVelocity().getY() + (pl.isInWater() ? 0.005f : 0.0784f)) * 40f);
+				loc.setPitch((Main.srnd.nextFloat() - 0.5f) * gt.xsprd * this.rctm + loc.getPitch() - tr * 0.1F + ((float) pl.getVelocity().getY() + (pl.isInWater() ? 0.005f : 0.0784f)) * 40f);
 				loc.setYaw((Main.srnd.nextFloat() - 0.5f) * gt.xsprd * this.rctm + loc.getYaw());
 			} 
 		}
@@ -84,12 +96,25 @@ public class Shooter {
 		final double lkz = -Math.cos(Math.toRadians((180f - loc.getYaw())));
 		
 		LivingEntity srch = null;
+		Location prp = null;
 		boolean h = false;
 		
-		for (final LivingEntity e : ents) {
+		for (final LivingEntity e : Main.getWLnts(loc.getWorld().getName())) {
+			final BoundingBox ebx;
+			final double dx;
+			final double dz;
 			switch (e.getType()) {
 			case PLAYER:
-				if (((HumanEntity) e).getGameMode() != GameMode.SURVIVAL) {
+				if (((HumanEntity) e).getGameMode() == GameMode.SURVIVAL && !e.getName().equals(pl.getName())) {
+					final Vec3D lc = Shooter.getPlShtrArena(e.getName()).getFirst().pss.peek();
+					if (((Player) e).isSneaking()) {
+						ebx = new BoundingBox(lc.b, lc.c, lc.d, lc.b, lc.c + 1.5d, lc.d);
+					} else {
+						ebx = new BoundingBox(lc.b, lc.c, lc.d, lc.b, lc.c + 1.9d, lc.d);
+					}
+					dx = lc.b - loc.getX();
+					dz = lc.d - loc.getZ();
+				} else {
 					continue;
 				}
 				break;
@@ -97,16 +122,18 @@ public class Shooter {
 			case TURTLE:
 				continue;
 			default:
+				ebx = e.getBoundingBox();
+				dx = ebx.getCenterX() - loc.getX();
+				dz = ebx.getCenterZ() - loc.getZ();
 				break;
 			}
-			final double dx = e.getLocation().getX() - loc.getX();
-			final double dz = e.getLocation().getZ() - loc.getZ();
 			final double ln = Math.sqrt(dx * dx + dz * dz);
 			if (Math.sqrt(Math.pow(lkx - dx / ln, 2) + Math.pow(lkz - dz / ln, 2d)) * ln < 0.4d) {
 				final double pty = loc.getY() + Math.tan(Math.toRadians(-loc.getPitch())) * ln;
-				if (pty < e.getBoundingBox().getMaxY() && pty > e.getBoundingBox().getMinY()) {
+				if (pty < ebx.getMaxY() && pty > ebx.getMinY()) {
 					srch = e;
-					h = pty - e.getBoundingBox().getMinY() > e.getBoundingBox().getHeight() * 0.75d;
+					prp = new Location(loc.getWorld(), ebx.getCenterX(), ebx.getCenterY(), ebx.getCenterZ());
+					h = pty - ebx.getMinY() > ebx.getHeight() * 0.75d;
 					break;
 				} 
 			} 
@@ -116,11 +143,11 @@ public class Shooter {
 		final boolean ex = srch != null;
 		final boolean hst = h;
 		final LivingEntity tgt = srch;
-		final Location el = ex ? tgt.getLocation() : null;
+		final Location el = ex ? prp : null;
 		/*new BukkitRunnable() {
 			public void run() {*/
 				int i = 800;
-				final HashSet<Block> wls = new HashSet<>();
+				final HashSet<BaseBlockPosition> wls = new HashSet<>();
 				final World w = pl.getWorld();
 				double x = 20d * vec.getX() + loc.getX();
 				double y = 20d * vec.getY() + loc.getY();
@@ -130,7 +157,7 @@ public class Shooter {
 					x += vec.getX();
 					y += vec.getY();
 					z += vec.getZ();
-					if (i % 20 == 0) {
+					if ((i & 31) == 0) {
 						pl.spawnParticle(Particle.ASH, x, y, z, 1);
 					}
 
@@ -159,7 +186,7 @@ public class Shooter {
 								}
 							}.runTask(plug);
 						}
-						wls.add(b);
+						wls.add(new BaseBlockPosition(b.getX(), b.getY(), b.getZ()));
 						break;
 					case ACACIA_SLAB:
 					case BIRCH_SLAB:
@@ -202,6 +229,22 @@ public class Shooter {
 					case DARK_OAK_LOG:
 					case OAK_LOG:
 					case JUNGLE_LOG:
+					case ACACIA_SIGN:
+					case ACACIA_WALL_SIGN:
+					case BIRCH_SIGN:
+					case BIRCH_WALL_SIGN:
+					case CRIMSON_SIGN:
+					case CRIMSON_WALL_SIGN:
+					case SPRUCE_SIGN:
+					case SPRUCE_WALL_SIGN:
+					case WARPED_SIGN:
+					case WARPED_WALL_SIGN:
+					case DARK_OAK_SIGN:
+					case DARK_OAK_WALL_SIGN:
+					case OAK_SIGN:
+					case OAK_WALL_SIGN:
+					case JUNGLE_SIGN:
+					case JUNGLE_WALL_SIGN:
 					case STRIPPED_ACACIA_WOOD:
 					case STRIPPED_BIRCH_WOOD:
 					case STRIPPED_CRIMSON_HYPHAE:
@@ -236,11 +279,21 @@ public class Shooter {
 					case JUNGLE_FENCE_GATE:
 					case BARREL:
 						if (b.getBoundingBox().contains(x, y, z)) {
-							wls.add(b);
+							wls.add(new BaseBlockPosition(b.getX(), b.getY(), b.getZ()));
 						}
 					case AIR:
 					case CAVE_AIR:
 					case GRASS:
+					case FERN:
+					case RAIL:
+					case CRIMSON_ROOTS:
+					case WARPED_ROOTS:
+					case NETHER_SPROUTS:
+					case RED_MUSHROOM:
+					case BROWN_MUSHROOM:
+					case CRIMSON_FUNGUS:
+					case WARPED_FUNGUS:
+					case DEAD_BUSH:
 					case WATER:
 					case TALL_GRASS:
 					case IRON_BARS:
@@ -274,7 +327,7 @@ public class Shooter {
 										dmg *= tgt.getEquipment().getChestplate() == null ? 1f : 0.6f;
 										nm = "§6" + String.valueOf((int)(dmg * 5.0f));
 									}
-									pl.playSound(pl.getLocation(), Sound.BLOCK_END_PORTAL_FRAME_FILL, 1f, 2f);
+									pl.playSound(pl.getLocation(), Sound.BLOCK_END_PORTAL_FRAME_FILL, 2f, 2f);
 									Bukkit.getPluginManager().callEvent(new EntityShootAtEntityEvent(pl, tgt, dmg, hst, wls.size() > 0, dff && gt.snp));
 									Main.dmgArm(pl, tgt.getEyeLocation(), nm);
 								}

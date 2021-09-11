@@ -1,6 +1,7 @@
-package me.Romindous.CounterStrike.Objects;
+		package me.Romindous.CounterStrike.Objects;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -11,7 +12,9 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
+import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Snowball;
 import org.bukkit.entity.ThrowableProjectile;
@@ -23,6 +26,7 @@ import org.bukkit.util.Vector;
 import com.mojang.datafixers.util.Pair;
 
 import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Enums.NadeType;
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Listeners.DmgLis;
@@ -49,7 +53,7 @@ public class Nade {
 				w.spawnParticle(Particle.EXPLOSION_HUGE, loc, 1, 0d, 0d, 0d);
 				w.playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 2f, 1.5f);
 				for (final Entity e : prj.getNearbyEntities(7d, 7d, 7d)) {
-					if (e instanceof LivingEntity && e.getType() != EntityType.ARMOR_STAND) {
+					if (e instanceof Mob || (e instanceof Player && ((Player) e).getGameMode() == GameMode.SURVIVAL)) {
 						final LivingEntity le = (LivingEntity) e;
 						final double d = 20d - e.getLocation().distance(loc) * 2d * (le.getEquipment().getChestplate() == null ? 1d : 0.4d);
 						final Pair<Shooter, Arena> pr = Shooter.getPlShtrArena(dmgr.getName());
@@ -63,7 +67,7 @@ public class Nade {
 				}
 				break;
 				
-			case FIRE:
+			case FLAME:
 				X = loc.getBlockX();
 				Y = loc.getBlockY();
 				Z = loc.getBlockZ();
@@ -115,26 +119,34 @@ public class Nade {
 				fm.addEffect(FireworkEffect.builder().withColor(Color.WHITE).with(FireworkEffect.Type.BURST).build());
 				fw.setFireworkMeta(fm);
 				fw.detonate();
-				for (final Player p : w.getPlayers()) {
-					Location ploc = p.getEyeLocation();
-					double px = -Math.sin(Math.toRadians(ploc.getYaw()));
-					double pz = Math.cos(Math.toRadians(ploc.getYaw()));
+				for (final LivingEntity le : w.getLivingEntities()) {
+					final Location eloc = le.getEyeLocation();
+					double px = -Math.sin(Math.toRadians(eloc.getYaw()));
+					double pz = Math.cos(Math.toRadians(eloc.getYaw()));
 					double pl = Math.sqrt(px * px + pz * pz);
-					double dx = loc.getX() - ploc.getX();
-					double dz = loc.getZ() - ploc.getZ();
+					double dx = loc.getX() - eloc.getX();
+					double dz = loc.getZ() - eloc.getZ();
 					double dl = Math.sqrt(dx * dx + dz * dz);
-					if (Math.abs((px / pl - dx / dl) * (px / pl - dx / dl) + (pz / pl - dz / dl) * (pz / pl - dz / dl)) < 1 && dl < 20) {
-						if (flshRT(loc, ploc)) {
-							if (dmgr != null) {
-								dmgr.playSound(ploc, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 2f, 1f);
+					if (dl < 20) {
+						if (le instanceof Mob) {
+							((Mob) le).setTarget(null);
+							le.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 200, 1, true, false));
+							le.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 200, 1, true, false));
+						} else if (le.getType() == EntityType.PLAYER && ((HumanEntity) le).getGameMode() == GameMode.SURVIVAL && Math.abs((px / pl - dx / dl) * (px / pl - dx / dl) + (pz / pl - dz / dl) * (pz / pl - dz / dl)) < 1) {
+							if (flshRT(loc, eloc)) {
+								if (dmgr != null) {
+									dmgr.playSound(eloc, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 2f, 1f);
+								}
+								le.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 50, 1, true, false, false));
 							}
-							p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 50, 1, true, false));
 						}
 					}
 				}
 				break;
 			case DECOY:
-				loc.setYaw(40.0F);
+				loc.setYaw(160.0F);
+				final GunType gt = GunType.getGnTp(dmgr.getInventory().getItem(0));
+				loc.setPitch(gt == null ? 10 : gt.ordinal());
 				Main.dcs.add(loc);
 				break;
 		}

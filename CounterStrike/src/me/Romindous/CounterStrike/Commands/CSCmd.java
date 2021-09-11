@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
@@ -13,12 +14,14 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+
+import com.mojang.datafixers.util.Pair;
+
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Game.Arena;
-import me.Romindous.CounterStrike.Game.Arena.Team;
-import me.Romindous.CounterStrike.Game.Defusal;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import net.minecraft.core.BaseBlockPosition;
+import ru.komiss77.ApiOstrov;
 
 public class CSCmd implements CommandExecutor, TabCompleter {
 	
@@ -30,10 +33,10 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 			if (p.hasPermission("ostrov.builder")) {
 				if (args.length == 1) {
 					sugg.add("join");
-					sugg.add("team");
 					sugg.add("leave");
 					sugg.add("help");
 					sugg.add("create");
+					sugg.add("type");
 					sugg.add("addTspawn");
 					sugg.add("addCTspawn");
 					sugg.add("setAsite");
@@ -42,29 +45,27 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 					sugg.add("delete");
 					sugg.add("setlobby");
 					sugg.add("reload");
-				} else if (args.length == 2 && (args[0].equalsIgnoreCase("join"))) {
-					if (args[0].equalsIgnoreCase("join") || args[0].equalsIgnoreCase("delete")) {
-						sugg.addAll(Main.nnactvarns);
-					} else if (args[0].equalsIgnoreCase("team")) {
-						sugg.add("T");
-						sugg.add("CT");
-					}
+				} else if (args.length == 2 && (args[0].equalsIgnoreCase("join") || args[0].equalsIgnoreCase("delete"))) {
+					sugg.addAll(Main.nnactvarns);
 				} else if (args.length == 2 && (args[0].equalsIgnoreCase("setBsite") 
 						|| args[0].equalsIgnoreCase("setAsite") 
 						|| args[0].equalsIgnoreCase("addCTspawn") 
 						|| args[0].equalsIgnoreCase("addTspawn") 
-						|| args[0].equalsIgnoreCase("delete") 
-						|| args[0].equalsIgnoreCase("finish"))) {
+						|| args[0].equalsIgnoreCase("finish") 
+						|| args[0].equalsIgnoreCase("type"))) {
 					for (final String s : Main.ars.getConfigurationSection("arenas").getKeys(false)) {
 						if (!Main.ars.contains("arenas." + s + ".fin")) {
 							sugg.add(s);
 						}
 					}
-				}
+				} else if (args.length == 3 && (args[0].equalsIgnoreCase("type"))) {
+					sugg.add("defusal");
+					sugg.add("gungame");
+					sugg.add("invasion");
+				} 
 			} else {
 				if (args.length == 1) {
 					sugg.add("join");
-					sugg.add("team");
 					sugg.add("leave");
 					sugg.add("help");
 				} else if (args.length == 2) {
@@ -72,9 +73,6 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 						for (final String s : Main.nnactvarns) {
 							sugg.add(s);
 						}
-					} else if (args[0].equalsIgnoreCase("team")) {
-						sugg.add("T");
-						sugg.add("CT");
 					}
 				}
 			}
@@ -120,34 +118,43 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 						return true;
 					}
 				} else if (args.length == 3 && args[0].equalsIgnoreCase("type") && Main.ars.contains("arenas." + args[1]) && !Main.ars.contains("arenas." + args[1] + ".fin")) {
-					if (args[2].equalsIgnoreCase("defusal")) {
-						Main.ars.set("arenas." + args[1] + ".type", "defusal");
-					} else {
-						p.sendMessage(Main.prf() + "§cПосле названия надо вписать тип карты (defusal)!");
+					
+					switch (args[2]) {
+					case "defusal":
+					case "gungame":
+					case "invasion":
+						Main.ars.set("arenas." + args[1] + ".type", args[2]);
+						p.sendMessage(Main.prf() + "Режим игры изменен на §d" + args[2]);
+						
+						try {
+							Main.ars.save(new File(Main.folder + File.separator + "arenas.yml"));
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+						
+						return true;
+					default:
+						p.sendMessage(Main.prf() + "§cПосле названия надо вписать тип карты (defusal | gungame | invasion)!");
+						return false;
 					}
 				} else if (args.length == 2) {
 					//добавление спавнов комманд
 					if (args[0].equalsIgnoreCase("addTspawn") && Main.ars.contains("arenas." + args[1]) && !Main.ars.contains("arenas." + args[1] + ".fin")) {
 						if (Main.ars.contains("arenas." + args[1] + ".tspawns")) {
 							final ConfigurationSection cs = Main.ars.getConfigurationSection("arenas." + args[1] + ".tspawns");
-							if (cs.getString("x").split(":").length <= Main.ars.getInt("arenas." + args[1] + ".max") / 2) {
-								cs.set("x", cs.getString("x") + ':' + p.getLocation().getBlockX());
-								cs.set("y", cs.getString("y") + ':' + p.getLocation().getBlockY());
-								cs.set("z", cs.getString("z") + ':' + p.getLocation().getBlockZ());
-								
-								p.sendMessage(Main.prf() + "Новый спавн для §4T§7 на коорд. (§5" + p.getLocation().getBlockX() + "§7, §5" + p.getLocation().getBlockY() + "§7, §5" + p.getLocation().getBlockZ() + "§7)!");
-								
-								try {
-									Main.ars.save(new File(Main.folder + File.separator + "arenas.yml"));
-								} catch (IOException e) {
-									e.printStackTrace();
-								}
-								
-								return true;
-							} else {
-								p.sendMessage(Main.prf() + "§cВы уже создали достаточно спавнов для этой комманды!");
-								return true;
+							cs.set("x", cs.getString("x") + ':' + p.getLocation().getBlockX());
+							cs.set("y", cs.getString("y") + ':' + p.getLocation().getBlockY());
+							cs.set("z", cs.getString("z") + ':' + p.getLocation().getBlockZ());
+							
+							p.sendMessage(Main.prf() + "Новый спавн для §4T§7 на коорд. (§5" + p.getLocation().getBlockX() + "§7, §5" + p.getLocation().getBlockY() + "§7, §5" + p.getLocation().getBlockZ() + "§7)!");
+							
+							try {
+								Main.ars.save(new File(Main.folder + File.separator + "arenas.yml"));
+							} catch (IOException e) {
+								e.printStackTrace();
 							}
+							
+							return true;
 						} else {
 							Main.ars.set("arenas." + args[1] + ".tspawns.x", p.getLocation().getBlockX());
 							Main.ars.set("arenas." + args[1] + ".tspawns.y", p.getLocation().getBlockY());
@@ -167,24 +174,19 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 					} else if (args[0].equalsIgnoreCase("addCTspawn") && Main.ars.contains("arenas." + args[1]) && !Main.ars.contains("arenas." + args[1] + ".fin")) {
 						if (Main.ars.contains("arenas." + args[1] + ".ctspawns")) {
 							final ConfigurationSection cs = Main.ars.getConfigurationSection("arenas." + args[1] + ".ctspawns");
-							if (cs.getString("x").split(":").length <= Main.ars.getInt("arenas." + args[1] + ".max") / 2) {
-								cs.set("x", cs.getString("x") + ':' + p.getLocation().getBlockX());
-								cs.set("y", cs.getString("y") + ':' + p.getLocation().getBlockY());
-								cs.set("z", cs.getString("z") + ':' + p.getLocation().getBlockZ());
-								
-								p.sendMessage(Main.prf() + "Новый спавн для §3СT§7 на коорд. (§5" + p.getLocation().getBlockX() + "§7, §5" + p.getLocation().getBlockY() + "§7, §5" + p.getLocation().getBlockZ() + "§7)!");
-								
-								try {
-									Main.ars.save(new File(Main.folder + File.separator + "arenas.yml"));
-								} catch (IOException e) {
-									e.printStackTrace();
-								}
-								
-								return true;
-							} else {
-								p.sendMessage(Main.prf() + "§cВы уже создали достаточно спавнов для этой комманды!");
-								return true;
+							cs.set("x", cs.getString("x") + ':' + p.getLocation().getBlockX());
+							cs.set("y", cs.getString("y") + ':' + p.getLocation().getBlockY());
+							cs.set("z", cs.getString("z") + ':' + p.getLocation().getBlockZ());
+							
+							p.sendMessage(Main.prf() + "Новый спавн для §3СT§7 на коорд. (§5" + p.getLocation().getBlockX() + "§7, §5" + p.getLocation().getBlockY() + "§7, §5" + p.getLocation().getBlockZ() + "§7)!");
+							
+							try {
+								Main.ars.save(new File(Main.folder + File.separator + "arenas.yml"));
+							} catch (IOException e) {
+								e.printStackTrace();
 							}
+							
+							return true;
 						} else {
 							Main.ars.set("arenas." + args[1] + ".ctspawns.x", p.getLocation().getBlockX());
 							Main.ars.set("arenas." + args[1] + ".ctspawns.y", p.getLocation().getBlockY());
@@ -201,44 +203,34 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 							return true;
 						}
 					} else if (args[0].equalsIgnoreCase("setAsite") && Main.ars.contains("arenas." + args[1]) && !Main.ars.contains("arenas." + args[1] + ".fin")) {
-						if (Main.ars.getString("arenas." + args[1] + ".type").equals("defusal")) {
-							Main.ars.set("arenas." + args[1] + ".asite.x", p.getLocation().getBlockX());
-							Main.ars.set("arenas." + args[1] + ".asite.y", p.getLocation().getBlockY());
-							Main.ars.set("arenas." + args[1] + ".asite.z", p.getLocation().getBlockZ());
-							
-							p.sendMessage(Main.prf() + "Точка §5A §7поставлена на координатах (§5" + p.getLocation().getBlockX() + "§7, §5" + p.getLocation().getBlockY() + "§7, §5" + p.getLocation().getBlockZ() + "§7)!");
-							
-							try {
-								Main.ars.save(new File(Main.folder + File.separator + "arenas.yml"));
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-							
-							return true;
-						} else {
-							p.sendMessage(Main.prf() + "§cТип игры не стоит на defusal, точки ставить нельзя!");
-							return false;
+						Main.ars.set("arenas." + args[1] + ".asite.x", p.getLocation().getBlockX());
+						Main.ars.set("arenas." + args[1] + ".asite.y", p.getLocation().getBlockY());
+						Main.ars.set("arenas." + args[1] + ".asite.z", p.getLocation().getBlockZ());
+						
+						p.sendMessage(Main.prf() + "Точка §5A §7поставлена на координатах (§5" + p.getLocation().getBlockX() + "§7, §5" + p.getLocation().getBlockY() + "§7, §5" + p.getLocation().getBlockZ() + "§7)!");
+						
+						try {
+							Main.ars.save(new File(Main.folder + File.separator + "arenas.yml"));
+						} catch (IOException e) {
+							e.printStackTrace();
 						}
+						
+						return true;
 						//окончание разработки карты	
 					} else if (args[0].equalsIgnoreCase("setBsite") && Main.ars.contains("arenas." + args[1]) && !Main.ars.contains("arenas." + args[1] + ".fin")) {
-						if (Main.ars.getString("arenas." + args[1] + ".type").equals("defusal")) {
-							Main.ars.set("arenas." + args[1] + ".bsite.x", p.getLocation().getBlockX());
-							Main.ars.set("arenas." + args[1] + ".bsite.y", p.getLocation().getBlockY());
-							Main.ars.set("arenas." + args[1] + ".bsite.z", p.getLocation().getBlockZ());
-							
-							p.sendMessage(Main.prf() + "Точка §5B §7поставлена на координатах (§5" + p.getLocation().getBlockX() + "§7, §5" + p.getLocation().getBlockY() + "§7, §5" + p.getLocation().getBlockZ() + "§7)!");
-							
-							try {
-								Main.ars.save(new File(Main.folder + File.separator + "arenas.yml"));
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-							
-							return true;
-						} else {
-							p.sendMessage(Main.prf() + "§cТип игры не стоит на defusal, точки ставить нельзя!");
-							return false;
+						Main.ars.set("arenas." + args[1] + ".bsite.x", p.getLocation().getBlockX());
+						Main.ars.set("arenas." + args[1] + ".bsite.y", p.getLocation().getBlockY());
+						Main.ars.set("arenas." + args[1] + ".bsite.z", p.getLocation().getBlockZ());
+						
+						p.sendMessage(Main.prf() + "Точка §5B §7поставлена на координатах (§5" + p.getLocation().getBlockX() + "§7, §5" + p.getLocation().getBlockY() + "§7, §5" + p.getLocation().getBlockZ() + "§7)!");
+						
+						try {
+							Main.ars.save(new File(Main.folder + File.separator + "arenas.yml"));
+						} catch (IOException e) {
+							e.printStackTrace();
 						}
+						
+						return true;
 						//окончание разработки карты	
 					} else if (args[0].equalsIgnoreCase("finish") && Main.ars.contains("arenas." + args[1]) && !Main.ars.contains("arenas." + args[1] + ".fin")) {
 						final ConfigurationSection cs = Main.ars.getConfigurationSection("arenas." + args[1]);
@@ -269,7 +261,7 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 							e.printStackTrace();
 						}
 						return true;
-					} else if (!args[0].equalsIgnoreCase("team") && !args[0].equalsIgnoreCase("join")){
+					} else if (!args[0].equalsIgnoreCase("join")){
 						p.sendMessage(Main.prf() + "§cНеправельный синтакс комманды, все комманды - §5/cs help");
 						return true;
 					}
@@ -310,74 +302,80 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 				//добавление на карту
 				if (args.length == 2) {
 					if (args[0].equalsIgnoreCase("join")) {
-						if (Shooter.getPlShtrArena(p.getName()).getSecond() == null) {
+						final Pair<Shooter, Arena> pr = Shooter.getPlShtrArena(p.getName());
+						if (pr.getSecond() == null) {
 							for (final Arena ar : Main.actvarns) {
 								if (ar.name.equalsIgnoreCase(args[1])) {
-									if (ar instanceof Defusal) {
-										ar.addPl(Shooter.getPlShtrArena(p.getName()).getFirst());
-										return true;
+									if (ApiOstrov.hasParty(p) && ApiOstrov.isPartyLeader(p)) {
+										for (final String s : ApiOstrov.getPartyPlayers(p)) {
+											final Player pl = Bukkit.getPlayer(s);
+											if (pl != null && !pl.getName().equals(p.getName())) {
+												pl.sendMessage(Main.prf() + "Лидер вашей компании запшел на карту §d" + ar.name + "§7!");
+												pl.performCommand("cs join " + ar.name);
+											}
+										}
 									}
+									ar.addPl(pr.getFirst());
+									return true;
 								}
 							}
 							if (Main.nnactvarns.contains(args[1])) {
 								final Arena ar = Main.plug.crtArena(args[1]);
-								if (ar instanceof Defusal) {
-									ar.addPl(Shooter.getPlShtrArena(p.getName()).getFirst());
-									return true;
+								if (ApiOstrov.hasParty(p) && ApiOstrov.isPartyLeader(p)) {
+									for (final String s : ApiOstrov.getPartyPlayers(p)) {
+										final Player pl = Bukkit.getPlayer(s);
+										if (pl != null && !pl.getName().equals(p.getName())) {
+											pl.sendMessage(Main.prf() + "Лидер вашей компании запшел на карту §d" + ar.name + "§7!");
+											pl.performCommand("cs join " + ar.name);
+										}
+									}
 								}
+								ar.addPl(pr.getFirst());
 								return true;
 							} else {
 								p.sendMessage(Main.prf() + "§cТакой карты не существует!");
-								return true;
+								return false;
 							}
 						} else {
 							p.sendMessage(Main.prf() + "§cВы уже на карте, используйте §d/cs leave§c для выхода!");
-							return true;
-						}
-					} else if (args[0].equalsIgnoreCase("team")) {
-						final Arena ar = Shooter.getPlShtrArena(p.getName()).getSecond();
-						if (ar == null) {
-							p.sendMessage(Main.prf() + "§cВы не находитесь в игре!");
-							return true;
-						} else {
-							switch (ar.gst) {
-							case BEGINING:
-							case WAITING:
-								if (ar instanceof Defusal) {
-									if (args[1].equals("T")) {
-										((Defusal) ar).chngTm(Shooter.getPlShtrArena(p.getName()).getFirst(), Team.Ts);
-									} else if (args[1].equals("CT")) {
-										((Defusal) ar).chngTm(Shooter.getPlShtrArena(p.getName()).getFirst(), Team.CTs);
-									} else {
-										p.sendMessage(Main.prf() + "§cТакой комманды не существует!");
-									}
-								}
-								return true;
-							case BUYTIME:
-							case ENDRND:
-							case FINISH:
-							case ROUND:
-								p.sendMessage(Main.prf() + "§cИгра уже началась!");
-								return false;
-							}
+							return false;
 						}
 					}
 				} else if (args.length == 1) {
 					if (args[0].equalsIgnoreCase("join")) {
-						if (Shooter.getPlShtrArena(p.getName()).getSecond() == null) {
+						final Pair<Shooter, Arena> pr = Shooter.getPlShtrArena(p.getName());
+						if (pr.getSecond() == null) {
 							final Arena ar = biggestArena();
-							if (ar != null) {
-								biggestArena().addPl(Shooter.getPlShtrArena(p.getName()).getFirst());
-								return true;
-							} else {
+							if (ar == null) {
 								if (Main.nnactvarns.size() > 0) {
 									final Arena a = Main.plug.crtArena(Main.nnactvarns.iterator().next());
-									a.addPl(Shooter.getPlShtrArena(p.getName()).getFirst());
+									if (ApiOstrov.hasParty(p) && ApiOstrov.isPartyLeader(p)) {
+										for (final String s : ApiOstrov.getPartyPlayers(p)) {
+											final Player pl = Bukkit.getPlayer(s);
+											if (pl != null && !pl.getName().equals(p.getName())) {
+												pl.sendMessage(Main.prf() + "Лидер вашей компании запшел на карту §d" + a.name + "§7!");
+												pl.performCommand("cs join " + a.name);
+											}
+										}
+									}
+									a.addPl(pr.getFirst());
 									return true;
 								} else {
 									p.sendMessage(Main.prf() + ChatColor.RED + "Ни одной карты еще не создано!");
 									return true;
 								}
+							} else {
+								if (ApiOstrov.hasParty(p) && ApiOstrov.isPartyLeader(p)) {
+									for (final String s : ApiOstrov.getPartyPlayers(p)) {
+										final Player pl = Bukkit.getPlayer(s);
+										if (pl != null && !pl.getName().equals(p.getName())) {
+											pl.sendMessage(Main.prf() + "Лидер вашей компании запшел на карту §d" + ar.name + "§7!");
+											pl.performCommand("cs join " + ar.name);
+										}
+									}
+								}
+								ar.addPl(pr.getFirst());
+								return true;
 							}
 						} else {
 							p.sendMessage(Main.prf() + "§cВы уже на карте, используйте §d/cs leave§c для выхода!");
@@ -399,7 +397,6 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 							p.sendMessage("§5-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n"
 							+ "§dПомощь по коммандам:\n"
 							+ "§d/cs join (название) §7- присоединится к игре\n"
-							+ "§d/cs team (T | CT) §7- выбрать комманду\n"
 							+ "§d/cs leave §7- выход из игры\n"
 							+ "§d/cs help §7- этот текст\n"
 							+ "§d/cs create (название) [мин.] [макс.] §7- создание карты\n"
@@ -417,7 +414,6 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 						p.sendMessage("§5-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n"
 						+ "§dПомощь по коммандам:\n"
 						+ "§d/cs join (название) §7- присоединится к игре\n"
-						+ "§d/cs team (T | CT) §7- выбрать комманду\n"
 						+ "§d/cs leave §7- выход из игры\n"
 						+ "§d/cs help §7- этот текст\n"
 						+ "§5-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
