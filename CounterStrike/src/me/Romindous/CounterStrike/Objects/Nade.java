@@ -52,10 +52,10 @@ public class Nade {
 			case FRAG:
 				w.spawnParticle(Particle.EXPLOSION_HUGE, loc, 1, 0d, 0d, 0d);
 				w.playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 2f, 1.5f);
-				for (final Entity e : prj.getNearbyEntities(7d, 7d, 7d)) {
+				for (final Entity e : prj.getNearbyEntities(5d, 5d, 5d)) {
 					if (e instanceof Mob || (e instanceof Player && ((Player) e).getGameMode() == GameMode.SURVIVAL)) {
 						final LivingEntity le = (LivingEntity) e;
-						final double d = 20d - e.getLocation().distance(loc) * 2d * (le.getEquipment().getChestplate() == null ? 1d : 0.4d);
+						final double d = 20d - e.getLocation().distanceSquared(loc) * 0.25d * (le.getEquipment().getChestplate() == null ? 1d : 0.4d);
 						final Pair<Shooter, Arena> pr = Shooter.getPlShtrArena(dmgr.getName());
 						if (pr.getSecond() != null) {
 							DmgLis.prcDmg(le, pr, d, le.getHealth() - d <= 0d ? 
@@ -145,7 +145,7 @@ public class Nade {
 				break;
 			case DECOY:
 				loc.setYaw(160.0F);
-				final GunType gt = GunType.getGnTp(dmgr.getInventory().getItem(0));
+				final GunType gt = dmgr == null ? GunType.USP : GunType.getGnTp(dmgr.getInventory().getItem(0));
 				loc.setPitch(gt == null ? 10 : gt.ordinal());
 				Main.dcs.add(loc);
 				break;
