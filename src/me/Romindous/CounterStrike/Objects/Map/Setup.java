@@ -2,16 +2,22 @@ package me.Romindous.CounterStrike.Objects.Map;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
 
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.util.Vector;
 
 import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Enums.GameType;
+import me.Romindous.CounterStrike.Game.Arena.Team;
+import me.Romindous.CounterStrike.Objects.Game.GameType;
 import me.Romindous.CounterStrike.Objects.Game.TripWire;
+import me.Romindous.CounterStrike.Objects.Loc.Spot;
 import net.minecraft.core.BaseBlockPosition;
 
 public class Setup {
@@ -20,8 +26,7 @@ public class Setup {
 	public final byte min;
 	public final byte max;
 	public final boolean rndM;
-	public final BaseBlockPosition[] ctSpots;
-	public final BaseBlockPosition[] tSpots;
+	public final Spot[] spots;
 	public final BaseBlockPosition[] ctSpawns;
 	public final BaseBlockPosition[] tSpawns;
 	public final BaseBlockPosition A;
@@ -29,6 +34,8 @@ public class Setup {
 	public final Map<GameType, String> worlds;
 	public final boolean bots;
 	public final boolean fin;
+	
+	private static final int MAX_REL = 20;
 	
 	public Setup(final ConfigurationSection ar) {
 		nm = TripWire.loadMapSound(ar.getName());
@@ -42,28 +49,13 @@ public class Setup {
 		rndM = ar.getBoolean("rnd");
 		if (rndM) {
 			bots = false;
-			ctSpots = null;
-			tSpots = null;
+			spots = null;
 			ctSpawns = null;
 			tSpawns = null;
 			A = null;
 			B = null;
 		} else {
 			bots = ar.getBoolean("bots");
-			final String[] ctPx = ar.getString("ctspots.x").split(":");
-			final String[] ctPy = ar.getString("ctspots.y").split(":");
-			final String[] ctPz = ar.getString("ctspots.z").split(":");
-			ctSpots = new BaseBlockPosition[ctPx.length];
-			for (byte i = (byte) (ctPx.length - 1); i >= 0; i--) {
-				ctSpots[i] = new BaseBlockPosition(Integer.parseInt(ctPx[i]), Integer.parseInt(ctPy[i]), Integer.parseInt(ctPz[i]));
-			}
-			final String[] tPx = ar.getString("tspots.x").split(":");
-			final String[] tPy = ar.getString("tspots.y").split(":");
-			final String[] tPz = ar.getString("tspots.z").split(":");
-			tSpots = new BaseBlockPosition[tPx.length];
-			for (byte i = (byte) (tPx.length - 1); i >= 0; i--) {
-				tSpots[i] = new BaseBlockPosition(Integer.parseInt(tPx[i]), Integer.parseInt(tPy[i]), Integer.parseInt(tPz[i]));
-			}
 			final String[] ctSx = ar.getString("ctspawns.x").split(":");
 			final String[] ctSy = ar.getString("ctspawns.y").split(":");
 			final String[] ctSz = ar.getString("ctspawns.z").split(":");
@@ -78,10 +70,33 @@ public class Setup {
 			for (byte i = (byte) (tSx.length - 1); i >= 0; i--) {
 				tSpawns[i] = new BaseBlockPosition(Integer.parseInt(tSx[i]), Integer.parseInt(tSy[i]), Integer.parseInt(tSz[i]));
 			}
+			final ConfigurationSection spc = ar.getConfigurationSection("spots");
+			if (spc == null) {
+				this.spots = null;
+			} else {
+				final ArrayList<Spot> sps = new ArrayList<>();
+				int ix = 0;
+				for (final String s : spc.getKeys(false)) {
+					final String[] ss = s.split(",");
+					sps.add(new Spot(Main.parseInt(ss[0]), Main.parseInt(ss[1]), Main.parseInt(ss[2]), 
+						ix, Team.valueOf(ss[3].substring(2)), readIntArr(spc.getString(s), ":")));
+					ix++;
+				}
+				this.spots = sps.toArray(new Spot[sps.size()]);
+			}
 			A = new BaseBlockPosition(ar.getInt("asite.x"), ar.getInt("asite.y"), ar.getInt("asite.z"));
 			B = new BaseBlockPosition(ar.getInt("bsite.x"), ar.getInt("bsite.y"), ar.getInt("bsite.z"));
 		}
 		fin = ar.getBoolean("fin");
+	}
+	
+	private int[] readIntArr(final String arr, final String rgx) {
+		final String[] els = arr.split(rgx);
+		final int[] nar = new int[els.length];
+		for (int i = 0; i < els.length; i++) {
+			nar[i] = Main.parseInt(els[i]);
+		}
+		return nar;
 	}
 	
 	public void save(final YamlConfiguration conf) {
@@ -107,31 +122,15 @@ public class Setup {
 			ar.set("bsite.y", B.v());
 			ar.set("bsite.z", B.w());
 		}
-		if (ctSpots != null) {
-			final StringBuffer xs = new StringBuffer();
-			final StringBuffer ys = new StringBuffer();
-			final StringBuffer zs = new StringBuffer();
-			for (final BaseBlockPosition l : ctSpots) {
-				xs.append(":" + l.u());
-				ys.append(":" + l.v());
-				zs.append(":" + l.w());
+		if (spots != null) {
+			final ConfigurationSection spc = ar.createSection("spots");
+			for (final Spot sp : spots) {
+				final StringBuffer sb = new StringBuffer();
+				for (int i : sp.relPos) {
+					sb.append(":" + i);
+				}
+				spc.set(sp.toString(), sb.isEmpty() ? "" : sb.substring(1));
 			}
-			ar.set("ctspots.x", xs.substring(1));
-			ar.set("ctspots.y", ys.substring(1));
-			ar.set("ctspots.z", zs.substring(1));
-		}
-		if (tSpots != null) {
-			final StringBuffer xs = new StringBuffer();
-			final StringBuffer ys = new StringBuffer();
-			final StringBuffer zs = new StringBuffer();
-			for (final BaseBlockPosition l : tSpots) {
-				xs.append(":" + l.u());
-				ys.append(":" + l.v());
-				zs.append(":" + l.w());
-			}
-			ar.set("tspots.x", xs.substring(1));
-			ar.set("tspots.y", ys.substring(1));
-			ar.set("tspots.z", zs.substring(1));
 		}
 		if (ctSpawns != null) {
 			final StringBuffer xs = new StringBuffer();
@@ -168,25 +167,21 @@ public class Setup {
 	
 	public Setup(final String name) {
 		nm = name; min = 2; max = 2; rndM = false;
-		ctSpots = null; tSpots = null; ctSpawns = null; tSpawns = null;
+		spots = null; ctSpawns = null; tSpawns = null;
 		A = null; B = null; fin = false; bots = false;
 		worlds = Collections.unmodifiableMap(
 			new EnumMap<>(GameType.class));
 	}
 	
-	public Setup(final String name,
-		final byte min, final byte max, 
+	public Setup(final String name, final byte min, final byte max, 
 		final boolean rndM, final boolean fin, final boolean bots,
-		final BaseBlockPosition[] ctSpots, final BaseBlockPosition[] tSpots, 
-		final BaseBlockPosition[] ctSpawns, final BaseBlockPosition[] tSpawns, 
-		final BaseBlockPosition A, final BaseBlockPosition B, 
-		final Map<GameType, String> worlds) {
+		final Spot[] spots, final BaseBlockPosition[] ctSpawns, final BaseBlockPosition[] tSpawns, 
+		final BaseBlockPosition A, final BaseBlockPosition B, final Map<GameType, String> worlds) {
 		this.nm = name;
 		this.min = min;
 		this.max = max;
 		this.rndM = rndM;
-		this.ctSpots = ctSpots;
-		this.tSpots = tSpots;
+		this.spots = spots;
 		this.ctSpawns = ctSpawns;
 		this.tSpawns = tSpawns;
 		this.A = A;
@@ -198,9 +193,16 @@ public class Setup {
 	
 	public boolean isReady() {
 		if (nm == null || min < 1 || max < min) return false;
-		return rndM || (A != null && B != null && 
-		(ctSpots != null && ctSpots.length > 1) && (tSpots != null && tSpots.length > 1) && 
+		return rndM || (A != null && B != null && hasSpot(Team.Ts) && hasSpot(Team.CTs) &&
 		(ctSpawns != null && ctSpawns.length > 1) && (tSpawns != null && tSpawns.length > 1));
+	}
+
+	public boolean hasSpot(final Team t) {
+		if (spots == null) return false;
+		for (final Spot sp : spots) {
+			if (sp.tm == t) return true;
+		}
+		return false;
 	}
 
 	public void delete(final boolean hard) {
@@ -213,5 +215,98 @@ public class Setup {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	public Spot[] linkSpots(final World w) {
+		if (!bots) return spots;
+		final int ln = spots.length;
+		final Spot[] nsp = new Spot[ln];
+		for (int i = 0; i < ln; i++) {
+			nsp[i] = new Spot(spots[i], i, ln);
+		}
+		
+		/*for (final Spot sp : nsp) {//take 1 spot
+			final HashSet<Spot> done = new HashSet<>();
+			done.add(sp);//itself
+			sp.setPosFrom(sp, 0);
+			//Bukkit.broadcast(Component.text("start"));
+			for (int stp = 1; stp < MAX_REL && done.size() < ln; stp++) {//link steps
+				final HashSet<Spot> add = new HashSet<>();
+				for (final Spot fr : done) {//link spots per step
+					for (final Spot to : nsp) {
+						if (!done.contains(to) && !add.contains(to)) {
+							if (sp.getPosFrom(to) == 0) {
+								if (Main.rayThruSoft(new Location(w, fr.u() + 0.5d, fr.v() + 0.5d, fr.w() + 0.5d), 
+									new Vector(to.u() + 0.5d, to.v() + 0.5d, to.w() + 0.5d), 0.6d)) {
+									//Bukkit.broadcast(Component.text("dst-"+(sp.getPosFrom(fr) + 1)+",sp-"+sp.toString()+",to-"+to.toString()));
+									sp.setPosFrom(to, sp.getPosFrom(fr) + 1);//() -> * -> * -> ()
+									to.setPosFrom(sp, sp.getPosFrom(fr) + 1);//() <- * <- * <- ()
+									if (stp != 1) {
+										fr.setPosFrom(to, 1);//* -> * -> () -> ()
+										to.setPosFrom(fr, 1);//* <- * <- () <- ()
+									}
+									add.add(to);
+								}
+							} else {
+								add.add(to);
+							}
+						}
+					}
+				}
+				done.addAll(add);
+			}
+		}*/
+		
+		//raytracing
+		for (final Spot sp : nsp) {//take 1 spot
+			sp.setPosFrom(sp, 0);//self
+			for (final Spot to : nsp) {//look at others
+				if (sp.noPosFrom(to)) {
+					if (Main.rayThruSoft(new Location(w, sp.u() + 0.5d, sp.v() + 0.5d, sp.w() + 0.5d), 
+							new Vector(to.u() + 0.5d, to.v() + 0.5d, to.w() + 0.5d), 0.6d)) {
+						sp.setPosFrom(to, 1);
+					}
+				}
+			}
+		}
+		
+		//magic
+		for (int stp = 2; stp < MAX_REL; stp++) {//link steps
+			for (final Spot sp : nsp) {//take 1 spot
+				for (final Spot to : nsp) {//look at others
+					if (sp.noPosFrom(to)) {
+						
+						int min = MAX_REL;
+						for (final Spot nr : nsp) {//look at near
+							if (to.getPosFrom(nr) == 1) {
+								if (sp.noPosFrom(nr) || min < sp.getPosFrom(nr)) continue;
+								min = sp.getPosFrom(nr);
+							}
+						}
+						
+						if (min == MAX_REL) continue;
+						sp.setPosFrom(to, min + 1);
+						to.setPosFrom(sp, min + 1);
+					}
+				}
+			}
+		}
+		
+		//filling
+		for (final Spot sp : nsp) {//take 1 spot
+			for (final Spot os : nsp) {//link leftover spots
+				if (sp.noPosFrom(os)) {
+					sp.setPosFrom(os, MAX_REL);
+					os.setPosFrom(sp, MAX_REL);
+				}
+			}
+			/*final StringBuffer sb = new StringBuffer();
+			for (int i : sp.relPos) {
+				sb.append(":" + i);
+			}
+			Bukkit.broadcast(Component.text(sp.toString() + "-" + sb.substring(1)));*/
+		}
+		
+		return nsp;
 	}
 }

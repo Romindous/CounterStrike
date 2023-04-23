@@ -30,11 +30,13 @@ import me.Romindous.CounterStrike.Game.Arena.Team;
 import me.Romindous.CounterStrike.Game.Defusal;
 import me.Romindous.CounterStrike.Game.Gungame;
 import me.Romindous.CounterStrike.Game.Invasion;
-import me.Romindous.CounterStrike.Mobs.Mobber;
 import me.Romindous.CounterStrike.Objects.EntityShootAtEntityEvent;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Game.BtShooter;
+import me.Romindous.CounterStrike.Objects.Game.GameState;
 import me.Romindous.CounterStrike.Objects.Game.Nade;
+import me.Romindous.CounterStrike.Objects.Game.PlShooter;
+import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
 import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
 import ru.komiss77.ApiOstrov;
@@ -121,8 +123,8 @@ public class DmgLis implements Listener {
 				final LivingEntity ent = (LivingEntity) e.getEntity();
 				final Shooter sh = Shooter.getShooter(ent, false);
 				if (sh != null) {
-					if (sh.arena() != null) {
-						prcDmg(ent, sh, null, e.getDamage(), "§f\u9295", 5);
+					if (sh.arena() != null && sh.arena().gst != GameState.BUYTIME) {
+						prcDmg(ent, sh, null, sh instanceof PlShooter ? e.getDamage() : e.getDamage() * 0.1d, "§f\u9295", 5);
 					}
 				} else if (ent instanceof Mob) {
 					prcDmg(ent, null, null, e.getDamage(), "", 5);
@@ -237,7 +239,7 @@ public class DmgLis implements Listener {
 						final String klfd;
 						switch (ar.gst) {
 						case ROUND:
-							if (!(ar instanceof Gungame) && ar.isSmTm(damager, tgtsh)) {
+							if (ar.isSmTm(damager, tgtsh) && !(ar instanceof Gungame)) {
 								break;
 							}
 							ar.addKll(damager);

@@ -12,6 +12,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerItemHeldEvent;
@@ -100,6 +101,13 @@ public class InventLis implements Listener {
 	public void onClick(final InventoryClickEvent e) {
 		final HumanEntity p = e.getWhoClicked();
 		final ItemStack it = e.getCurrentItem();
+		switch (e.getAction()) {
+		case CLONE_STACK, COLLECT_TO_CURSOR, MOVE_TO_OTHER_INVENTORY:
+			e.setCancelled(true);
+			return;
+		default:
+			break;
+		}
 		if (e.getClick() == ClickType.NUMBER_KEY) {
 			e.setCancelled(true);
 			return;
@@ -425,9 +433,14 @@ public class InventLis implements Listener {
 			if (it != null && it.hasItemMeta() && it.getItemMeta().getDisplayName().equals("§сВыход")) {
 				((Player) p).performCommand("cs leave");
 			}
-		} 
+		}
 	}
-   
+	   
+	@EventHandler
+	public void onDrag(final InventoryDragEvent e) {
+		e.setCancelled(true);
+	}
+	
 	private boolean addSetItm(final PlayerInventory inv, final int slt, final ItemStack it) {
 		final ItemStack s = inv.getItem(slt);
 		if (s != null && s.getType() == it.getType()) {

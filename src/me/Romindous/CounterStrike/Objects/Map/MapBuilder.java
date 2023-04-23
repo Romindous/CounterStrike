@@ -16,9 +16,7 @@ import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
 
 import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Enums.GameType;
-import me.Romindous.CounterStrike.Enums.TileSet;
-import me.Romindous.CounterStrike.Enums.TileType;
+import me.Romindous.CounterStrike.Objects.Game.GameType;
 import me.Romindous.CounterStrike.Objects.Loc.PasteSet;
 import net.minecraft.core.BaseBlockPosition;
 import ru.komiss77.Ostrov;

@@ -1,6 +1,6 @@
 package me.Romindous.CounterStrike.Objects.Loc;
 
-import me.Romindous.CounterStrike.Enums.TileSet;
+import me.Romindous.CounterStrike.Objects.Map.TileSet;
 import net.minecraft.core.BaseBlockPosition;
 
 public class PasteSet {

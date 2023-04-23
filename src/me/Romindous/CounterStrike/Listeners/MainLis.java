@@ -27,27 +27,25 @@ import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.spigotmc.event.entity.EntityDismountEvent;
 
 import com.destroystokyo.paper.event.player.PlayerJumpEvent;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
 import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Enums.GameState;
-import me.Romindous.CounterStrike.Enums.GameType;
 import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Enums.NadeType;
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Game.Arena.Team;
 import me.Romindous.CounterStrike.Game.Defusal;
 import me.Romindous.CounterStrike.Objects.Shooter;
+import me.Romindous.CounterStrike.Objects.Bots.BotManager;
+import me.Romindous.CounterStrike.Objects.Game.GameState;
 import me.Romindous.CounterStrike.Utils.PacketUtils;
 import me.clip.deluxechat.events.DeluxeChatEvent;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
-import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Data;
 import ru.komiss77.events.BungeeDataRecieved;
 import ru.komiss77.events.LocalDataLoadEvent;
@@ -59,7 +57,7 @@ public class MainLis implements Listener {
 	public void onBungee(final BungeeDataRecieved e) {
 		final Oplayer op = e.getOplayer();
         final String wa = op.getDataString(Data.WANT_ARENA_JOIN);
-        if (!wa.isEmpty()) {
+        if (!wa.isEmpty()) {/*
         	if (Main.nnactvarns.containsKey(wa)) {
         		final Arena ar;
             	if (Main.actvarns.get(wa) == null) {
@@ -79,13 +77,14 @@ public class MainLis implements Listener {
 						}
 					}
 				}.runTaskLater(Main.plug, 5);
-        	}
+        	}*/
         }
 	}
 
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onData(final LocalDataLoadEvent e) {
 		Main.lobbyPl(e.getPlayer());
+		BotManager.injectPlayer(e.getPlayer());
 		final String title;
 		switch (new Random().nextInt(4)) {
 		case 0:
@@ -118,6 +117,7 @@ public class MainLis implements Listener {
 
 	@EventHandler
 	public void onQuit(final PlayerQuitEvent e) {
+		BotManager.removePlayer(e.getPlayer());
 		final Shooter pr = Shooter.getPlShooter(e.getPlayer().getName(), true);
 		if (pr.arena() != null) {
 			pr.arena().rmvPl(pr); 	
@@ -154,24 +154,9 @@ public class MainLis implements Listener {
 			case GOLDEN_APPLE:
 				final Defusal ar = (Defusal) pr.arena();
 				if (ar != null) {
-					for (final Entry<Shooter, Team> n : ar.shtrs.entrySet()) {
-						final Player pl = n.getKey().getPlayer();
-						if (pl != null) {
-							pl.playSound(pl.getLocation(), "cs.info." + (n.getValue() == Team.Ts ? "tdropbmb" : "ctdropbmb"), 1f, 1f);
-						}
-					}
+					ar.dropBomb(drop);
 					if (ar.indon) {
 						ar.indSts(p);
-					}
-					
-					if (ar.gst == GameState.ROUND) {
-						for (final Shooter sh : ar.shtrs.keySet()) {
-							final Player pl = sh.getPlayer();
-							if (pl != null) {
-								pl.getScoreboard().getTeam("bmb").addEntry(drop.getUniqueId().toString());
-							}
-						}
-						drop.setGlowing(true);
 					}
 				}
 				break;
@@ -232,14 +217,7 @@ public class MainLis implements Listener {
 					if (ar != null && ar.shtrs.get(pr) == Team.Ts) {
 						pr.item(it, 7);
 						e.getItem().remove();
-						for (final Entry<Shooter, Team> n : ar.shtrs.entrySet()) {
-							final Player pl = n.getKey().getPlayer();
-							if (pl != null) {
-								if (n.getValue() == Team.Ts) {
-									pl.playSound(pl.getLocation(), "cs.info.tpkpbmb", 1f, 1f);
-								}
-							}
-						}
+						ar.pickBomb();
 						if (!ar.indon && ((Player) e.getEntity()).getInventory().getHeldItemSlot() == 7) {
 							ar.indSts((Player) e.getEntity());
 						}

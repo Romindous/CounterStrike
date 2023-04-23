@@ -1,6 +1,7 @@
 package me.Romindous.CounterStrike.Game;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -12,6 +13,7 @@ import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
 import org.bukkit.FireworkEffect.Type;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
@@ -39,13 +41,15 @@ import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
 
 import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Enums.GameState;
-import me.Romindous.CounterStrike.Enums.GameType;
 import me.Romindous.CounterStrike.Listeners.MainLis;
-import me.Romindous.CounterStrike.Mobs.Mobber;
 import me.Romindous.CounterStrike.Objects.Shooter;
+import me.Romindous.CounterStrike.Objects.Game.GameState;
+import me.Romindous.CounterStrike.Objects.Game.GameType;
+import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Game.TripWire;
 import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
+import me.Romindous.CounterStrike.Objects.Loc.Spot;
+import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
 import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
 import me.Romindous.CounterStrike.Utils.Inventories;
@@ -69,21 +73,19 @@ public class Invasion extends Arena {
 	public final Mobber[] sis;
 	public final EntityShulkerBullet ast;
 	public final EntityShulkerBullet bst;
+	
 	public byte apc;
 	public byte bpc;
 	public byte ccl;
 	public int cnt;
 	public boolean isDay;
 	
-	public Invasion(final String name, final byte min, final byte max, 
-		final BaseBlockPosition[] TSps, final BaseBlockPosition[] CTSps, 
-		final World w, final BaseBlockPosition ast, final BaseBlockPosition bst, 
-		final BaseBlockPosition[] TPss, final BaseBlockPosition[] CTPss, final boolean rnd, final boolean bots) {
-		super(name, min, max, TSps, CTSps, w, TPss, CTPss, rnd, bots);
+	public Invasion(final String name, final byte min, final byte max, final BaseBlockPosition[] TSps, final BaseBlockPosition[] CTSps, final World w, final BaseBlockPosition ast, final BaseBlockPosition bst, final Spot[] spots, final boolean rnd, final boolean bots) {
+		super(name, min, max, TSps, CTSps, w, spots, rnd, bots);
 		this.TMbs = new HashMap<>();
 		this.spnrs = new HashSet<>();
 		this.dfs = new LinkedHashMap<>();
-		this.sis = new Mobber[TSps.length];
+		this.sis = new Mobber[TPss.length >> 1];
 		this.isDay = true;
 		
 		final net.minecraft.world.level.World wm = PacketUtils.getNMSWrld(w);
@@ -258,13 +260,14 @@ public class Invasion extends Arena {
 				for (final TripWire tw : tws) {
 					PacketUtils.getNMSPl(p).b.a(new PacketPlayOutEntityDestroy(tw.eif.ae()));
 				}
-				if (shtrs.size() == 0) {
+				final int sz = getAmt(true, true);
+				if (sz == 0) {
 					if (tsk != null) {
 						tsk.cancel();
 					}
 					endSps();
 					end(this);
-				} else if (shtrs.size() == 1) {
+				} else if (sz == 1) {
 					cnt = Math.max(((isDay ? 80 : 48) - ccl) / shtrs.size(), 1);
 					for (final Shooter s : shtrs.keySet()) {
 						final Player pl = s.getPlayer();
@@ -399,7 +402,7 @@ public class Invasion extends Arena {
 		} else {
 			cnt = Math.max((80 - ccl) / shtrs.size(), 1);
 			final net.minecraft.world.level.World wm = PacketUtils.getNMSWrld(w);
-			for (byte i = (byte) (sis.length - 1); i >= 0; i--) {
+			for (int i = sis.length - 1; i >= 0; i--) {
 				sis[i] = new Mobber(TPss[i], wm, this);
 				sis[i].runTaskTimer(Main.plug, 10L, 10L);
 			}
@@ -418,15 +421,15 @@ public class Invasion extends Arena {
 			cnt = Math.max((48 - ccl) / shtrs.size(), 1);
 			ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ИГРА, "§7[§5CS§7]", "§dВторжение", " ", "§7Игроков: §5" + shtrs.size() + "§7/§5" + this.max, "", shtrs.size());
 			Inventories.updtGm(this);
+			final ArrayList<Player> pls = new ArrayList<>();
 			for (final Shooter sh : shtrs.keySet()) {
+				sh.item(Main.air, 8);
 				final Player p = sh.getPlayer();
-				if (p == null) {
-					
-				} else {
-					sh.item(Main.air, 8);
+				if (p != null) {
 					PacketUtils.sendTtlSbTtl(p, "§4Ночь", "§7Крепитесь и защищайте точки!", 50);
 					Main.chgSbdTm(p.getScoreboard(), "gst", "", "§5Ночь");
 					p.playSound(p.getLocation(), "cs.info.night", 10f, 1f);
+					pls.add(p);
 				}
 			}
 			for (final Mobber mb : sis) {
@@ -455,6 +458,10 @@ public class Invasion extends Arena {
 				}
 				cs.setSpawnCount(0);
 				cs.update();
+				final Location lc = new Location(b.getWorld(), b.getX(), b.getY() - 1, b.getZ());
+				for (final Player p : pls) {
+					p.sendBlockChange(lc, Mobber.stnd);
+				}
 			}
 		} else {
 			//day
@@ -567,7 +574,7 @@ public class Invasion extends Arena {
 				PacketUtils.sendTtlSbTtl(p, ttl, sbt, 50);
 				PacketUtils.sendNmTg(sh, "§7<§d" + name + "§7> ", " §7[" + sh.kills() + 
 					"-" + sh.spwnrs() + "-" + sh.deaths() + "]", Team.NA.clr);
-				ApiOstrov.moneyChange(sh.name(), sh.kills(), "Убийства");
+				ApiOstrov.moneyChange(sh.name(), sh.kills() >> 2, "Убийства");
 				p.sendMessage(" \n§7Финиш: " + ttl
 					+ "\n§7=-=-=-=-=-=-=-=-=-=-=-=-=-=-"
 					+ "\n§7Самый кровожадный защитник:"
@@ -761,6 +768,7 @@ public class Invasion extends Arena {
 		if (p == null) {
 			
 		} else {
+			//p.sendMessage("1");
 			p.closeInventory();
 			if (gst == GameState.ROUND && !isDay) {
 				addDth(sh);
@@ -993,6 +1001,17 @@ public class Invasion extends Arena {
 				}.runTaskLater(Main.plug, 200L);
 			}
 		}
+	}
+	
+	public int getAmt(final boolean bots, final boolean alv) {
+		int n = 0;
+		for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
+			if (alv && e.getKey().isDead()) continue;
+			if (e.getKey() instanceof PlShooter || bots) {
+				n++;
+			} 
+		}
+		return n;
 	}
 	
 	@Override

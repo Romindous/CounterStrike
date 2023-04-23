@@ -1,4 +1,5 @@
 package me.Romindous.CounterStrike.Objects.Game;
+
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
 import org.bukkit.GameMode;
@@ -10,7 +11,6 @@ import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
-import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
@@ -52,15 +52,22 @@ public class Nade {
 			case FRAG:
 				w.spawnParticle(Particle.EXPLOSION_HUGE, loc, 1, 0d, 0d, 0d);
 				w.playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 2f, 1.5f);
+				final Shooter sh = Shooter.getPlShooter(dmgr.getName(), true);
 				for (final Entity e : prj.getNearbyEntities(5d, 5d, 5d)) {
-					if (e instanceof Mob || (e instanceof Player && ((Player) e).getGameMode() == GameMode.SURVIVAL)) {
+					if (e instanceof Mob) {
 						final LivingEntity le = (LivingEntity) e;
-						final double d = 20d - e.getLocation().distanceSquared(loc) * 0.4d * (le.getEquipment().getChestplate() == null ? 1d : 0.4d);
-						final Shooter sh = Shooter.getPlShooter(dmgr.getName(), true);
+						final double d = 12d - e.getLocation().distanceSquared(loc) * 0.4d * (le.getEquipment().getChestplate() == null ? 1d : 0.4d);
 						if (sh.arena() != null) {
-							DmgLis.prcDmg(le, Shooter.getShooter(le, true), sh, d, NadeType.FRAG.icn, 2, NadeType.nadeRwd, false, false, false, false, false);
+							DmgLis.prcDmg(le, Shooter.getShooter(le, false), sh, d, NadeType.FRAG.icn, 2, NadeType.nadeRwd, false, false, false, false, false);
 						}
 						Main.dmgArm(dmgr, le.getEyeLocation(), "§6" + String.valueOf((int)(d * 5.0f)));
+					} else if (e instanceof Player && ((Player) e).getGameMode() == GameMode.SURVIVAL) {
+						final Player pl = (Player) e;
+						final double d = 20d - e.getLocation().distanceSquared(loc) * 0.4d * (pl.getInventory().getChestplate() == null ? 1d : 0.4d);
+						if (sh.arena() != null) {
+							DmgLis.prcDmg(pl, Shooter.getShooter(pl, false), sh, d, NadeType.FRAG.icn, 2, NadeType.nadeRwd, false, false, false, false, false);
+						}
+						Main.dmgArm(dmgr, pl.getEyeLocation(), "§6" + String.valueOf((int)(d * 5.0f)));
 					}
 				}
 				break;
@@ -81,7 +88,7 @@ public class Nade {
 									int n = (X - x) * (X - x) + (Y - y) * (Y - y) + (Z - z) * (Z - z);
 									if ((r - 1) * (r - 1) <= n && n <= r * r) {
 										if (sv.getFastMat(w, x, y, z).isAir() && sv.getFastMat(w, x, y - 1, z).isCollidable()) {
-											final WXYZ bl = new WXYZ(x, y, z, w, nt.time << 1);
+											final WXYZ bl = new WXYZ(w, x, y, z, nt.time << 1);
 											bl.getBlock().setType(Material.FIRE, false);
 											Main.ndBlks.remove(bl);
 											Main.ndBlks.add(bl);
@@ -109,7 +116,7 @@ public class Nade {
 									if ((r - 1) * (r - 1) <= n && n <= r * r) {
 										switch (sv.getFastMat(w, x, y, z)) {
 										case FIRE, AIR, CAVE_AIR:
-											final WXYZ bl = new WXYZ(x, y, z, w, nt.time << 2);
+											final WXYZ bl = new WXYZ(w, x, y, z, nt.time << 2);
 											bl.getBlock().setType(Material.POWDER_SNOW, false);
 											Main.ndBlks.remove(bl);
 											Main.ndBlks.add(bl);
@@ -138,9 +145,9 @@ public class Nade {
 					double dz = loc.getZ() - eloc.getZ();
 					double dl = Math.sqrt(dx * dx + dz * dz);
 					if (dl < 32d) {
-						final Shooter sh = Shooter.getShooter(le, false);
-						if (sh != null) {
-							if (!sh.isDead() && Math.abs((px / pl - dx / dl) * (px / pl - dx / dl) + (pz / pl - dz / dl) * (pz / pl - dz / dl)) < 1) {
+						final Shooter she = Shooter.getShooter(le, false);
+						if (she != null) {
+							if (!she.isDead() && Math.abs((px / pl - dx / dl) * (px / pl - dx / dl) + (pz / pl - dz / dl) * (pz / pl - dz / dl)) < 1) {
 								if (Main.rayThruAir(loc, eloc.toVector(), 0.1F)) {
 									if (dmgr != null && dmgr.getEntityId() != le.getEntityId()) {
 										dmgr.playSound(eloc, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 4f, 1f);
@@ -149,9 +156,15 @@ public class Nade {
 								}
 							}
 						} else if (le instanceof Mob) {
-							((Mob) le).setTarget(null);
-							le.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 200, 1, true, false));
-							le.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 200, 1, true, false));
+							switch (le.getType()) {
+							case SHULKER:
+								return;
+							default:
+								((Mob) le).setTarget(null);
+								le.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 200, 1, true, false));
+								le.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 200, 1, true, false));
+								break;
+							}
 						}
 					}
 				}
@@ -162,7 +175,7 @@ public class Nade {
 				Z = loc.getBlockZ();
 				final GunType gt = dmgr == null ? GunType.USP : GunType.getGnTp(dmgr.getInventory().getItem(0));
 				loc.setPitch(gt == null ? 10 : gt.ordinal());
-				Main.decoys.add(new WXYZ(X, Y, Z, w, 160));
+				Main.decoys.add(new WXYZ(w, X, Y, Z, 160, gt == null ? GunType.USP.ordinal() : gt.ordinal()));
 				break;
 		}
 		prj.remove();

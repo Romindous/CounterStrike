@@ -9,6 +9,7 @@ import java.util.Map.Entry;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.LivingEntity;
@@ -22,6 +23,7 @@ import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Loc.WXYZ;
 import net.minecraft.EnumChatFormat;
+import net.minecraft.commands.arguments.ArgumentAnchor.Anchor;
 import net.minecraft.core.BlockPosition;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.chat.IChatBaseComponent;
@@ -31,6 +33,7 @@ import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
 import net.minecraft.network.protocol.game.PacketPlayOutAbilities;
 import net.minecraft.network.protocol.game.PacketPlayOutBlockBreakAnimation;
+import net.minecraft.network.protocol.game.PacketPlayOutLookAt;
 import net.minecraft.network.protocol.game.PacketPlayOutScoreboardTeam;
 import net.minecraft.network.protocol.game.PacketPlayOutScoreboardTeam.a;
 import net.minecraft.server.level.EntityPlayer;
@@ -63,11 +66,11 @@ public class PacketUtils {
 		}
 	}
 	
+	private static int id = 0;
+	
 	public static void sendNmTg(final Shooter of, final String prf, final String sfx, final EnumChatFormat clr) {
 		final EntityLiving ep = getNMSLE(of.getEntity());
-		if (ep == null) {
-			return;
-		}
+		if (ep == null) return;
 		final Scoreboard sb = ep.cD().aF();
 		final ScoreboardTeam st = sb.g(of.name());
 		st.b(IChatBaseComponent.a(prf));
@@ -87,7 +90,13 @@ public class PacketUtils {
 			}
 		} else {
 			switch (of.arena().gst) {
-			case BEGINING, WAITING, FINISH:
+			case WAITING:
+				for (final EntityHuman e : ep.s.w()) {
+					final NetworkManager nm = ((EntityPlayer) e).networkManager;
+					nm.a(pt); nm.a(crt); nm.a(add); nm.a(modSm);
+				}
+				break;
+			case BEGINING, FINISH:
 				for (final Shooter sh : of.arena().shtrs.keySet()) {
 					if (sh instanceof PlShooter) {
 						final NetworkManager nm = getNMSPl(sh.getPlayer()).networkManager;
@@ -232,9 +241,9 @@ public class PacketUtils {
 		}
   	}
   
- 	public static void blkCrckClnt(final EntityPlayer ep, final WXYZ bl) {
- 		final PacketPlayOutBlockBreakAnimation pb = new PacketPlayOutBlockBreakAnimation(Main.srnd.nextInt(1000) + 10000, new BlockPosition(bl.x, bl.y, bl.z), getNxtStg(bl));
- 		for (final EntityHuman e : ep.s.w()) {
+ 	public static void blkCrckClnt(final WXYZ bl) {
+ 		final PacketPlayOutBlockBreakAnimation pb = new PacketPlayOutBlockBreakAnimation((id == 1000 ? (id = 0) : id++) + 10000, new BlockPosition(bl.x, bl.y, bl.z), getNxtStg(bl));
+ 		for (final EntityHuman e : getNMSWrld(bl.w).w()) {
  			((EntityPlayer) e).b.a(pb);
  		}
  	}
@@ -252,4 +261,9 @@ public class PacketUtils {
  		Main.ckracks.add(bl);
  		return 0;
  	}
+ 	
+	public static void sendRecoil(final PlShooter sh, final Location rot) {
+		final Location lc = rot.add(rot.getDirection().multiply(40d));
+		getNMSPl(sh.getPlayer()).b.a(new PacketPlayOutLookAt(Anchor.b, lc.getX(), lc.getY(), lc.getZ()));
+	}
 }

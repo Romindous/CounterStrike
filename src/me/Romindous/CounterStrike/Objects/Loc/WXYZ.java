@@ -25,15 +25,16 @@ public class WXYZ extends XYZ {
 		this.yaw = j;
 	}
 	
-	public WXYZ(int x, int y, int z, final World w, final int i) {
+	public WXYZ(final World w, final int x, final int y, final int z, final int i) {
 		this.x = x;
 		this.y = y; 
 		this.z = z;
 		this.w = w;
 		this.pitch = i;
+		this.yaw = 0;
 	}
 	
-	public WXYZ(int x, int y, int z, final World w, final int i, final int j) {
+	public WXYZ(final World w, final int x, final int y, final int z, final int i, final int j) {
 		this.x = x;
 		this.y = y; 
 		this.z = z;

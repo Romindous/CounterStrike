@@ -18,11 +18,9 @@ import org.bukkit.event.inventory.InventoryType;
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Objects.Shooter;
-import me.Romindous.CounterStrike.Objects.Map.MapBuilder;
 import me.Romindous.CounterStrike.Objects.Map.MapManager;
 import me.Romindous.CounterStrike.Objects.Map.Setup;
 import me.Romindous.CounterStrike.Objects.Map.TypeChoose;
-import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
 import net.minecraft.core.BaseBlockPosition;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.utils.inventory.SmartInventory;
@@ -71,7 +69,7 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 		if (label.equalsIgnoreCase("cs") && send instanceof Player) {
 			final Player p = (Player) send;
 			//админ комманды
-			if (p.hasPermission("ostrov.builder")) {
+			if (ApiOstrov.isLocalBuilder(p, false)) {
 				//создание карты
 				if (args.length == 2) {
 					if (args[0].equalsIgnoreCase("edit")) {
@@ -195,7 +193,7 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 						}
 						//помощь
 					} else if (args[0].equalsIgnoreCase("help")) {
-						if (p.hasPermission("ostrov.builder")) {
+						if (ApiOstrov.isLocalBuilder(p, false)) {
 							p.sendMessage("§5-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n"
 							+ "§dПомощь по коммандам:\n"
 							+ "§d/cs join (название) §7- присоединится к игре\n"

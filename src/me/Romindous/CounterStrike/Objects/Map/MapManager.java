@@ -12,8 +12,11 @@ import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
+
 import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Enums.GameType;
+import me.Romindous.CounterStrike.Game.Arena.Team;
+import me.Romindous.CounterStrike.Objects.Game.GameType;
+import me.Romindous.CounterStrike.Objects.Loc.Spot;
 import net.minecraft.core.BaseBlockPosition;
 import ru.komiss77.utils.ItemBuilder;
 import ru.komiss77.utils.inventory.ClickableItem;
@@ -32,7 +35,7 @@ public class MapManager implements InventoryProvider {
 		final Setup ar = Main.nnactvarns.get(name);
 		stp = ar == null ? new Setup(name) : 
 		new Setup(ar.nm, ar.min, ar.max, ar.rndM, ar.fin, ar.bots, 
-		ar.ctSpots, ar.tSpots, ar.ctSpawns, ar.tSpawns, ar.A, ar.B, ar.worlds);
+		ar.spots, ar.ctSpawns, ar.tSpawns, ar.A, ar.B, ar.worlds);
 	}
 	
 	@Override
@@ -41,7 +44,7 @@ public class MapManager implements InventoryProvider {
 		
 		its.set(0, new InputButton(InputType.ANVILL, //имя
 			new ItemBuilder(Material.GLOBE_BANNER_PATTERN).name("§5" + stp.nm).lore(Arrays.asList("§dКлик §7- изменить имя")).build(), "Карта", nm -> {
-			stp = new Setup(nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.ctSpots, stp.tSpots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
+			stp = new Setup(nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.spots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
 			reopen(pl, its);
 		}));
 		
@@ -51,12 +54,12 @@ public class MapManager implements InventoryProvider {
 			case RIGHT, SHIFT_RIGHT:
 				if (stp.min == 1) return;
 				stp = new Setup(stp.nm, (byte) (stp.min - 1), stp.max, 
-					stp.rndM, stp.fin, stp.bots, stp.ctSpots, stp.tSpots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
+					stp.rndM, stp.fin, stp.bots, stp.spots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 0.6f);
 				break;
 			default:
 				stp = new Setup(stp.nm, (byte) (stp.min + 1), stp.min == stp.max ? (byte) (stp.max + 1) : stp.max, 
-					stp.rndM, stp.fin, stp.bots, stp.ctSpots, stp.tSpots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
+					stp.rndM, stp.fin, stp.bots, stp.spots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 				break;
 			}
@@ -69,12 +72,12 @@ public class MapManager implements InventoryProvider {
 			case RIGHT, SHIFT_RIGHT:
 				if (stp.max == 1) return;
 				stp = new Setup(stp.nm, stp.min == stp.max ? (byte) (stp.min - 1) : stp.min, (byte) (stp.max - 1), 
-					stp.rndM, stp.fin, stp.bots, stp.ctSpots, stp.tSpots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
+					stp.rndM, stp.fin, stp.bots, stp.spots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 0.6f);
 				break;
 			default:
 				stp = new Setup(stp.nm, stp.min, (byte) (stp.max + 1), 
-					stp.rndM, stp.fin, stp.bots, stp.ctSpots, stp.tSpots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
+					stp.rndM, stp.fin, stp.bots, stp.spots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 				break;
 			}
@@ -83,14 +86,24 @@ public class MapManager implements InventoryProvider {
 		
 		if (stp.rndM) {
 			its.set(3, ClickableItem.of(new ItemBuilder(Material.POTION).name("§7Рандом: §aВкл").lore(Arrays.asList("§dКлик §7- Выкл")).build(), e -> {
-				stp = new Setup(stp.nm, stp.min, stp.max, false, stp.fin, stp.bots, stp.ctSpots, stp.tSpots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
+				stp = new Setup(stp.nm, stp.min, stp.max, false, stp.fin, stp.bots, stp.spots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
+				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
+				reopen(pl, its);
+			}));
+			
+			its.set(4, new InputButton(InputType.ANVILL, new ItemBuilder(Material.ENDER_EYE)
+				.name("§7Мир для §5Классики§7: " + stp.worlds.get(GameType.DEFUSAL))
+				.lore(Arrays.asList("§dКлик §7- изменить")).build(), "Карта", nm -> {
+				final EnumMap<GameType, String> worlds = new EnumMap<>(stp.worlds);
+				worlds.put(GameType.DEFUSAL, nm);
+				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.spots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 				reopen(pl, its);
 			}));
 			
 			if (stp.isReady()) {
-				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, true, stp.bots, stp.ctSpots, stp.tSpots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
-				its.set(14, ClickableItem.of(new ItemBuilder(Material.KNOWLEDGE_BOOK).name("§aГотово").lore(Arrays.asList("§7Закрыть редактор!")).build(), e -> {
+				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, true, stp.bots, stp.spots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
+				its.set(5, ClickableItem.of(new ItemBuilder(Material.KNOWLEDGE_BOOK).name("§aГотово").lore(Arrays.asList("§7Закрыть редактор!")).build(), e -> {
 					pl.playSound(pl.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 					pl.sendMessage(Main.prf() + "Карта §d" + stp.nm + " §7сохранена!");
 					Main.nnactvarns.put(stp.nm, stp);
@@ -99,11 +112,11 @@ public class MapManager implements InventoryProvider {
 					pl.closeInventory();
 				}));
 			} else {
-				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, false, stp.bots, stp.ctSpots, stp.tSpots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
-				its.set(14, ClickableItem.empty(new ItemBuilder(Material.GRAY_DYE).name("§cНе Готово").lore(Arrays.asList("§7Какие-то поля пустые!")).build()));
+				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, false, stp.bots, stp.spots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
+				its.set(5, ClickableItem.empty(new ItemBuilder(Material.GRAY_DYE).name("§cНе Готово").lore(Arrays.asList("§7Какие-то поля пустые!")).build()));
 			}
 			
-			its.set(15, new InputButton(InputType.ANVILL, new ItemBuilder(Material.BARRIER)
+			its.set(6, new InputButton(InputType.ANVILL, new ItemBuilder(Material.BARRIER)
 			.name("§4Удалить").lore(Arrays.asList("§7Невозвратимо!")).build(), stp.nm, e -> {
 				pl.playSound(pl.getLocation(), Sound.BLOCK_BEACON_DEACTIVATE, 1f, 1f);
 				pl.sendMessage(Main.prf() + "Карта §5" + stp.nm + " §7удалена!");
@@ -113,7 +126,7 @@ public class MapManager implements InventoryProvider {
 			}));
 		} else {
 			its.set(3, ClickableItem.of(new ItemBuilder(Material.GLASS_BOTTLE).name("§7Рандом: §cВыкл").lore(Arrays.asList("§dКлик §7- Вкл")).build(), e -> {
-				stp = new Setup(stp.nm, stp.min, stp.max, true, stp.fin, stp.bots, stp.ctSpots, stp.tSpots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
+				stp = new Setup(stp.nm, stp.min, stp.max, true, stp.fin, stp.bots, stp.spots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 				reopen(pl, its);
 			}));
@@ -124,47 +137,56 @@ public class MapManager implements InventoryProvider {
 			ctplr.add("§eШифт+ЛКМ §7- показать");
 			ctplr.add("§eШифт+ПКМ §7- убрать показ");
 			ctplr.add(" ");
-			if (stp.ctSpots == null) {
-				ctplr.add("§7Точек еще нет...");
-			} else {
-				for (final BaseBlockPosition lc : stp.ctSpots) {
+			final boolean cts = stp.hasSpot(Team.CTs);
+			if (cts) {
+				for (final Spot lc : stp.spots) {
 					ctplr.add("§7" + lc.toString());
 				}
+			} else {
+				ctplr.add("§7Точек еще нет...");
 			}
 			its.set(4, ClickableItem.of(new ItemBuilder(Material.BLUE_DYE).name("§7Точки §3Спецназа").lore(ctplr).build(), e -> {
 				switch (e.getClick()) {
 				case SHIFT_LEFT:
-					if (stp.ctSpots != null) {
+					if (cts) {
 						final World w = pl.getWorld();
-						for (final BaseBlockPosition lc : stp.ctSpots) {
-							w.getBlockAt(lc.u(), lc.v(), lc.w()).setType(Material.BLUE_STAINED_GLASS, false);
+						for (final Spot lc : stp.spots) {
+							if (lc.tm == Team.CTs) {
+								w.getBlockAt(lc.u(), lc.v(), lc.w()).setType(Material.BLUE_STAINED_GLASS, false);
+							}
 						}
 					}
 					pl.playSound(pl.getLocation(), Sound.BLOCK_BELL_USE, 1f, 1f);
 					break;
 				case SHIFT_RIGHT:
-					if (stp.ctSpots != null) {
+					if (cts) {
 						final World w = pl.getWorld();
-						for (final BaseBlockPosition lc : stp.ctSpots) {
-							w.getBlockAt(lc.u(), lc.v(), lc.w()).setType(Material.AIR, false);
+						for (final Spot lc : stp.spots) {
+							if (lc.tm == Team.CTs) {
+								w.getBlockAt(lc.u(), lc.v(), lc.w()).setType(Material.AIR, false);
+							}
 						}
 					}
 					pl.playSound(pl.getLocation(), Sound.BLOCK_BELL_USE, 1f, 1f);
 					break;
 				case RIGHT:
-					pl.sendMessage(Main.prf() + "Убрана предыдущая точка (" + (stp.ctSpots.length-1) + ")");
+					if (stp.spots == null) return;
+					pl.sendMessage(Main.prf() + "Убрана предыдущая точка (" + (stp.spots.length-1) + ")");
+					stp.spots[stp.spots.length - 1].getBlock(pl.getWorld()).setType(Material.AIR, false);
 					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, 
-						rmvFst(stp.ctSpots), stp.tSpots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
+						rmv(stp.spots), stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 0.6f);
 					reopen(pl, its);
 					return;
 				default:
-					final Location loc = pl.getLocation();
+					final Location loc = pl.getLocation();loc.setY(loc.getY() + 1d);
 					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, 
-						addFst(stp.ctSpots, new BaseBlockPosition(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ())), 
-						stp.tSpots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
+						add(stp.spots, new Spot(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ(), 
+								stp.spots == null ? 0 : stp.spots.length, Team.CTs, new int[0])), 
+						stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
+					loc.getBlock().setType(Material.BLUE_STAINED_GLASS, false);
 					pl.sendMessage(Main.prf() + "Точка поставлена на " + 
-					new BaseBlockPosition(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()).toString() + " (" + stp.ctSpots.length + ")");
+					new BaseBlockPosition(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()).toString() + " (" + stp.spots.length + ")");
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 					break;
 				}
@@ -177,47 +199,56 @@ public class MapManager implements InventoryProvider {
 			tplr.add("§eШифт+ЛКМ §7- показать");
 			tplr.add("§eШифт+ПКМ §7- убрать показ");
 			tplr.add(" ");
-			if (stp.tSpots == null) {
-				tplr.add("§7Точек еще нет...");
-			} else {
-				for (final BaseBlockPosition lc : stp.tSpots) {
+			final boolean ts = stp.hasSpot(Team.Ts);
+			if (ts) {
+				for (final Spot lc : stp.spots) {
 					tplr.add("§7" + lc.toString());
 				}
+			} else {
+				tplr.add("§7Точек еще нет...");
 			}
 			its.set(5, ClickableItem.of(new ItemBuilder(Material.REDSTONE).name("§7Точки §4Террористов").lore(tplr).build(), e -> {
 				switch (e.getClick()) {
 				case SHIFT_LEFT:
-					if (stp.tSpots != null) {
+					if (ts) {
 						final World w = pl.getWorld();
-						for (final BaseBlockPosition lc : stp.tSpots) {
-							w.getBlockAt(lc.u(), lc.v(), lc.w()).setType(Material.RED_STAINED_GLASS, false);
+						for (final Spot lc : stp.spots) {
+							if (lc.tm == Team.Ts) {
+								w.getBlockAt(lc.u(), lc.v(), lc.w()).setType(Material.RED_STAINED_GLASS, false);
+							}
 						}
 					}
 					pl.playSound(pl.getLocation(), Sound.BLOCK_BELL_USE, 1f, 1f);
 					break;
 				case SHIFT_RIGHT:
-					if (stp.tSpots != null) {
+					if (ts) {
 						final World w = pl.getWorld();
-						for (final BaseBlockPosition lc : stp.tSpots) {
-							w.getBlockAt(lc.u(), lc.v(), lc.w()).setType(Material.AIR, false);
+						for (final Spot lc : stp.spots) {
+							if (lc.tm == Team.Ts) {
+								w.getBlockAt(lc.u(), lc.v(), lc.w()).setType(Material.AIR, false);
+							}
 						}
 					}
 					pl.playSound(pl.getLocation(), Sound.BLOCK_BELL_USE, 1f, 1f);
 					break;
 				case RIGHT:
-					pl.sendMessage(Main.prf() + "Убрана предыдущая точка (" + (stp.tSpots.length-1) + ")");
+					if (stp.spots == null) return;
+					pl.sendMessage(Main.prf() + "Убрана предыдущая точка (" + (stp.spots.length-1) + ")");
+					stp.spots[stp.spots.length - 1].getBlock(pl.getWorld()).setType(Material.AIR, false);
 					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, 
-						stp.ctSpots, rmvFst(stp.tSpots), stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
+						rmv(stp.spots), stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 0.6f);
 					reopen(pl, its);
 					return;
 				default:
-					final Location loc = pl.getLocation();
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.ctSpots, 
-						addFst(stp.tSpots, new BaseBlockPosition(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ())), 
+					final Location loc = pl.getLocation();loc.setY(loc.getY() + 1d);
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, 
+						add(stp.spots, new Spot(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ(), 
+							stp.spots == null ? 0 : stp.spots.length, Team.Ts, new int[0])), 
 						stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
+					loc.getBlock().setType(Material.RED_STAINED_GLASS, false);
 					pl.sendMessage(Main.prf() + "Точка поставлена на " + 
-					new BaseBlockPosition(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()).toString() + " (" + stp.tSpots.length + ")");
+					new BaseBlockPosition(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()).toString() + " (" + stp.spots.length + ")");
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 					break;
 				}
@@ -258,16 +289,20 @@ public class MapManager implements InventoryProvider {
 					pl.playSound(pl.getLocation(), Sound.BLOCK_BELL_USE, 1f, 1f);
 					break;
 				case RIGHT:
+					if (stp.ctSpawns == null) return;
 					pl.sendMessage(Main.prf() + "Убран предыдущий спавн (" + (stp.ctSpawns.length-1) + ")");
+					final BaseBlockPosition lst = stp.ctSpawns[stp.ctSpawns.length - 1];
+					pl.getWorld().getBlockAt(lst.u(), lst.v(), lst.w()).setType(Material.AIR, false);
 					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, 
-						stp.ctSpots, stp.tSpots, rmvFst(stp.ctSpawns), stp.tSpawns, stp.A, stp.B, stp.worlds);
+						stp.spots, rmv(stp.ctSpawns), stp.tSpawns, stp.A, stp.B, stp.worlds);
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 0.6f);
 					reopen(pl, its);
 					return;
 				default:
 					final Location loc = pl.getLocation();
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.ctSpots, stp.tSpots, 
-						addFst(stp.ctSpawns, new BaseBlockPosition(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ())), stp.tSpawns, stp.A, stp.B, stp.worlds);
+					loc.getBlock().setType(Material.BLUE_CONCRETE, false);
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.spots, 
+						add(stp.ctSpawns, new BaseBlockPosition(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ())), stp.tSpawns, stp.A, stp.B, stp.worlds);
 					pl.sendMessage(Main.prf() + "Спавн поставлен на " + 
 					new BaseBlockPosition(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()).toString() + " (" + stp.ctSpawns.length + ")");
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
@@ -310,16 +345,20 @@ public class MapManager implements InventoryProvider {
 					pl.playSound(pl.getLocation(), Sound.BLOCK_BELL_USE, 1f, 1f);
 					break;
 				case RIGHT:
+					if (stp.tSpawns == null) return;
 					pl.sendMessage(Main.prf() + "Убран предыдущий спавн (" + (stp.tSpawns.length-1) + ")");
+					final BaseBlockPosition lst = stp.tSpawns[stp.tSpawns.length - 1];
+					pl.getWorld().getBlockAt(lst.u(), lst.v(), lst.w()).setType(Material.AIR, false);
 					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, 
-						stp.ctSpots, stp.tSpots, stp.ctSpawns, rmvFst(stp.tSpawns), stp.A, stp.B, stp.worlds);
+						stp.spots, stp.ctSpawns, rmv(stp.tSpawns), stp.A, stp.B, stp.worlds);
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 0.6f);
 					reopen(pl, its);
 					return;
 				default:
 					final Location loc = pl.getLocation();
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.ctSpots, stp.tSpots, stp.ctSpawns, 
-						addFst(stp.tSpawns, new BaseBlockPosition(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ())), stp.A, stp.B, stp.worlds);
+					loc.getBlock().setType(Material.BLUE_CONCRETE, false);
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.spots, stp.ctSpawns, 
+						add(stp.tSpawns, new BaseBlockPosition(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ())), stp.A, stp.B, stp.worlds);
 					pl.sendMessage(Main.prf() + "Спавн поставлен на " + 
 					new BaseBlockPosition(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()).toString() + " (" + stp.tSpawns.length + ")");
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
@@ -339,7 +378,7 @@ public class MapManager implements InventoryProvider {
 					break;
 				default:
 					final Location loc = pl.getLocation();
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.ctSpots, stp.tSpots, 
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.spots, 
 						stp.ctSpawns, stp.tSpawns, new BaseBlockPosition(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()), stp.B, stp.worlds);
 					pl.sendMessage(Main.prf() + "Точка §bA §7теперь на " + stp.A.toString());
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
@@ -359,7 +398,7 @@ public class MapManager implements InventoryProvider {
 					break;
 				default:
 					final Location loc = pl.getLocation();
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.ctSpots, stp.tSpots, 
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.spots, 
 						stp.ctSpawns, stp.tSpawns, stp.A, new BaseBlockPosition(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()), stp.worlds);
 					pl.sendMessage(Main.prf() + "Точка §6B §7теперь на " + stp.B.toString());
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
@@ -370,13 +409,13 @@ public class MapManager implements InventoryProvider {
 			
 			if (stp.bots) {
 				its.set(10, ClickableItem.of(new ItemBuilder(Material.FERMENTED_SPIDER_EYE).name("§7Боты: §aВкл").lore(Arrays.asList("§dКлик §7- Выкл")).build(), e -> {
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, false, stp.ctSpots, stp.tSpots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, false, stp.spots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 					reopen(pl, its);
 				}));
 			} else {
 				its.set(10, ClickableItem.of(new ItemBuilder(Material.SPIDER_EYE).name("§7Боты: §cВыкл").lore(Arrays.asList("§dКлик §7- Вкл")).build(), e -> {
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, true, stp.ctSpots, stp.tSpots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, true, stp.spots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 					reopen(pl, its);
 				}));
@@ -387,7 +426,7 @@ public class MapManager implements InventoryProvider {
 				.lore(Arrays.asList("§dКлик §7- изменить")).build(), "Карта", nm -> {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(stp.worlds);
 				worlds.put(GameType.DEFUSAL, nm);
-				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.ctSpots, stp.tSpots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, worlds);
+				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.spots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 				reopen(pl, its);
 			}));
@@ -397,7 +436,7 @@ public class MapManager implements InventoryProvider {
 				.lore(Arrays.asList("§dКлик §7- изменить")).build(), "Карта", nm -> {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(stp.worlds);
 				worlds.put(GameType.GUNGAME, nm);
-				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.ctSpots, stp.tSpots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, worlds);
+				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.spots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 				reopen(pl, its);
 			}));
@@ -407,13 +446,13 @@ public class MapManager implements InventoryProvider {
 				.lore(Arrays.asList("§dКлик §7- изменить")).build(), "Карта", nm -> {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(stp.worlds);
 				worlds.put(GameType.INVASION, nm);
-				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.ctSpots, stp.tSpots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, worlds);
+				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.spots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 				reopen(pl, its);
 			}));
 			
 			if (stp.isReady()) {
-				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, true, stp.bots, stp.ctSpots, stp.tSpots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
+				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, true, stp.bots, stp.linkSpots(pl.getWorld()), stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
 				its.set(14, ClickableItem.of(new ItemBuilder(Material.KNOWLEDGE_BOOK).name("§aГотово").lore(Arrays.asList("§7Закрыть редактор!")).build(), e -> {
 					pl.playSound(pl.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 					pl.sendMessage(Main.prf() + "Карта §d" + stp.nm + " §7сохранена!");
@@ -423,7 +462,7 @@ public class MapManager implements InventoryProvider {
 					pl.closeInventory();
 				}));
 			} else {
-				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, false, stp.bots, stp.ctSpots, stp.tSpots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
+				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, false, stp.bots, stp.spots, stp.ctSpawns, stp.tSpawns, stp.A, stp.B, stp.worlds);
 				its.set(14, ClickableItem.empty(new ItemBuilder(Material.GRAY_DYE).name("§cНе Готово").lore(Arrays.asList("§7Какие-то поля пустые!")).build()));
 			}
 			
@@ -454,18 +493,33 @@ public class MapManager implements InventoryProvider {
 		return its;
 	}*/
 	
-	private static BaseBlockPosition[] addFst(final BaseBlockPosition[] ar, final BaseBlockPosition el) {
-		if (ar == null) return new BaseBlockPosition[] {el};
-		final BaseBlockPosition[] na = new BaseBlockPosition[ar.length + 1];
-		for (int i = ar.length; i > 0; i--) {na[i] = ar[i-1];}
-		na[0] = el;
+	private static Spot[] add(final Spot[] ar, final Spot el) {
+		if (ar == null) return new Spot[] {el};
+		final Spot[] na = new Spot[ar.length + 1];
+		for (int i = 0; i < ar.length; i++) {na[i] = ar[i];}
+		na[ar.length] = el;
 		return na;
 	}
 	
-	private static BaseBlockPosition[] rmvFst(final BaseBlockPosition[] ar) {
+	private static Spot[] rmv(final Spot[] ar) {
+		if (ar == null || ar.length == 1) return null;
+		final Spot[] na = new Spot[ar.length - 1];
+		for (int i = 0; i < na.length; i++) {na[i] = ar[i];}
+		return na;
+	}
+	
+	private static BaseBlockPosition[] add(final BaseBlockPosition[] ar, final BaseBlockPosition el) {
+		if (ar == null) return new BaseBlockPosition[] {el};
+		final BaseBlockPosition[] na = new BaseBlockPosition[ar.length + 1];
+		for (int i = 0; i < ar.length; i++) {na[i] = ar[i];}
+		na[ar.length] = el;
+		return na;
+	}
+	
+	private static BaseBlockPosition[] rmv(final BaseBlockPosition[] ar) {
 		if (ar == null || ar.length == 1) return null;
 		final BaseBlockPosition[] na = new BaseBlockPosition[ar.length - 1];
-		for (int i = na.length; i > 0; i--) {na[i-1] = ar[i];}
+		for (int i = 0; i < na.length; i++) {na[i] = ar[i];}
 		return na;
 	}
 

@@ -1,5 +1,6 @@
 package me.Romindous.CounterStrike.Objects.Skins;
 
+import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Enums.GunType;
 
 public class GunSkin {
@@ -27,21 +28,13 @@ public class GunSkin {
 	}
 	
 	public static GunSkin fromString(final String data) {
-		int chs = parseInt(data.substring(0, data.indexOf(';')));
+		int chs = Main.parseInt(data.substring(0, data.indexOf(';')));
 		final String[] has = data.substring(data.indexOf(';') + 1).split(":");
 		final int[] ns = new int[has.length];
 		for (int i = ns.length - 1; i >= 0; i--) {
-			ns[i] = parseInt(has[i]);
+			ns[i] = Main.parseInt(has[i]);
 		}
 		return new GunSkin(chs, ns);
-	}
-	
-	private static int parseInt(final String n) {
-		try {
-			return Integer.parseInt(n);
-		} catch (final NumberFormatException e) {
-			return 0;
-		}
 	}
 
 	public boolean has(int mdl) {

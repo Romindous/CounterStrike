@@ -4,7 +4,6 @@ import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -15,7 +14,6 @@ import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.HumanEntity;
-import org.bukkit.entity.Item;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
@@ -27,7 +25,6 @@ import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
 import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Enums.GameState;
 import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Game.Arena.Team;
@@ -50,20 +47,20 @@ public class PlShooter implements Shooter {
 	
 	public static final float walkSpd = 0.2f;
 	
-	public PlShooter(final Player ent) {
-		name = ent.getName();
+	public PlShooter(final Player p) {
+		name = p.getName();
 		shc = name.hashCode();
 		rclTm = 50; cldwn = 0; count = 0; shtTm = 0;
 		money = 0; kills = 0; spwnrs = 0; deaths = 0;
 		arena = null;
 		
-		final Vector vc = ent.getLocation().toVector();
+		final Vector vc = p.getLocation().toVector();
 		pss = new LinkedList<>();
 		pss.add(vc); pss.add(vc); pss.add(vc); pss.add(vc); pss.add(vc);
 
 		skins = new EnumMap<>(GunType.class);
-		inv = ent.getInventory();
-		final Oplayer op = PM.getOplayer(ent);
+		inv = p.getInventory();
+		final Oplayer op = PM.getOplayer(p);
 		final Map<String, String> data = op.mysqlData;
 		Ostrov.async(() -> {
 			for (final GunType gt : GunType.values()) {
@@ -159,7 +156,8 @@ public class PlShooter implements Shooter {
 
 	public final LinkedList<Vector> pss;
 	public void rotPss() {pss.poll();pss.add(getEntity().getLocation().toVector());}
-	public Vector getPos() {return pss.peek().clone();}
+	public Vector getPos(final boolean dir) 
+	{return dir ? pss.getLast().clone() : pss.getFirst().clone();}
 	
 	private int shtTm;
 	public int shtTm() {return shtTm;}
@@ -241,19 +239,11 @@ public class PlShooter implements Shooter {
 			if (!Inventories.isBlankItem(it, false) && arena instanceof Defusal) {
 				final Defusal df = (Defusal) arena;
 				//bomb dropped
+				if (df.getTmAmt(Team.Ts, true, true) != 1) {
+					df.dropBomb(w.dropItem(loc, Main.bmb));
+				}
 				if (df.indon) {
 					df.indSts(getPlayer());
-				}
-				final Item drop = w.dropItem(loc, Main.bmb);
-				if (df.getTmAmt(Team.Ts, true, true) != 1) {
-					for (final Entry<Shooter, Team> n : df.shtrs.entrySet()) {
-						final Player pl = n.getKey().getPlayer();
-						if (pl != null) {
-							pl.playSound(loc, "cs.info." + (n.getValue() == Team.Ts ? "tdropbmb" : "ctdropbmb"), 10f, 1f);
-							pl.getScoreboard().getTeam("bmb").addEntry(drop.getUniqueId().toString());
-						}
-					}
-					drop.setGlowing(true);
 				}
 			}
 			break;
@@ -322,6 +312,21 @@ public class PlShooter implements Shooter {
 				loc.setYaw((Main.srnd.nextFloat() - 0.5f) * gt.xsprd * rclTm() + loc.getYaw());
 			}
 		}
+		/*final LivingEntity ent = getEntity();
+		final Location loc = ent.getEyeLocation();
+		final float ptc, yaw;
+		if (dff) {
+			if (gt.brst == 0 && !gt.snp) {
+				ptc = loc.getPitch() - tr * gt.yrcl + ((float) ent.getVelocity().getY() + (ent.isInWater() ? 0.005f : 0.0784f)) * 40f;
+				yaw = (Main.srnd.nextFloat() - 0.5f) * gt.xsprd * tr + loc.getYaw();
+			} else {
+				loc.setPitch(ptc = (Main.srnd.nextFloat() - 0.5f) * gt.xsprd * rclTm + loc.getPitch() - tr * 0.1F + 
+					((float) ent.getVelocity().getY() + (ent.isInWater() ? 0.005f : 0.0784f)) * 40f);
+				loc.setYaw(yaw = (Main.srnd.nextFloat() - 0.5f) * gt.xsprd * rclTm + loc.getYaw());
+			}
+		} else {
+			ptc = loc.getPitch(); yaw = loc.getYaw();
+		}*/
 		final double lkx = -Math.sin(Math.toRadians((180f - loc.getYaw())));
 		final double lkz = -Math.cos(Math.toRadians((180f - loc.getYaw())));
 		LivingEntity srch = null;
@@ -340,7 +345,7 @@ public class PlShooter implements Shooter {
 					//ent.sendMessage("sh-" + sh + ", id-" + e.getEntityId() + ", ids-" + BotManager.npcs.keySet().toString());
 					continue;
 				}
-				final Vector lc = sh.getPos();
+				final Vector lc = sh.getPos(false);
 				ebx = new BoundingBox(lc.getX(), lc.getY(), lc.getZ(), lc.getX(), lc.getY() + 
 				(sh instanceof PlShooter && ((Player) e).isSneaking() ? 1.5d : 1.9d), lc.getZ());
 				dx = lc.getX() - loc.getX();
@@ -374,138 +379,146 @@ public class PlShooter implements Shooter {
 		final Vector el = ex ? prp : null;
 		/*new BukkitRunnable() {
 			public void run() {*/
-				int i = gt.snp ? 1600 : 1200;
-				final boolean brkBlks = arena() != null && arena().gst == GameState.ROUND;
-				final HashSet<BaseBlockPosition> wls = new HashSet<>();
-				final World w = ent.getWorld();
-				double x = 20d * vec.getX() + loc.getX();
-				double y = 20d * vec.getY() + loc.getY();
-				double z = 20d * vec.getZ() + loc.getZ();
-				final IServer is = VM.getNmsServer();
-				
-				while(true) {
-					//ent.sendMessage("route" + i);
-					x += vec.getX();
-					y += vec.getY();
-					z += vec.getZ();
-					if ((i & 63) == 0) {
-						w.spawnParticle(Particle.ASH, x, y, z, 1);
-					}
-					
-					final Material mat = is.getFastMat(w, (int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
-					final Block b;
-					switch(mat) {
-					case OAK_LEAVES, ACACIA_LEAVES, BIRCH_LEAVES, JUNGLE_LEAVES, 
-					SPRUCE_LEAVES, DARK_OAK_LEAVES, MANGROVE_LEAVES, AZALEA_LEAVES,
-					FLOWERING_AZALEA_LEAVES, 
-					
-					GLASS, WHITE_STAINED_GLASS, 
-					WHITE_STAINED_GLASS_PANE, DIAMOND_ORE, COAL_ORE, IRON_ORE, EMERALD_ORE:
-						if (brkBlks) {
-							b = w.getBlockAt((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
-							arena().brkn.add(new BrknBlck(b));
-							w.playSound(b.getLocation(), Sound.BLOCK_SHROOMLIGHT_FALL, 2f, 0.8f);
-							w.spawnParticle(Particle.BLOCK_CRACK, b.getLocation().add(0.5d, 0.5d, 0.5d), 40, 0.4d, 0.4d, 0.4d, b.getType().createBlockData());
-							b.setType(Material.AIR, false);
-							wls.add(new BaseBlockPosition(b.getX(), b.getY(), b.getZ()));
-						}
-						break;
-					case ACACIA_SLAB, BIRCH_SLAB, CRIMSON_SLAB, SPRUCE_SLAB, WARPED_SLAB, 
-					DARK_OAK_SLAB, OAK_SLAB, JUNGLE_SLAB, PETRIFIED_OAK_SLAB, MANGROVE_SLAB, 
-					
-					ACACIA_STAIRS, BIRCH_STAIRS, CRIMSON_STAIRS, SPRUCE_STAIRS, 
-					WARPED_STAIRS, DARK_OAK_STAIRS, OAK_STAIRS, JUNGLE_STAIRS, MANGROVE_STAIRS, 
-					
-					ACACIA_PLANKS, BIRCH_PLANKS, CRIMSON_PLANKS, SPRUCE_PLANKS, 
-					WARPED_PLANKS, DARK_OAK_PLANKS, OAK_PLANKS, JUNGLE_PLANKS, MANGROVE_PLANKS, 
-					
-					ACACIA_TRAPDOOR, BIRCH_TRAPDOOR, CRIMSON_TRAPDOOR, DARK_OAK_TRAPDOOR, 
-					JUNGLE_TRAPDOOR, MANGROVE_TRAPDOOR, OAK_TRAPDOOR, SPRUCE_TRAPDOOR, WARPED_TRAPDOOR, 
-					
-					ACACIA_WOOD, BIRCH_WOOD, CRIMSON_HYPHAE, SPRUCE_WOOD, 
-					WARPED_HYPHAE, DARK_OAK_WOOD, OAK_WOOD, JUNGLE_WOOD, MANGROVE_WOOD, 
-					
-					ACACIA_LOG, BIRCH_LOG, CRIMSON_STEM, SPRUCE_LOG, 
-					WARPED_STEM, DARK_OAK_LOG, OAK_LOG, JUNGLE_LOG, MANGROVE_LOG, 
-					
-					ACACIA_SIGN, ACACIA_WALL_SIGN, BIRCH_SIGN, BIRCH_WALL_SIGN, CRIMSON_SIGN, 
-					CRIMSON_WALL_SIGN, SPRUCE_SIGN, SPRUCE_WALL_SIGN, WARPED_SIGN, 
-					WARPED_WALL_SIGN, DARK_OAK_SIGN, DARK_OAK_WALL_SIGN, OAK_SIGN, 
-					OAK_WALL_SIGN, JUNGLE_SIGN, JUNGLE_WALL_SIGN, MANGROVE_SIGN, MANGROVE_WALL_SIGN, 
-					
-					STRIPPED_ACACIA_WOOD, STRIPPED_BIRCH_WOOD, STRIPPED_CRIMSON_HYPHAE, STRIPPED_SPRUCE_WOOD, 
-					STRIPPED_WARPED_HYPHAE, STRIPPED_DARK_OAK_WOOD, STRIPPED_OAK_WOOD, STRIPPED_JUNGLE_WOOD, 
-					STRIPPED_MANGROVE_WOOD, 
-					
-					STRIPPED_ACACIA_LOG, STRIPPED_BIRCH_LOG, STRIPPED_CRIMSON_STEM, STRIPPED_SPRUCE_LOG, 
-					STRIPPED_WARPED_STEM, STRIPPED_DARK_OAK_LOG, STRIPPED_OAK_LOG, STRIPPED_JUNGLE_LOG, 
-					STRIPPED_MANGROVE_LOG, 
-					
-					ACACIA_FENCE, BIRCH_FENCE, CRIMSON_FENCE, SPRUCE_FENCE, WARPED_FENCE, DARK_OAK_FENCE, 
-					OAK_FENCE, JUNGLE_FENCE, MANGROVE_FENCE, ACACIA_FENCE_GATE, BIRCH_FENCE_GATE, CRIMSON_FENCE_GATE, 
-					SPRUCE_FENCE_GATE, WARPED_FENCE_GATE, DARK_OAK_FENCE_GATE, OAK_FENCE_GATE, JUNGLE_FENCE_GATE, MANGROVE_FENCE_GATE,
-					
-					BARREL, BEEHIVE, BEE_NEST, NOTE_BLOCK, JUKEBOX:
-						b = w.getBlockAt((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
-						if (b.getBoundingBox().contains(x, y, z)) {
-							wls.add(new BaseBlockPosition(b.getX(), b.getY(), b.getZ()));
-						}
-					case AIR, CAVE_AIR, VOID_AIR,
-					
-					SEAGRASS, TALL_SEAGRASS, WEEPING_VINES, TWISTING_VINES, 
-					
-					BLACK_CARPET, BLUE_CARPET, BROWN_CARPET, CYAN_CARPET, GRAY_CARPET, 
-					GREEN_CARPET, LIGHT_BLUE_CARPET, LIGHT_GRAY_CARPET, LIME_CARPET, 
-					MAGENTA_CARPET, MOSS_CARPET, ORANGE_CARPET, PINK_CARPET, 
-					PURPLE_CARPET, RED_CARPET, WHITE_CARPET, YELLOW_CARPET, 
-					
-					WATER, IRON_BARS, CHAIN, STRUCTURE_VOID, COBWEB, SNOW, 
-					POWDER_SNOW, BARRIER, TRIPWIRE, LADDER, RAIL, POWERED_RAIL, 
-					DETECTOR_RAIL, ACTIVATOR_RAIL:
-						break;
-					default:
-						if (mat.isCollidable()) {
-							b = w.getBlockAt((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
-							if (b.getBoundingBox().contains(x, y, z)) {
-								b.getWorld().spawnParticle(Particle.BLOCK_CRACK, new Location(b.getWorld(), x, y, z), 10, 0.1d, 0.1d, 0.1d, b.getBlockData());
-								if (ent instanceof Player) PacketUtils.blkCrckClnt(PacketUtils.getNMSPl((Player) ent), new WXYZ(b, 640));
-								return;
-							}
-						}
-					}
-					
-					if (ex && Math.pow(x - el.getX(), 2d) + Math.pow(z - el.getZ(), 2d) < 0.2d) {
-						/*new BukkitRunnable() {
-							@Override
-							public void run() {*/
-								if (/*pl.isValid() && tgt.isValid() && */tgt.getNoDamageTicks() == 0) {
-									double dmg = gt.dmg * Math.pow(0.5d, wls.size());
-									final String nm;
-									if (hst) {
-										dmg *= 2f * (tgt.getEquipment().getHelmet() == null ? 1f : 0.5f);
-										nm = "§c銑 " + String.valueOf((int)(dmg * 5.0F));
-									} else {
-										dmg *= tgt.getEquipment().getChestplate() == null ? 1f : 0.6f;
-										nm = "§6" + String.valueOf((int)(dmg * 5.0f));
-									}
-									if (ent instanceof Player) {
-										final Player pl = (Player) ent;
-										if (hst) pl.playSound(loc, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 2f);
-										pl.playSound(loc, Sound.BLOCK_END_PORTAL_FRAME_FILL, 2f, 2f);
-										Main.dmgArm(pl, tgt.getEyeLocation(), nm);
-									}
-									Bukkit.getPluginManager().callEvent(new EntityShootAtEntityEvent(ent, tgt, dmg, hst, wls.size() > 0, dff && gt.snp));
-								}
-							/*}
-						}.runTask(plug);*/
-						return;
-					}
-
-					if ((i--) < 0) {
-						return;
+		int i = gt.snp ? 1600 : 1200;
+		final boolean brkBlks = arena() != null && arena().gst == GameState.ROUND;
+		final HashSet<BaseBlockPosition> wls = new HashSet<>();
+		final World w = ent.getWorld();
+		double x = 20d * vec.getX() + loc.getX();
+		double y = 20d * vec.getY() + loc.getY();
+		double z = 20d * vec.getZ() + loc.getZ();
+		final IServer is = VM.getNmsServer();
+		
+		lp : while(true) {
+			//ent.sendMessage("route" + i);
+			x += vec.getX();
+			y += vec.getY();
+			z += vec.getZ();
+			if ((i & 63) == 0) {
+				w.spawnParticle(Particle.ASH, x, y, z, 1);
+			}
+			
+			final Material mat = is.getFastMat(w, (int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
+			final Block b;
+			switch(mat) {
+			case OAK_LEAVES, ACACIA_LEAVES, BIRCH_LEAVES, JUNGLE_LEAVES, 
+			SPRUCE_LEAVES, DARK_OAK_LEAVES, MANGROVE_LEAVES, AZALEA_LEAVES,
+			FLOWERING_AZALEA_LEAVES, 
+			
+			GLASS, WHITE_STAINED_GLASS, GLASS_PANE, 
+			WHITE_STAINED_GLASS_PANE, DIAMOND_ORE, 
+			COAL_ORE, IRON_ORE, EMERALD_ORE:
+				if (brkBlks) {
+					b = w.getBlockAt((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
+					arena().brkn.add(new BrknBlck(b));
+					w.playSound(b.getLocation(), Sound.BLOCK_SHROOMLIGHT_FALL, 2f, 0.8f);
+					w.spawnParticle(Particle.BLOCK_CRACK, b.getLocation().add(0.5d, 0.5d, 0.5d), 40, 0.4d, 0.4d, 0.4d, b.getType().createBlockData());
+					b.setType(Material.AIR, false);
+					wls.add(new BaseBlockPosition(b.getX(), b.getY(), b.getZ()));
+				}
+				break;
+			case ACACIA_SLAB, BIRCH_SLAB, CRIMSON_SLAB, SPRUCE_SLAB, WARPED_SLAB, 
+			DARK_OAK_SLAB, OAK_SLAB, JUNGLE_SLAB, PETRIFIED_OAK_SLAB, MANGROVE_SLAB, 
+			
+			ACACIA_STAIRS, BIRCH_STAIRS, CRIMSON_STAIRS, SPRUCE_STAIRS, 
+			WARPED_STAIRS, DARK_OAK_STAIRS, OAK_STAIRS, JUNGLE_STAIRS, MANGROVE_STAIRS, 
+			
+			ACACIA_PLANKS, BIRCH_PLANKS, CRIMSON_PLANKS, SPRUCE_PLANKS, 
+			WARPED_PLANKS, DARK_OAK_PLANKS, OAK_PLANKS, JUNGLE_PLANKS, MANGROVE_PLANKS, 
+			
+			ACACIA_TRAPDOOR, BIRCH_TRAPDOOR, CRIMSON_TRAPDOOR, DARK_OAK_TRAPDOOR, 
+			JUNGLE_TRAPDOOR, MANGROVE_TRAPDOOR, OAK_TRAPDOOR, SPRUCE_TRAPDOOR, WARPED_TRAPDOOR, 
+			
+			ACACIA_WOOD, BIRCH_WOOD, CRIMSON_HYPHAE, SPRUCE_WOOD, 
+			WARPED_HYPHAE, DARK_OAK_WOOD, OAK_WOOD, JUNGLE_WOOD, MANGROVE_WOOD, 
+			
+			ACACIA_LOG, BIRCH_LOG, CRIMSON_STEM, SPRUCE_LOG, 
+			WARPED_STEM, DARK_OAK_LOG, OAK_LOG, JUNGLE_LOG, MANGROVE_LOG, 
+			
+			ACACIA_SIGN, ACACIA_WALL_SIGN, BIRCH_SIGN, BIRCH_WALL_SIGN, CRIMSON_SIGN, 
+			CRIMSON_WALL_SIGN, SPRUCE_SIGN, SPRUCE_WALL_SIGN, WARPED_SIGN, 
+			WARPED_WALL_SIGN, DARK_OAK_SIGN, DARK_OAK_WALL_SIGN, OAK_SIGN, 
+			OAK_WALL_SIGN, JUNGLE_SIGN, JUNGLE_WALL_SIGN, MANGROVE_SIGN, MANGROVE_WALL_SIGN, 
+			
+			STRIPPED_ACACIA_WOOD, STRIPPED_BIRCH_WOOD, STRIPPED_CRIMSON_HYPHAE, STRIPPED_SPRUCE_WOOD, 
+			STRIPPED_WARPED_HYPHAE, STRIPPED_DARK_OAK_WOOD, STRIPPED_OAK_WOOD, STRIPPED_JUNGLE_WOOD, 
+			STRIPPED_MANGROVE_WOOD, 
+			
+			STRIPPED_ACACIA_LOG, STRIPPED_BIRCH_LOG, STRIPPED_CRIMSON_STEM, STRIPPED_SPRUCE_LOG, 
+			STRIPPED_WARPED_STEM, STRIPPED_DARK_OAK_LOG, STRIPPED_OAK_LOG, STRIPPED_JUNGLE_LOG, 
+			STRIPPED_MANGROVE_LOG, 
+			
+			ACACIA_FENCE, BIRCH_FENCE, CRIMSON_FENCE, SPRUCE_FENCE, WARPED_FENCE, DARK_OAK_FENCE, 
+			OAK_FENCE, JUNGLE_FENCE, MANGROVE_FENCE, ACACIA_FENCE_GATE, BIRCH_FENCE_GATE, CRIMSON_FENCE_GATE, 
+			SPRUCE_FENCE_GATE, WARPED_FENCE_GATE, DARK_OAK_FENCE_GATE, OAK_FENCE_GATE, JUNGLE_FENCE_GATE, MANGROVE_FENCE_GATE,
+			
+			OAK_DOOR, ACACIA_DOOR, BIRCH_DOOR, CRIMSON_DOOR, DARK_OAK_DOOR, 
+			JUNGLE_DOOR, MANGROVE_DOOR, WARPED_DOOR, SPRUCE_DOOR, 
+			
+			BARREL, BEEHIVE, BEE_NEST, NOTE_BLOCK, JUKEBOX, CRAFTING_TABLE:
+				b = w.getBlockAt((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
+				if (b.getBoundingBox().contains(x, y, z) && wls.add(new BaseBlockPosition(b.getX(), b.getY(), b.getZ()))) {
+					PacketUtils.blkCrckClnt(new WXYZ(b, 640));
+				}
+			case AIR, CAVE_AIR, VOID_AIR,
+			
+			SEAGRASS, TALL_SEAGRASS, WEEPING_VINES, TWISTING_VINES, 
+			
+			BLACK_CARPET, BLUE_CARPET, BROWN_CARPET, CYAN_CARPET, GRAY_CARPET, 
+			GREEN_CARPET, LIGHT_BLUE_CARPET, LIGHT_GRAY_CARPET, LIME_CARPET, 
+			MAGENTA_CARPET, MOSS_CARPET, ORANGE_CARPET, PINK_CARPET, 
+			PURPLE_CARPET, RED_CARPET, WHITE_CARPET, YELLOW_CARPET, 
+			
+			WATER, IRON_BARS, CHAIN, STRUCTURE_VOID, COBWEB, SNOW, 
+			POWDER_SNOW, BARRIER, TRIPWIRE, LADDER, RAIL, POWERED_RAIL, 
+			DETECTOR_RAIL, ACTIVATOR_RAIL, CAMPFIRE, SOUL_CAMPFIRE:
+				break;
+			default:
+				if (mat.isCollidable()) {
+					b = w.getBlockAt((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
+					if (b.getBoundingBox().contains(x, y, z)) {
+						b.getWorld().spawnParticle(Particle.BLOCK_CRACK, new Location(b.getWorld(), x, y, z), 10, 0.1d, 0.1d, 0.1d, b.getBlockData());
+						PacketUtils.blkCrckClnt(new WXYZ(b, 640));
+						break lp;
 					}
 				}
-			/*}
+			}
+			
+			if (ex && Math.pow(x - el.getX(), 2d) + Math.pow(z - el.getZ(), 2d) < 0.2d) {
+				/*new BukkitRunnable() {
+					@Override
+					public void run() {*/
+						if (/*pl.isValid() && tgt.isValid() && */tgt.getNoDamageTicks() == 0) {
+							double dmg = gt.dmg * Math.pow(0.5d, wls.size());
+							final String nm;
+							if (hst) {
+								dmg *= 2f * (tgt.getEquipment().getHelmet() == null ? 1f : 0.5f);
+								nm = "§c銑 " + String.valueOf((int)(dmg * 5.0F));
+							} else {
+								dmg *= tgt.getEquipment().getChestplate() == null ? 1f : 0.6f;
+								nm = "§6" + String.valueOf((int)(dmg * 5.0f));
+							}
+							if (ent instanceof Player) {
+								final Player pl = (Player) ent;
+								if (hst) pl.playSound(loc, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 2f);
+								pl.playSound(loc, Sound.BLOCK_END_PORTAL_FRAME_FILL, 2f, 2f);
+								Main.dmgArm(pl, tgt.getEyeLocation(), nm);
+							}
+							Bukkit.getPluginManager().callEvent(new EntityShootAtEntityEvent(ent, tgt, dmg, hst, wls.size() > 0, dff && gt.snp));
+						}
+					/*}
+				}.runTask(plug);*/
+				break lp;
+			}
+
+			if ((i--) < 0) {
+				break lp;
+			}
+		}
+		
+		/*if (dff) {
+			PacketUtils.sendRecoil(this, new Location(loc.getWorld(), loc.getX(), loc.getY(), loc.getZ(), yaw, ptc));
+		}
+			}
 		}.runTaskAsynchronously(plug);*/
 	}
 

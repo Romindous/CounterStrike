@@ -1,5 +1,6 @@
 package me.Romindous.CounterStrike.Game;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -19,21 +20,22 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.Vector;
 
 import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Enums.GameState;
-import me.Romindous.CounterStrike.Enums.GameType;
 import me.Romindous.CounterStrike.Objects.Shooter;
+import me.Romindous.CounterStrike.Objects.Game.GameState;
+import me.Romindous.CounterStrike.Objects.Game.GameType;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Game.TripWire;
 import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
+import me.Romindous.CounterStrike.Objects.Loc.Spot;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
 import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
 import me.Romindous.CounterStrike.Utils.Inventories;
 import me.Romindous.CounterStrike.Utils.PacketUtils;
 import net.minecraft.EnumChatFormat;
 import net.minecraft.core.BaseBlockPosition;
-import net.minecraft.core.BlockPosition;
 import ru.komiss77.ApiOstrov;
 
 public class Arena {
@@ -47,6 +49,7 @@ public class Arena {
 	public final byte max;
 	protected final BaseBlockPosition[] TSps;
 	protected final BaseBlockPosition[] CTSps;
+	protected final Spot[] spots;
 	protected final BaseBlockPosition[] TPss;
 	protected final BaseBlockPosition[] CTPss;
 	public final boolean bots;
@@ -57,7 +60,7 @@ public class Arena {
 	
 	public Arena(final String name, final byte min, final byte max, 
 		final BaseBlockPosition[] TSps, final BaseBlockPosition[] CTSps, final World w, 
-		final BaseBlockPosition[] TPss, final BaseBlockPosition[] CTPss, final boolean rnd, final boolean bots) {
+		final Spot[] spots, final boolean rnd, final boolean bots) {
 		this.w = w;
 		w.setTime(6000L);
 		w.setDifficulty(Difficulty.EASY);
@@ -67,8 +70,24 @@ public class Arena {
 		this.gst = GameState.WAITING;
 		this.TSps = TSps;
 		this.CTSps = CTSps;
-		this.TPss = TPss;
-		this.CTPss = CTPss;
+		this.spots = spots;
+		final ArrayList<BaseBlockPosition> Ts = new ArrayList<>();
+		final ArrayList<BaseBlockPosition> CTs = new ArrayList<>();
+		for (final Spot sp : spots) {
+			switch (sp.tm) {
+			case Ts:
+				Ts.add(sp);
+				break;
+			case CTs:
+				CTs.add(sp);
+				break;
+			default:
+				break;
+			}
+		}
+
+		this.TPss = Ts.toArray(new BaseBlockPosition[Ts.size()]);
+		this.CTPss = CTs.toArray(new BaseBlockPosition[CTs.size()]);
 		this.name = name;
 		this.bots = bots;
 		this.rnd = rnd;
@@ -240,7 +259,7 @@ public class Arena {
 		return bbps.get(bbi);
 	}
 
-	public int distSq(final BaseBlockPosition from, final BaseBlockPosition to) {
+	public static int distSq(final BaseBlockPosition from, final BaseBlockPosition to) {
 		final int dx = from.u() - to.u(), dy = from.v() - to.v(), dz = from.w() - to.w();
 		return dx * dx + dy * dy + dz * dz;
 		
@@ -266,5 +285,45 @@ public class Arena {
 		}
 		im.setLore(lr);
 		it.setItemMeta(im);
+	}
+
+	public Spot[] getPoss() {
+		return spots;
+	}
+
+	public Spot getClosePos(final World w, final BaseBlockPosition org, final boolean trace, final boolean must) {
+		Spot spot = null;
+		int dd = Integer.MAX_VALUE;
+		if (trace) {
+			final Location loc = new Location(w, org.u() + 0.5d, org.v() + 0.5d, org.w() + 0.5d);
+			for (final Spot s : spots) {
+				final int d = distSq(org, s);
+				if ((spot == null || d < dd) && Main.rayThruSoft(loc, 
+						new Vector(s.u() + 0.5d, s.v() + 0.5d, s.w() + 0.5d), 1d)) {
+					spot = s;
+					dd = d;
+				}
+			}
+			
+			if (spot == null && must) {
+				for (final Spot s : spots) {
+					final int d = distSq(org, s);
+					if (spot == null || d < dd) {
+						spot = s;
+						dd = d;
+					}
+				}
+			}
+		} else {
+			for (final Spot s : spots) {
+				final int d = distSq(org, s);
+				if (spot == null || d < dd) {
+					spot = s;
+					dd = d;
+				}
+			}
+		}
+		
+		return spot;
 	}
 }

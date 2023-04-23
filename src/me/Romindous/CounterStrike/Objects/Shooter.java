@@ -24,7 +24,7 @@ public interface Shooter {
 	public String name();
 	
 	public void rotPss();
-	public Vector getPos();
+	public Vector getPos(final boolean dir);
 	
 	public Player getPlayer();
 	public LivingEntity getEntity();
