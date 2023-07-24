@@ -2,7 +2,6 @@ package me.Romindous.CounterStrike;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,7 +20,6 @@ import org.bukkit.Particle;
 import org.bukkit.World;
 import org.bukkit.World.Environment;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.block.Block;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -33,13 +31,18 @@ import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scoreboard.Criteria;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.ScoreboardManager;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
+import org.joml.Vector3f;
 
+import com.mojang.math.Transformation;
+
+import io.papermc.paper.adventure.PaperAdventure;
 import me.Romindous.CounterStrike.Commands.CSCmd;
 import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Game.Arena;
@@ -51,13 +54,11 @@ import me.Romindous.CounterStrike.Listeners.InterrLis;
 import me.Romindous.CounterStrike.Listeners.InventLis;
 import me.Romindous.CounterStrike.Listeners.MainLis;
 import me.Romindous.CounterStrike.Objects.Shooter;
-import me.Romindous.CounterStrike.Objects.Bots.BotType;
+import me.Romindous.CounterStrike.Objects.Bots.BotType__;
 import me.Romindous.CounterStrike.Objects.Game.GameState;
 import me.Romindous.CounterStrike.Objects.Game.GameType;
 import me.Romindous.CounterStrike.Objects.Game.Nade;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
-import me.Romindous.CounterStrike.Objects.Loc.Spot;
-import me.Romindous.CounterStrike.Objects.Loc.WXYZ;
 import me.Romindous.CounterStrike.Objects.Map.MapBuilder;
 import me.Romindous.CounterStrike.Objects.Map.Setup;
 import me.Romindous.CounterStrike.Utils.Inventories;
@@ -66,20 +67,24 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.minecraft.EnumChatFormat;
 import net.minecraft.core.BaseBlockPosition;
-import net.minecraft.network.chat.IChatBaseComponent;
 import net.minecraft.network.protocol.game.PacketPlayOutEntityDestroy;
 import net.minecraft.network.protocol.game.PacketPlayOutEntityMetadata;
 import net.minecraft.network.protocol.game.PacketPlayOutSpawnEntity;
-import net.minecraft.server.dedicated.DedicatedServer;
+import net.minecraft.server.level.WorldServer;
 import net.minecraft.server.network.PlayerConnection;
+import net.minecraft.world.entity.Display.BillboardConstraints;
+import net.minecraft.world.entity.Display.TextDisplay;
+import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.entity.EntityTypes;
-import net.minecraft.world.entity.decoration.EntityArmorStand;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.Ostrov;
 import ru.komiss77.enums.Stat;
+import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.modules.world.WorldManager;
 import ru.komiss77.modules.world.WorldManager.Generator;
+import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.utils.ItemBuilder;
+import ru.komiss77.utils.TCUtils;
 import ru.komiss77.version.IServer;
 import ru.komiss77.version.VM;
  
@@ -87,19 +92,17 @@ public final class Main extends JavaPlugin implements Listener {
 	
 	public static Main plug;
 	public static File folder;
-	public static World lbbyW;
-	public static DedicatedServer ds;
-	public static BaseBlockPosition lobby;
+	public static WXYZ lobby;
 	public static ScoreboardManager smg;
 	public static YamlConfiguration ars;
 	public static YamlConfiguration config;
 	public static final SecureRandom srnd = new SecureRandom();
-	public static boolean maxSQL = true;
     public static final LivingEntity[] a = new LivingEntity[0];
 	public static final HashMap<UUID, LivingEntity[]> wlents = new HashMap<>();
 	public static ItemStack cp;
 	public static ItemStack bmb;
 	public static ItemStack air;
+	public static ItemStack spy;
 	public static ItemStack thlmt;
 	public static ItemStack cthlmt;
 	
@@ -119,16 +122,8 @@ public final class Main extends JavaPlugin implements Listener {
 		plug = this;
 		folder = getDataFolder();
 		smg = getServer().getScoreboardManager();
-		//PacketUtils.v = getServer().getClass().getPackage().getName().split("\\.")[3];
-        
-        try {
-            ds = (DedicatedServer) getServer().getClass().getMethod("getServer").invoke(getServer());
-        } catch (IllegalAccessException|InvocationTargetException|NoSuchMethodException e) {
-            e.printStackTrace();
-        }
 		
 		loadConfigs();
-		if (maxSQL) {return;}
 		getServer().getPluginManager().registerEvents(new DmgLis(), this);
 		getServer().getPluginManager().registerEvents(new InterrLis(), this);
 		getServer().getPluginManager().registerEvents(new MainLis(), this);
@@ -136,6 +131,7 @@ public final class Main extends JavaPlugin implements Listener {
 		
 		getCommand("cs").setExecutor(new CSCmd());
 		
+		//Ostrov things
      
 		//game stuff (5 tick)
 		new BukkitRunnable() {
@@ -195,7 +191,7 @@ public final class Main extends JavaPlugin implements Listener {
 	            	loc.w.spawnParticle(Particle.SOUL, loc.getCenterLoc(), 2, 0.2D, 0.2D, 0.2D, 0.0D, null, false);
 	            	final GunType gt = GunType.values()[loc.yaw];
 	            	if ((loc.pitch & 31) < 16 && loc.pitch % gt.cld == 0) {
-	            		Main.plyWrldSht(loc.getCenterLoc(), gt.snd);
+	            		Main.plyWrldSnd(loc.getCenterLoc(), gt.snd);
 	            	}
 	                if ((loc.pitch--) == 0) {
 	                	li.remove();
@@ -217,7 +213,7 @@ public final class Main extends JavaPlugin implements Listener {
 		try {
 			File file = new File(getDataFolder() + File.separator + "config.yml");
 	        if (!file.exists() || !getConfig().contains("spawns")) {
-	        	getServer().getConsoleSender().sendMessage("Config for WarZone not found, creating a new one...");
+	        	getServer().getConsoleSender().sendMessage("Config for CS not found, creating a new one...");
 	    		getConfig().options().copyDefaults(true);
 	    		getConfig().save(file);
 	        }
@@ -230,6 +226,7 @@ public final class Main extends JavaPlugin implements Listener {
 	        
 	    	cp = new ItemStack(Material.CARVED_PUMPKIN);
 	    	air = new ItemStack(Material.AIR);
+	    	spy = Main.mkItm(Material.SPYGLASS, "§8О.О", 10);
 	    	bmb = Main.mkItm(Material.GOLDEN_APPLE, "§4§lС*4 §c\u926e", 10, "§dПКМ §7- Заложить бомбу", "§7Можно установить на точку §5A §7или §5B");
 	    	thlmt = new ItemStack(Material.LEATHER_HELMET);
 			final LeatherArmorMeta hm = (LeatherArmorMeta) thlmt.getItemMeta();
@@ -264,8 +261,9 @@ public final class Main extends JavaPlugin implements Listener {
 			}
 	        
 	        if (ars.contains("lobby")) {
-	        	lbbyW = getServer().getWorld(ars.getString("lobby.world"));
-	        	lobby = new BaseBlockPosition(ars.getInt("lobby.x"), ars.getInt("lobby.y"), ars.getInt("lobby.z"));
+	        	final XYZ lb = XYZ.fromString(ars.getString("lobby"));
+	        	lobby = new WXYZ(Bukkit.getWorld(lb.worldName) == null ? 
+	        		Bukkit.getWorld("lobby") : Bukkit.getWorld(lb.worldName), lb);
 	        }
 	        
 	        wlents.clear();
@@ -277,7 +275,7 @@ public final class Main extends JavaPlugin implements Listener {
 	        Inventories.fillLbbInv();
 	        Inventories.fillTsInv();
 	        Inventories.fillCTsInv();
-	        BotType.values();
+	        BotType__.values();
         }
         catch (IOException | NullPointerException e) {
         	e.printStackTrace();
@@ -293,9 +291,7 @@ public final class Main extends JavaPlugin implements Listener {
 		if (p.isInsideVehicle()) {
 			p.getVehicle().remove();
 		}
-		if (Main.lobby != null) {
-			p.teleport(getNrLoc(Main.lobby, lbbyW));
-		}
+		if (Main.lobby != null) p.teleport(getNrLoc(Main.lobby));
 		p.getInventory().setItem(2, Main.mkItm(Material.CAMPFIRE, "§dВыбор Игры", 10));
 		p.getInventory().setItem(5, Main.mkItm(Material.TOTEM_OF_UNDYING, "§eВыбор Обшивки", 10));
 		p.getInventory().setItem(6, Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10));
@@ -316,7 +312,7 @@ public final class Main extends JavaPlugin implements Listener {
 		for (final PlShooter sho : shtrs.values()) {
 			if (sho.arena() == null) {
 				PacketUtils.sendNmTg(sho, "§7<§5ЛОББИ§7> ", " §7[-.-]", EnumChatFormat.h);
-			}
+			}	
 		}
 		for (final Arena ar : Main.actvarns.values()) {
 			if (ar.gst == GameState.WAITING) {
@@ -329,7 +325,7 @@ public final class Main extends JavaPlugin implements Listener {
    
 	public static void lobbyScore(final Player p) {
 		final Scoreboard sb = Main.smg.getNewScoreboard();
-		final Objective ob = sb.registerNewObjective("CS:GO", "", Component.text("§7[§5CS:GO§7]"));
+		final Objective ob = sb.registerNewObjective("CS:GO", Criteria.DUMMY, Component.text("§7[§5CS:GO§7]"));
 		ob.setDisplaySlot(DisplaySlot.SIDEBAR);
 		ob.getScore("    ")
 		.setScore(10);
@@ -362,39 +358,32 @@ public final class Main extends JavaPlugin implements Listener {
 		return this;
 	}
 	
-	public static void dmgArm(final Player p, final Location loc, final String nm) {
-		final EntityArmorStand arm = new EntityArmorStand(EntityTypes.d, PacketUtils.getNMSWrld(loc.getWorld()));
-		arm.j(true);//Invis
-		arm.e(true);//noGrav
-		arm.m(true);//Invuln
-		arm.t(true);//marker
-		arm.b(IChatBaseComponent.a(nm));//name
-		arm.n(true);
-		arm.setPosRaw(loc.getX() + srnd.nextDouble() - 0.5D, loc.getY() + srnd.nextDouble() - 0.5D, loc.getZ() + srnd.nextDouble() - 0.5D, false);
-
-		if (!p.isValid()) {
-			return;
-		}
-		final PlayerConnection pc = PacketUtils.getNMSPl(p).b;
-		pc.a(new PacketPlayOutSpawnEntity(arm));
-		pc.a(new PacketPlayOutEntityMetadata(arm.ae(), arm.ai(), true));
+	public static void dmgInd(final Player p, final Location loc, final String nm) {
+		final WorldServer wm = VM.getNmsServer().toNMS(loc.getWorld());
+		final TextDisplay tds = new TextDisplay(EntityTypes.aX, wm);
+		final int eid = tds.af();
+		tds.e(true);
+		tds.a(BillboardConstraints.b);
+		tds.b(160);
+		final float lc = (float) p.getEyeLocation().distanceSquared(loc);
+		tds.a(new Transformation(null, null, new Vector3f(lc * 0.006f, lc * 0.006f, lc * 0.006f), null));
+	    byte flagBits = tds.t();//getFlags
+	    flagBits = (byte) (flagBits | 1);
+	    flagBits = (byte) (flagBits | 2);
+	    tds.d(flagBits);
 		
-		new BukkitRunnable() {
-			public void run() {
-				pc.a(new PacketPlayOutEntityDestroy(arm.ae()));
-			}
-		}.runTaskLater(Main.plug, 20L);
+		tds.setPosRaw(0.5f - srnd.nextFloat() + loc.getX(), lc * 0.001f + loc.getY() - srnd.nextFloat(), 0.5f - srnd.nextFloat() + loc.getZ(), false);
+		tds.c(PaperAdventure.asVanilla(TCUtils.format(nm)));
+		
+		final PlayerConnection pc = VM.getNmsServer().toNMS(p).c;
+		pc.a(new PacketPlayOutSpawnEntity(tds));
+		pc.a(new PacketPlayOutEntityMetadata(eid, tds.aj().c()));
+		tds.a(RemovalReason.a);
+		Ostrov.async(() -> pc.a(new PacketPlayOutEntityDestroy(eid)), 24);
    }
    
    public static ItemStack mkItm(final Material mt, final String nm, final int mdl, final String... lr) {
 	   return new ItemBuilder(mt).name(nm).setModelData(mdl).lore(Arrays.asList(lr)).build();
-	   /*final ItemStack it = new ItemStack(mt);
-	   final ItemMeta im = it.getItemMeta();
-	   im.displayName(Component.text(nm));
-       im.setCustomModelData(Integer.valueOf(mdl));
-       im.setLore(Arrays.asList(lr));
-	   it.setItemMeta(im);
-	   return it;*/
    }
    
    public static boolean isHdMat(final ItemStack it, final Material mt) {
@@ -444,6 +433,8 @@ public final class Main extends JavaPlugin implements Listener {
 		}
 	}
 
+	private static final XYZ[] eml = new XYZ[0];
+	
 	public Arena crtArena(final String nm, final GameType gt) {
 		final Setup stp = nnactvarns.get(nm);
 		final String wnm = stp.worlds.get(gt);
@@ -455,39 +446,38 @@ public final class Main extends JavaPlugin implements Listener {
 			final MapBuilder mb = new MapBuilder(nm);
 			mb.setType(gt);
 			
-			mb.build(new Location(w, 0d, 11d, 0d));
+			mb.build(new Location(w, 0d, 11d, 0d), stp.bots);
 			switch (gt) {
 			case DEFUSAL:
 			default:
-				ar = new Defusal(stp.nm, stp.min, stp.max, mb.getCTSpawns(), mb.getTSpawns(), w, mb.getASite(), mb.getBSite(), 
-					new Spot[0], (byte) 6, true, false);
+				ar = new Defusal(stp.nm, stp.min, stp.max, mb.getCTSpawns(), mb.getTSpawns(), eml, w, mb.getASite(), mb.getBSite(), (byte) 6, true, false);
 				actvarns.put(nm, (Defusal) ar);
 				break;
 			case INVASION:
-				ar = new Invasion(stp.nm, stp.min, stp.max, mb.getCTSpawns(), mb.getTSpawns(), w, 
-					mb.getASite(), mb.getBSite(), new Spot[0], true, false);
+				ar = new Invasion(stp.nm, stp.min, stp.max, mb.getCTSpawns(), mb.getTSpawns(), eml, w, mb.getASite(), mb.getBSite(), true, false);
 				actvarns.put(nm, (Invasion) ar);
 				break;
 			case GUNGAME:
-				ar = new Gungame(stp.nm, stp.min, stp.max, mb.getCTSpawns(), mb.getTSpawns(), 
-					w, new Spot[0], true, false);
+				ar = new Gungame(stp.nm, stp.min, stp.max, mb.getCTSpawns(), mb.getTSpawns(), eml, w, true, false);
 				actvarns.put(nm, (Gungame) ar);
 				break;
 			}
 			mapBlds.put(nm, mb);
 		} else {
+//			mar = new Area(nm, stp.bot, stp.top, w);
+//			if (stp.bots) Ostrov.async(() -> mar.loadPos());
 			switch (gt) {
 			case DEFUSAL:
 			default:
-				ar = new Defusal(stp.nm, stp.min, stp.max, stp.tSpawns, stp.ctSpawns, w, stp.A, stp.B, stp.spots, (byte) 6, false, stp.bots);
+				ar = new Defusal(stp.nm, stp.min, stp.max, stp.tSpawns, stp.ctSpawns, stp.spots, w, stp.A, stp.B, (byte) 6, false, stp.bots);
 				actvarns.put(nm, (Defusal) ar);
 				break;
 			case INVASION:
-				ar = new Invasion(stp.nm, stp.min, stp.max, stp.tSpawns, stp.ctSpawns, w, stp.A, stp.B, stp.spots, false, stp.bots);
+				ar = new Invasion(stp.nm, stp.min, stp.max, stp.tSpawns, stp.ctSpawns, stp.spots, w, stp.A, stp.B, false, stp.bots);
 				actvarns.put(nm, (Invasion) ar);
 				break;
 			case GUNGAME:
-				ar = new Gungame(stp.nm, stp.min, stp.max, stp.tSpawns, stp.ctSpawns, w, stp.spots, false, stp.bots);
+				ar = new Gungame(stp.nm, stp.min, stp.max, stp.tSpawns, stp.ctSpawns, stp.spots, w, false, stp.bots);
 				actvarns.put(nm, (Gungame) ar);
 				break;
 			}
@@ -495,23 +485,27 @@ public final class Main extends JavaPlugin implements Listener {
 		return ar;
 	}
 
-	public static Location getNrLoc(final BaseBlockPosition loc, final World w) {
-		return new Location(w, (Main.srnd.nextBoolean() ? -1 : 1) + loc.u() + 0.5d, loc.v() + 0.1d, (Main.srnd.nextBoolean() ? -1 : 1) + loc.w() + 0.5d);
-	}
-
-	public static Location getNrLoc(final WXYZ loc, final World w) {
+	public static Location getNrLoc(final XYZ loc, final World w) {
 		return new Location(w, (Main.srnd.nextBoolean() ? -1 : 1) + loc.x + 0.5d, loc.y + 0.1d, (Main.srnd.nextBoolean() ? -1 : 1) + loc.z + 0.5d);
 	}
 
-	public static Vector getNrVec(final BaseBlockPosition loc) {
-		return new Vector((Main.srnd.nextBoolean() ? -1 : 1) + loc.u() + 0.5d, loc.v() + 0.1d, (Main.srnd.nextBoolean() ? -1 : 1) + loc.w() + 0.5d);
+	public static Location getNrLoc(final Location loc) {
+		return loc.add(Main.srnd.nextBoolean() ? -1d : 1d, 0.1d, Main.srnd.nextBoolean() ? -1d : 1d);
 	}
 
-	public static Block getBBlock(final BaseBlockPosition loc, final World w) {
-		return w.getBlockAt(loc.u(), loc.v(), loc.w());
+	public static Location getNrLoc(final WXYZ loc) {
+		return new Location(loc.w, (Main.srnd.nextBoolean() ? -1 : 1) + loc.x + 0.5d, loc.y + 0.1d, (Main.srnd.nextBoolean() ? -1 : 1) + loc.z + 0.5d);
+	}
+
+	public static Vector getNrVec(final XYZ loc) {
+		return new Vector((Main.srnd.nextBoolean() ? -1 : 1) + loc.x + 0.5d, loc.y + 0.1d, (Main.srnd.nextBoolean() ? -1 : 1) + loc.z + 0.5d);
+	}
+
+	public static XYZ getNrPos(final XYZ loc) {
+		return loc.clone().add(Main.srnd.nextBoolean() ? -1 : 1, 0, Main.srnd.nextBoolean() ? -1 : 1);
 	}
 	
-	public static void plyWrldSht(final Location org, final String snd) {
+	public static void plyWrldSnd(final Location org, final String snd) {
 		Ostrov.async(() -> {
 			for (final Player p : org.getWorld().getPlayers()) {
 				final float d = (float) p.getLocation().distanceSquared(org);
@@ -521,7 +515,7 @@ public final class Main extends JavaPlugin implements Listener {
 	}
 	
 	public static void clsLbPls() {
-		for (final Player p : lbbyW.getPlayers()) {
+		for (final Player p : lobby.w.getPlayers()) {
 			p.closeInventory();
 		}
 	}
@@ -558,12 +552,6 @@ public final class Main extends JavaPlugin implements Listener {
 	public static LivingEntity[] getWLnts(final UUID wnm) {
 		final LivingEntity[] arr = wlents.get(wnm);
 		return arr == null ? a : arr;
-	}
-
-	public static double twoDisQuared(final BaseBlockPosition one, final BaseBlockPosition two) {
-		final int dx = one.u() - two.u();
-		final int dz = one.w() - two.w();
-		return dx * dx + dz * dz;
 	}
 
 	public static void brdcst(final String msg) {

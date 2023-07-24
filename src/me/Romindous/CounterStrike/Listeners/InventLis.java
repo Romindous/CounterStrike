@@ -2,7 +2,6 @@ package me.Romindous.CounterStrike.Listeners;
 
 import java.util.Arrays;
 
-import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -16,7 +15,6 @@ import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerItemHeldEvent;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -32,14 +30,15 @@ import me.Romindous.CounterStrike.Game.Arena.Team;
 import me.Romindous.CounterStrike.Game.Defusal;
 import me.Romindous.CounterStrike.Game.Invasion;
 import me.Romindous.CounterStrike.Objects.Shooter;
+import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Map.Setup;
 import me.Romindous.CounterStrike.Objects.Map.TypeChoose;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
-import me.Romindous.CounterStrike.Utils.Inventories;
-import me.Romindous.CounterStrike.Utils.PacketUtils;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.utils.ItemBuilder;
+import ru.komiss77.utils.ItemUtils;
+import ru.komiss77.utils.TCUtils;
 import ru.komiss77.utils.inventory.SmartInventory;
 
 public class InventLis implements Listener {
@@ -54,8 +53,7 @@ public class InventLis implements Listener {
 	@EventHandler
 	public void onSlot(final PlayerItemHeldEvent e) {
 		final Player p = e.getPlayer();
-		final Shooter pr = Shooter.getPlShooter(p.getName(), true);
-		final Shooter sh = pr;
+		final PlShooter sh = Shooter.getPlShooter(p.getName(), true);
 		sh.shtTm(0);
 		sh.count(0);
 		final ItemStack it = sh.item(e.getNewSlot());
@@ -66,17 +64,18 @@ public class InventLis implements Listener {
 				sh.count((it.getType().getMaxDurability() - ((Damageable)it.getItemMeta()).getDamage()) * gt.rtm / it.getType().getMaxDurability());
 			}
 		}
+		
 		if (p.isSneaking()) {
-			PacketUtils.fkHlmtClnt(p, sh.item(EquipmentSlot.HEAD));
-			PacketUtils.zoom(p, false);
-			e.getPlayer().setSneaking(false);
+			sh.scope(false);
+			if (!ItemUtils.isBlank(p.getInventory().getItemInOffHand(), false))
+				p.getInventory().setItemInOffHand(Main.air);
 		}
 		
 		if (it != null) {
 			switch (it.getType()) {
 			case GOLDEN_APPLE:
-				if (pr.arena() != null && !((Defusal) pr.arena()).indon) {
-					((Defusal) pr.arena()).indSts(p);
+				if (sh.arena() != null && !((Defusal) sh.arena()).indon) {
+					((Defusal) sh.arena()).indSts(p);
 				}
 				return;
 			default:
@@ -87,8 +86,8 @@ public class InventLis implements Listener {
 		if (p.getInventory().getItemInMainHand() != null) {
 			switch (p.getInventory().getItemInMainHand().getType()) {
 			case GOLDEN_APPLE:
-				if (pr.arena() != null && ((Defusal) pr.arena()).indon) {
-					((Defusal) pr.arena()).indSts(p);
+				if (sh.arena() != null && ((Defusal) sh.arena()).indon) {
+					((Defusal) sh.arena()).indSts(p);
 				}
 				return;
 			default:
@@ -112,7 +111,7 @@ public class InventLis implements Listener {
 			e.setCancelled(true);
 			return;
 		}
-		final String ttl = Inventories.getCleanTitle(e.getView());
+		final String ttl = TCUtils.stripColor(e.getView().title());
 		//p.sendMessage(ttl);
 		if (ttl.equals("Тренировка")) {
 			if (e.getCurrentItem() != null) {
@@ -122,7 +121,7 @@ public class InventLis implements Listener {
 					final int mdl;
 					final Shooter pr;
 					final GunType gt;
-					switch (it.getItemMeta().getDisplayName().charAt(1)) {
+					switch (TCUtils.toString(it.getItemMeta().displayName()).charAt(1)) {
 					case '5':
 						pr = Shooter.getPlShooter(p.getName(), true);
 						gt = GunType.getGnTp(it);
@@ -183,31 +182,32 @@ public class InventLis implements Listener {
 							if (pr.money() - nt.prc < 0) {
 								p.sendMessage(Main.prf() + "§cУ вас не хватает денег для покупки этого!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
-							} else if (p.getInventory().getItem(3) != null) {
+							} else if (p.getInventory().getItem(NadeType.prmSlot) != null) {
 								p.sendMessage(Main.prf() + "§cУ вас уже есть граната в этом слоту!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else {
 								pr.arena().chngMn(pr, -nt.prc);
 								cp = it.clone();
 								final ItemMeta im = cp.getItemMeta();
-								im.setLore(Arrays.asList());
+								im.lore(Arrays.asList());
 								cp.setItemMeta(im);
-								p.getInventory().setItem(3, cp);
+								p.getInventory().setItem(NadeType.prmSlot, cp);
 								p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
 							}
 						} else {
 							if (pr.money() - nt.prc < 0) {
 								p.sendMessage(Main.prf() + "§cУ вас не хватает денег для покупки этого!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
-							} else if (p.getInventory().getItem(4) != null && p.getInventory().getItem(4).getType() != it.getType()) {
+							} else if (p.getInventory().getItem(NadeType.scdSlot) != null && 
+								p.getInventory().getItem(NadeType.scdSlot).getType() != it.getType()) {
 								p.sendMessage(Main.prf() + "§cУ вас уже есть граната в этом слоту!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else {
 								cp = it.clone();
 								final ItemMeta im = cp.getItemMeta();
-								im.setLore(Arrays.asList());
+								im.lore(Arrays.asList());
 								cp.setItemMeta(im);
-								if (addSetItm(p.getInventory(), 4, cp)) {
+								if (addSetItm(p.getInventory(), NadeType.scdSlot, cp)) {
 									pr.arena().chngMn(pr, -nt.prc);
 									p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
 								} else {
@@ -228,7 +228,7 @@ public class InventLis implements Listener {
 								pr.arena().chngMn(pr, -GunType.twrPrc);
 								cp = it.clone();
 								final ItemMeta im = cp.getItemMeta();
-								im.setLore(Arrays.asList());
+								im.lore(Arrays.asList());
 								cp.setItemMeta(im);
 								p.getInventory().setItem(3, cp);
 								p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
@@ -245,7 +245,7 @@ public class InventLis implements Listener {
 								pr.arena().chngMn(pr, -GunType.dfktPrc);
 								cp = it.clone();
 								final ItemMeta im = cp.getItemMeta();
-								im.setLore(Arrays.asList());
+								im.lore(Arrays.asList());
 								cp.setItemMeta(im);
 								p.getInventory().setItem(7, cp);
 								p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
@@ -262,7 +262,7 @@ public class InventLis implements Listener {
 								pr.arena().chngMn(pr, -GunType.hlmtPrc);
 								cp = it.clone();
 								final ItemMeta im = cp.getItemMeta();
-								im.setLore(Arrays.asList());
+								im.lore(Arrays.asList());
 								cp.setItemMeta(im);
 								p.getInventory().setHelmet(cp);
 								p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_IRON, 1f, 1.4f);
@@ -278,7 +278,7 @@ public class InventLis implements Listener {
 							} else {
 								cp = it.clone();
 								final ItemMeta im = cp.getItemMeta();
-								im.setLore(Arrays.asList());
+								im.lore(Arrays.asList());
 								cp.setItemMeta(im);
 								pr.arena().chngMn(pr, -GunType.chstPrc);
 								p.getInventory().setChestplate(cp);
@@ -301,7 +301,7 @@ public class InventLis implements Listener {
 				case PURPLE_CONCRETE_POWDER:
 					if (it.hasItemMeta()) {
 						p.getWorld().playSound(p.getLocation(), Sound.BLOCK_IRON_TRAPDOOR_CLOSE, 2f, 2f);
-						final String nm = it.getItemMeta().getDisplayName().substring(2);
+						final String nm = TCUtils.toString(it.getItemMeta().displayName()).substring(2);
 						final Arena ar = Main.actvarns.get(nm);
 						if (ar == null) {
 							final Setup stp = Main.nnactvarns.get(nm);
@@ -333,7 +333,7 @@ public class InventLis implements Listener {
 		                        .title("§d§l      Выбор Типа Игры")
 		                        .build().open((Player) p);
 							} else {
-								p.sendMessage(Main.prf() + ChatColor.RED + "Ни одной карты еще не создано!");
+								p.sendMessage(Main.prf() + "§cНи одной карты еще не создано!");
 							}
 						} else {
 							CSCmd.partyJoinMap(Shooter.getPlShooter(p.getName(), true), (Player) p, ar);
@@ -430,7 +430,7 @@ public class InventLis implements Listener {
 			}
 		} else {
 			e.setCancelled((p.getGameMode() != GameMode.CREATIVE));
-			if (it != null && it.hasItemMeta() && it.getItemMeta().getDisplayName().equals("§сВыход")) {
+			if (it != null && it.hasItemMeta() && TCUtils.toString(it.getItemMeta().displayName()).equals("§сВыход")) {
 				((Player) p).performCommand("cs leave");
 			}
 		}

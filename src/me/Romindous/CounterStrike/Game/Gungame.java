@@ -2,11 +2,11 @@ package me.Romindous.CounterStrike.Game;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
 import org.bukkit.FireworkEffect.Type;
@@ -15,6 +15,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
@@ -32,6 +33,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.scoreboard.Criteria;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
@@ -47,17 +49,17 @@ import me.Romindous.CounterStrike.Objects.Game.GameType;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Game.TripWire;
 import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
-import me.Romindous.CounterStrike.Objects.Loc.Spot;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
 import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
 import me.Romindous.CounterStrike.Utils.Inventories;
 import me.Romindous.CounterStrike.Utils.PacketUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.minecraft.core.BaseBlockPosition;
 import net.minecraft.network.protocol.game.PacketPlayOutEntityDestroy;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
+import ru.komiss77.modules.bots.BotManager;
+import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.utils.ItemBuilder;
 
 public class Gungame extends Arena {
@@ -67,9 +69,9 @@ public class Gungame extends Arena {
 	private final byte cycle;
 	
 	public Gungame(final String name, final byte min, final byte max, 
-		final BaseBlockPosition[] TSps, final BaseBlockPosition[] CTSps, final org.bukkit.World w, 
-		final Spot[] spots, final boolean rnd, final boolean bots) {
-		super(name, min, max, TSps, CTSps, w, spots, rnd, bots);
+		final XYZ[] TSps, final XYZ[] CTSps, final XYZ[] spots, 
+		final World w, final boolean rnd, final boolean bots) {
+		super(name, min, max, TSps, CTSps, spots, w, rnd, bots);
 		this.guns = new GunType[GunType.values().length + 1];
 		final List<GunType> gts = Arrays.asList(GunType.values());
 		Collections.shuffle(gts);
@@ -116,8 +118,7 @@ public class Gungame extends Arena {
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел на карту!");
 							PacketUtils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!", 30);
 							if (!rnd) {
-								final BaseBlockPosition spt = Main.srnd.nextBoolean() ? Main.rndElmt(TPss) : Main.rndElmt(CTPss);
-								pl.teleport(new Location(w, spt.u(), spt.v(), spt.w()));
+								pl.teleport(Main.rndElmt(spots).getCenterLoc(w));
 							}
 							PacketUtils.sendNmTg(s, "§7<§d" + name + "§7> ", " §7[-.-]", Team.NA.clr);
 							pl.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 600, 1));
@@ -148,8 +149,7 @@ public class Gungame extends Arena {
 				sh.item(Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10), 6);
 				sh.item(Main.mkItm(Material.SLIME_BALL, "§cВыход", 10), 8);
 				if (!rnd) {
-					final BaseBlockPosition spt = Main.srnd.nextBoolean() ? Main.rndElmt(TPss) : Main.rndElmt(CTPss);
-					p.teleport(new Location(w, spt.u(), spt.v(), spt.w()));
+					p.teleport(Main.rndElmt(spots).getCenterLoc(w));
 				}
 				p.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, tm * 20, 1));
 				beginScore(sh, p);
@@ -159,11 +159,9 @@ public class Gungame extends Arena {
 					final Player pl = e.getKey().getPlayer();
 					if (pl != null) {
 						pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел на карту!");
-						//Main.chgSbdTm(p.getScoreboard(), "tamt", "", "§4" + String.valueOf(getTmAmt(Team.Ts)) + (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."));
-						//Main.chgSbdTm(p.getScoreboard(), "ctamt", "", "§3" + String.valueOf(getTmAmt(Team.CTs)) + (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
 						PacketUtils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!", 30);
-						PacketUtils.sendNmTg(PacketUtils.getNMSPl(p).networkManager, pl, "§7<§d" + name + "§7> ", " §7[-.-]", true, e.getValue().clr);
 					}
+					PacketUtils.sendNmTg(PacketUtils.getNMSPl(p).c.h, e.getKey(), "§7<§d" + name + "§7> ", " §7[-.-]", true, e.getValue().clr);
 				}
 				break;
 			case BUYTIME:
@@ -174,17 +172,21 @@ public class Gungame extends Arena {
 				gameScore(sh, p);
 				PacketUtils.sendNmTg(sh, tm.icn + " ", " §7[0-0]", tm.clr);
 				for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
-					final Player pl = e.getKey().getPlayer();
+					final Shooter s = e.getKey();
+					final Team t = e.getValue();
+					final Player pl = s.getPlayer();
 					if (pl != null) {
 						pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел играть за комманду " + tm.icn + "§7!");
-						Main.chgSbdTm(pl.getScoreboard(), "tamt", "", "§4" + String.valueOf(getTmAmt(Team.Ts, true)) + (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."));
-						Main.chgSbdTm(pl.getScoreboard(), "ctamt", "", "§3" + String.valueOf(getTmAmt(Team.CTs, true)) + (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
-						PacketUtils.sendNmTg(PacketUtils.getNMSPl(p).networkManager, pl, e.getValue().icn + " ", " §7[0-0]", e.getValue() == tm, e.getValue().clr);
+						Main.chgSbdTm(pl.getScoreboard(), "tamt", "", "§4" + String.valueOf(getTmAmt(Team.Ts, true, true)) + (t == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."));
+						Main.chgSbdTm(pl.getScoreboard(), "ctamt", "", "§3" + String.valueOf(getTmAmt(Team.CTs, true, true)) + (t == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
+					} else {
+						((BtShooter) s).updateAll(PacketUtils.getNMSPl(p).c.h);
 					}
+					PacketUtils.sendNmTg(PacketUtils.getNMSPl(p).c.h, s, e.getValue().icn + " ", " §7[" + s.kills() + "-" + s.deaths() + "]", t == tm, t.clr);
 				}
 				for (final TripWire tw : tws) {
 					if (tm == tw.tm) {
-						tw.shwNd(PacketUtils.getNMSPl(p).b);
+						tw.shwNd(PacketUtils.getNMSPl(p).c);
 					}
 				}
 			case ENDRND:
@@ -205,8 +207,7 @@ public class Gungame extends Arena {
 
 	public void addToTm(final Player p, final Team tm) {
 		p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1, 1);
-		final BaseBlockPosition spt = tm == Team.Ts ? Main.rndElmt(TPss) : Main.rndElmt(CTPss);
-		p.teleport(new Location(w, spt.u(), spt.v(), spt.w()));
+		p.teleport(Main.rndElmt(spots).getCenterLoc(w));
 		Main.shwHdPls(p);
 		final PlayerInventory pinv = p.getInventory();
 		p.setGameMode(GameMode.SURVIVAL);
@@ -256,8 +257,8 @@ public class Gungame extends Arena {
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7вышел с карты!");
 							PacketUtils.sendAcBr(pl, "§7Нужно еще §d" + rm + " §7игроков для начала!", 30);
 							final Scoreboard sb = pl.getScoreboard();
-							Main.chgSbdTm(pl.getScoreboard(), "tamt", "", "§4" + String.valueOf(getTmAmt(Team.Ts, true)) + (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."));
-							Main.chgSbdTm(pl.getScoreboard(), "ctamt", "", "§3" + String.valueOf(getTmAmt(Team.CTs, true)) + (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
+							Main.chgSbdTm(pl.getScoreboard(), "tamt", "", "§4" + String.valueOf(getTmAmt(Team.Ts, true, true)) + (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."));
+							Main.chgSbdTm(pl.getScoreboard(), "ctamt", "", "§3" + String.valueOf(getTmAmt(Team.CTs, true, true)) + (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
 							Main.chgSbdTm(sb, "rmn", "", "§5" + String.valueOf(rm) + (rm > 1 ? " §7игроков" : " §7игрокa"));
 						}
 					}
@@ -277,7 +278,7 @@ public class Gungame extends Arena {
 							
 						} else {
 							waitScore(s, pl, min - 1);
-							pl.teleport(Main.getNrLoc(Main.lobby, Main.lbbyW));
+							pl.teleport(Main.getNrLoc(Main.lobby));
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7вышел с карты,\n§7Слишком мало игроков для начала!");
 							PacketUtils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!", 30);
 							pl.removePotionEffect(PotionEffectType.GLOWING);
@@ -289,8 +290,8 @@ public class Gungame extends Arena {
 						if (pl != null) {
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7вышел с карты!");
 							PacketUtils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!", 30);
-							Main.chgSbdTm(pl.getScoreboard(), "tamt", "", "§4" + String.valueOf(getTmAmt(Team.Ts, true)) + (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."));
-							Main.chgSbdTm(pl.getScoreboard(), "ctamt", "", "§3" + String.valueOf(getTmAmt(Team.CTs, true)) + (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
+							Main.chgSbdTm(pl.getScoreboard(), "tamt", "", "§4" + String.valueOf(getTmAmt(Team.Ts, true, true)) + (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."));
+							Main.chgSbdTm(pl.getScoreboard(), "ctamt", "", "§3" + String.valueOf(getTmAmt(Team.CTs, true, true)) + (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
 						}
 					}
 				}
@@ -299,10 +300,10 @@ public class Gungame extends Arena {
 			case ROUND:
 				for (final TripWire tw : tws) {
 					if (tm == tw.tm) {
-						PacketUtils.getNMSPl(p).b.a(new PacketPlayOutEntityDestroy(tw.eif.ae()));
+						PacketUtils.getNMSPl(p).c.a(new PacketPlayOutEntityDestroy(tw.eif.af()));
 					}
 				}
-				if (getTmAmt(Team.CTs, false) == 0 || getTmAmt(Team.Ts, false) == 0) {
+				if (getTmAmt(Team.CTs, false, true) == 0 || getTmAmt(Team.Ts, false, true) == 0) {
 					if (tsk != null) {
 						tsk.cancel();
 					}
@@ -321,8 +322,8 @@ public class Gungame extends Arena {
 						final Player pl = e.getKey().getPlayer();
 						if (pl != null) {
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7вышел из игры!");
-							Main.chgSbdTm(pl.getScoreboard(), "tamt", "", "§4" + String.valueOf(getTmAmt(Team.Ts, true)) + (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."));
-							Main.chgSbdTm(pl.getScoreboard(), "ctamt", "", "§3" + String.valueOf(getTmAmt(Team.CTs, true)) + (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
+							Main.chgSbdTm(pl.getScoreboard(), "tamt", "", "§4" + String.valueOf(getTmAmt(Team.Ts, true, true)) + (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."));
+							Main.chgSbdTm(pl.getScoreboard(), "ctamt", "", "§3" + String.valueOf(getTmAmt(Team.CTs, true, true)) + (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
 						}
 					}
 				}
@@ -415,19 +416,7 @@ public class Gungame extends Arena {
 				PacketUtils.sendTtlSbTtl(p, "", "§l§eПодготовка Оружейни...", 30);
 			}
 			
-			final BaseBlockPosition spt;
-			switch (e.getValue()) {
-			case Ts:
-				spt = Main.rndElmt(TPss);
-				sh.teleport(sh.getEntity(), new Location(w, spt.u(), spt.v(), spt.w()));
-				break;
-			case CTs:
-				spt = Main.rndElmt(CTPss);
-				sh.teleport(sh.getEntity(), new Location(w, spt.u(), spt.v(), spt.w()));
-				break;
-			case NA:
-				break;
-			}
+			sh.teleport(sh.getEntity(), Main.rndElmt(spots).getCenterLoc(w));
 			
 			updateWeapon(sh);
 			PacketUtils.sendNmTg(e.getKey(), e.getValue().icn + " ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", e.getValue().clr);
@@ -438,7 +427,7 @@ public class Gungame extends Arena {
 		tsk = new BukkitRunnable() {
 			@Override
 			public void run() {
-				final String t = getTime(tm, ChatColor.DARK_PURPLE);
+				final String t = getTime(tm, "§5");
 				for (final LivingEntity le : w.getLivingEntities()) {
 					le.setFireTicks(-1);
 				}
@@ -480,11 +469,11 @@ public class Gungame extends Arena {
 		ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ИГРА, "§7[§5CS§7]", "§dЭстафета", " ", "§7Игроков: §5" + shtrs.size() + "§7/§5" + this.max, "", shtrs.size());
 		Inventories.updtGm(this);
 		for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
-			e.getKey().getEntity().removePotionEffect(PotionEffectType.SLOW);
-			final Player p = e.getKey().getPlayer();
-			if (p != null) {
-				//final Entity v = p.getVehicle();
-				//v.eject(); v.remove();
+			final LivingEntity le = e.getKey().getEntity();
+			if (le == null) continue;
+			le.removePotionEffect(PotionEffectType.SLOW);
+			if (le instanceof Player) {
+				final Player p = (Player) le;
 				PacketUtils.sendSbTtl(p, (e.getValue() == Team.Ts ? "§4" : "§3") + "§lВперед", 30);
 				Main.chgSbdTm(p.getScoreboard(), "gst", "", "§dБой");
 				p.playSound(p.getLocation(), "cs.info." + (e.getValue() == Team.Ts ? "tfight" : "ctfight"), 10f, 1f);
@@ -499,7 +488,7 @@ public class Gungame extends Arena {
 						final Player p = sh.getPlayer();
 						if (p != null) {
 							PacketUtils.sendAcBr(p, "§7Осталась §d1 §7минута!", 30);
-							Main.chgSbdTm(p.getScoreboard(), "tm", getTime(tm, ChatColor.LIGHT_PURPLE), "");
+							Main.chgSbdTm(p.getScoreboard(), "tm", getTime(tm, "§d"), "");
 						}
 					}
 					break;
@@ -509,7 +498,7 @@ public class Gungame extends Arena {
 						if (p != null) {
 							PacketUtils.sendAcBr(p, "§7Осталось §d" + tm + " §7секунд!", 30);
 							p.playSound(p.getLocation(), "cs.info." + (e.getValue() == Team.Ts ? "t30sec" : "ct30sec"), 10f, 1f);
-							Main.chgSbdTm(p.getScoreboard(), "tm", getTime(tm, ChatColor.LIGHT_PURPLE), "");
+							Main.chgSbdTm(p.getScoreboard(), "tm", getTime(tm, "§d"), "");
 						}
 					}
 					break;
@@ -518,7 +507,7 @@ public class Gungame extends Arena {
 						final Player p = sh.getPlayer();
 						if (p != null) {
 							PacketUtils.sendAcBr(p, "§7Осталось §d" + tm + " §7секунд!", 30);
-							Main.chgSbdTm(p.getScoreboard(), "tm", getTime(tm, ChatColor.LIGHT_PURPLE), "");
+							Main.chgSbdTm(p.getScoreboard(), "tm", getTime(tm, "§d"), "");
 						}
 					}
 					break;
@@ -537,7 +526,7 @@ public class Gungame extends Arena {
 					for (final Shooter sh : shtrs.keySet()) {
 						final Player p = sh.getPlayer();
 						if (p != null) {
-							Main.chgSbdTm(p.getScoreboard(), "tm", getTime(tm, ChatColor.LIGHT_PURPLE), "");
+							Main.chgSbdTm(p.getScoreboard(), "tm", getTime(tm, "§d"), "");
 						}
 					}
 					break;
@@ -559,10 +548,12 @@ public class Gungame extends Arena {
 			e.remove();
 		}
 		
-		for (final BrknBlck b : brkn) {
+		final Iterator<BrknBlck> bi = brkn.iterator();
+		while (bi.hasNext()) {
+			final BrknBlck b = bi.next();
 			b.getBlock().setBlockData(b.bd, false);
+			bi.remove();
 		}
-		brkn.clear();
 		
 		Shooter bt = null;
 		Shooter bct = null;
@@ -614,33 +605,32 @@ public class Gungame extends Arena {
 				p.sendMessage(msg);
 				PacketUtils.sendTtlSbTtl(p, "§5Финиш", st, 40);
 				PacketUtils.sendNmTg(sh, "§7<§d" + name + "§7> ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", Team.NA.clr);
-				ApiOstrov.moneyChange(sh.name(), sh.kills() * 2, "Убийства");
 				sh.inv().clear();
 				winScore(sh, p, wn == Team.CTs);
 				
 				if (e.getValue() == wn) {
 					ApiOstrov.addStat(p, Stat.CS_win);
 					SkinQuest.tryCompleteQuest(e.getKey(), Quest.ГРУЗЧИК, ApiOstrov.getStat(p, Stat.CS_win));
-					ApiOstrov.moneyChange(e.getKey().name(), 20, "Игра");
 				} else {
 					ApiOstrov.addStat(p, Stat.CS_loose);
 				}
 				ApiOstrov.addStat(p, Stat.CS_game);
 				SkinQuest.tryCompleteQuest(sh, Quest.ДУША, ApiOstrov.getStat(p, Stat.CS_game));
 			} else {
-				((BtShooter) sh).remove(true);
+				((BtShooter) sh).remove();
 			}
 		}
 		
-		for (final TripWire tw : tws) {
-			tw.rmv(this);
+		final Iterator<TripWire> ti = tws.iterator();
+		while (bi.hasNext()) {
+			ti.next().rmv(this);
+			bi.remove();
 		}
 		
-		tws.clear();
 		tsk = new BukkitRunnable() {
 			@Override
 			public void run() {
-				final String t = getTime(tm, ChatColor.DARK_PURPLE);
+				final String t = getTime(tm, "§d");
 				if (tm == 0) {
 					if (tsk != null) {
 						tsk.cancel();
@@ -681,7 +671,7 @@ public class Gungame extends Arena {
 
 	private void waitScore(final Shooter sh, final Player p, final int rm) {
 		final Scoreboard sb = Main.smg.getNewScoreboard();
-		final Objective ob = sb.registerNewObjective("CS:GO", "", Component.text("§7[§5CS:GO§7]"));
+		final Objective ob = sb.registerNewObjective("CS:GO", Criteria.DUMMY, Component.text("§7[§5CS:GO§7]"));
 		ob.setDisplaySlot(DisplaySlot.SIDEBAR);
 		ob.getScore("    ")
 		.setScore(11);
@@ -691,12 +681,12 @@ public class Gungame extends Arena {
 		.setScore(9);
 		ob.getScore("§7=-=-=-=-=-=-=-=-")
 		.setScore(8);
-		Main.crtSbdTm(sb, "tamt", "", "§4\u9265 §7: ", "§4" + String.valueOf(getTmAmt(Team.Ts, true)) + " §7чел.");
+		Main.crtSbdTm(sb, "tamt", "", "§4\u9265 §7: ", "§4" + String.valueOf(getTmAmt(Team.Ts, true, true)) + " §7чел.");
 		ob.getScore("§4\u9265 §7: ")
 		.setScore(7);
 		ob.getScore("   ")
 		.setScore(6);
-		Main.crtSbdTm(sb, "ctamt", "", "§3\u9264 §7: ", "§3" + String.valueOf(getTmAmt(Team.CTs, true)) + " §7чел.");
+		Main.crtSbdTm(sb, "ctamt", "", "§3\u9264 §7: ", "§3" + String.valueOf(getTmAmt(Team.CTs, true, true)) + " §7чел.");
 		ob.getScore("§3\u9264 §7: ")
 		.setScore(5);
 		ob.getScore("§7-=-=-=-=-=-=-=-")
@@ -716,7 +706,7 @@ public class Gungame extends Arena {
 
 	private void beginScore(final Shooter sh, final Player p) {
 		final Scoreboard sb = Main.smg.getNewScoreboard();
-		final Objective ob = sb.registerNewObjective("CS:GO", "", Component.text("§7[§5CS:GO§7]"));
+		final Objective ob = sb.registerNewObjective("CS:GO", Criteria.DUMMY, Component.text("§7[§5CS:GO§7]"));
 		final org.bukkit.scoreboard.Team bmb = sb.registerNewTeam("bmb");
 		bmb.prefix(Component.text("§4"));
 		bmb.color(NamedTextColor.DARK_RED);
@@ -729,12 +719,12 @@ public class Gungame extends Arena {
 		.setScore(9);
 		ob.getScore("§7=-=-=-=-=-=-=-=-")
 		.setScore(8);
-		Main.crtSbdTm(sb, "tamt", "", "§4\u9265 §7: ", "§4" + String.valueOf(getTmAmt(Team.Ts, true)) + (shtrs.get(sh) == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."));
+		Main.crtSbdTm(sb, "tamt", "", "§4\u9265 §7: ", "§4" + String.valueOf(getTmAmt(Team.Ts, true, true)) + (shtrs.get(sh) == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."));
 		ob.getScore("§4\u9265 §7: ")
 		.setScore(7);
 		ob.getScore("   ")
 		.setScore(6);
-		Main.crtSbdTm(sb, "ctamt", "", "§3\u9264 §7: ", "§3" + String.valueOf(getTmAmt(Team.CTs, true)) + (shtrs.get(sh) == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
+		Main.crtSbdTm(sb, "ctamt", "", "§3\u9264 §7: ", "§3" + String.valueOf(getTmAmt(Team.CTs, true, true)) + (shtrs.get(sh) == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
 		ob.getScore("§3\u9264 §7: ")
 		.setScore(5);
 		ob.getScore("§7=-=-=-=-=-=-=-")
@@ -756,7 +746,7 @@ public class Gungame extends Arena {
 		final Scoreboard sb = Main.smg.getNewScoreboard();
 		final org.bukkit.scoreboard.Team t = sb.registerNewTeam("ind");
 		t.color(NamedTextColor.DARK_RED);
-		final Objective ob = sb.registerNewObjective("CS:GO", "", Component.text("§7[§5CS:GO§7]"));
+		final Objective ob = sb.registerNewObjective("CS:GO", Criteria.DUMMY, Component.text("§7[§5CS:GO§7]"));
 		final org.bukkit.scoreboard.Team bmb = sb.registerNewTeam("bmb");
 		bmb.prefix(Component.text("§4"));
 		bmb.color(NamedTextColor.DARK_RED);
@@ -774,15 +764,15 @@ public class Gungame extends Arena {
 		Main.crtSbdTm(sb, "gst", "", "§7Cтадия: ", gst == GameState.BUYTIME ? "§5Подготовка" : "§5Бой");
 		ob.getScore("§7Cтадия: ")
 		.setScore(9);
-		Main.crtSbdTm(sb, "tm", getTime(tm, ChatColor.LIGHT_PURPLE), " §7до конца!", "");
+		Main.crtSbdTm(sb, "tm", getTime(tm, "§d"), " §7до конца!", "");
 		ob.getScore(" §7до конца!")
 		.setScore(8);
 		ob.getScore("   ")
 		.setScore(7);
-		Main.crtSbdTm(sb, "tamt", "", "§4\u9265 §7: ", "§4" + String.valueOf(getTmAmt(Team.Ts, true)) + (shtrs.get(sh) == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."));
+		Main.crtSbdTm(sb, "tamt", "", "§4\u9265 §7: ", "§4" + String.valueOf(getTmAmt(Team.Ts, true, true)) + (shtrs.get(sh) == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."));
 		ob.getScore("§4\u9265 §7: ")
 		.setScore(6);
-		Main.crtSbdTm(sb, "ctamt", "", "§3\u9264 §7: ", "§3" + String.valueOf(getTmAmt(Team.CTs, true)) + (shtrs.get(sh) == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
+		Main.crtSbdTm(sb, "ctamt", "", "§3\u9264 §7: ", "§3" + String.valueOf(getTmAmt(Team.CTs, true, true)) + (shtrs.get(sh) == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
 		ob.getScore("§3\u9264 §7: ")
 		.setScore(5);
 		ob.getScore("  ")
@@ -812,7 +802,7 @@ public class Gungame extends Arena {
 
 	private void winScore(final Shooter sh, final Player p, final boolean isCTWn) {
 		final Scoreboard sb = Main.smg.getNewScoreboard();
-		final Objective ob = sb.registerNewObjective("CS:GO", "", Component.text("§7[§5CS:GO§7]"));
+		final Objective ob = sb.registerNewObjective("CS:GO", Criteria.DUMMY, Component.text("§7[§5CS:GO§7]"));
 		ob.setDisplaySlot(DisplaySlot.SIDEBAR);
 		if (isCTWn) {
 			ob.getScore("§l§4\u9265 §7: §4" + getTmProg(Team.Ts) + "§7/§4" + cycle + " §7--=x=-- §l§3" + cycle + "§7/§3" + cycle + " §7: §3\u9264")
@@ -834,9 +824,9 @@ public class Gungame extends Arena {
 		.setScore(8);
 		ob.getScore("   ")
 		.setScore(7);
-		ob.getScore("§4\u9265 §7: §4" + String.valueOf(getTmAmt(Team.Ts, true)) + (shtrs.get(sh) == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."))
+		ob.getScore("§4\u9265 §7: §4" + String.valueOf(getTmAmt(Team.Ts, true, true)) + (shtrs.get(sh) == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."))
 		.setScore(6);
-		ob.getScore("§3\u9264 §7: §3" + String.valueOf(getTmAmt(Team.CTs, true)) + (shtrs.get(sh) == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."))
+		ob.getScore("§3\u9264 §7: §3" + String.valueOf(getTmAmt(Team.CTs, true, true)) + (shtrs.get(sh) == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."))
 		.setScore(5);
 		ob.getScore("  ")
 		.setScore(4);
@@ -857,7 +847,7 @@ public class Gungame extends Arena {
 		//Bukkit.broadcast(Component.text("ent-" + sh.getEntity().getEntityId() + ", sh-" + sh.name()));
 		final LivingEntity le = sh.getEntity();
 		if (gst == GameState.ROUND) {
-			sh.dropIts(le.getLocation(), shtrs.get(sh), false);
+			sh.dropIts(le.getLocation());
 			addDth(sh);
 			if (sh instanceof BtShooter) {
 				((BtShooter) sh).die(le);
@@ -870,11 +860,11 @@ public class Gungame extends Arena {
 				Main.nrmlzPl((Player) le, false);
 			}
 		}
-		if (gst != GameState.ROUND) return; 
-		final BaseBlockPosition spt = shtrs.get(sh) == Team.Ts ? Main.rndElmt(TPss) : Main.rndElmt(CTPss);
-		final Location loc = new Location(w, spt.u(), spt.v(), spt.w());
-		loc.getWorld().spawnParticle(Particle.PORTAL, loc, 200, 0.2D, 0.4D, 0.2D, 0.4D, null, false);
-		sh.teleport(le, loc);
+		if (gst != GameState.FINISH) {
+			final Location loc = Main.rndElmt(spots).getCenterLoc(w);
+			loc.getWorld().spawnParticle(Particle.PORTAL, loc, 200, 0.2D, 0.4D, 0.2D, 0.4D, null, false);
+			sh.teleport(le, loc);
+		}
 	}
 	
 	private void updateWeapon(final Shooter sh) {
@@ -915,7 +905,7 @@ public class Gungame extends Arena {
 			sh.item(new ItemBuilder(gt.getMat()).name(mdl == GunType.defCMD ? "§5" + gt.toString() : 
 				"§5" + gt.toString() + " '" + Main.nrmlzStr(Quest.getQuest(gt, mdl).toString()) + "'")
 			.setAmount(gt.amo).setModelData(mdl).build(), gt.prm ? 0 : 1);
-			sh.item(Inventories.CTShop.getItem(nt.slt).clone(), nt.prm ? 3 : 4);
+			sh.item(Inventories.CTShop.getItem(nt.slt).clone(), nt.prm ? NadeType.prmSlot : NadeType.scdSlot);
 			//Bukkit.broadcast(Component.text("guns-" + sh.getEntity().getEntityId()));
 		}
 		
@@ -976,7 +966,7 @@ public class Gungame extends Arena {
 		}
 	}
 	
-	public int getTmAmt(final Team tm, final boolean bots) {
+	public int getTmAmt(final Team tm, final boolean bots, final boolean alv) {
 		int n = 0;
 		for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
 			if (e.getValue() == tm && (e.getKey() instanceof PlShooter || bots)) {
@@ -992,16 +982,16 @@ public class Gungame extends Arena {
 		if (p == null) {
 			
 		} else {
-			if (nv != null && ( (shtrs.get(sh) == nv.getOpst() && getTmAmt(nv, true) >= 
-				getTmAmt(nv.getOpst(), true)) || getTmAmt(nv, true) > getTmAmt(nv.getOpst(), true) )) {
+			if (nv != null && ( (shtrs.get(sh) == nv.getOpst() && getTmAmt(nv, true, true) >= 
+				getTmAmt(nv.getOpst(), true, true)) || getTmAmt(nv, true, true) > getTmAmt(nv.getOpst(), true, true) )) {
 				p.sendMessage(Main.prf() + "§cВ этой комманде слишком много игроков!");
 				return;
 			}
 			final Team tm = shtrs.replace(sh, nv);
 			if (nv == Team.NA || tm != nv) {
 				for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
-					Main.chgSbdTm(p.getScoreboard(), "tamt", "", "§4" + String.valueOf(getTmAmt(Team.Ts, true)) + (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."));
-					Main.chgSbdTm(p.getScoreboard(), "ctamt", "", "§3" + String.valueOf(getTmAmt(Team.CTs, true)) + (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
+					Main.chgSbdTm(p.getScoreboard(), "tamt", "", "§4" + String.valueOf(getTmAmt(Team.Ts, true, true)) + (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."));
+					Main.chgSbdTm(p.getScoreboard(), "ctamt", "", "§3" + String.valueOf(getTmAmt(Team.CTs, true, true)) + (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
 				}
 				PacketUtils.sendNmTg(sh, "§7<§d" + name + "§7> ", " §7[-.-]", nv.clr);
 				switch (tm) {
@@ -1043,28 +1033,60 @@ public class Gungame extends Arena {
 		}
 		
 		if (bots) {
-			final int tmMx = max >> 2;
-			for (int i = getTmAmt(Team.CTs, true); i < tmMx; i++) {
-				shtrs.put(new BtShooter(this, w), Team.CTs);
+			int tmMx = max >> 1;
+//			shtrs.put(new BtShooter(this, w), Team.CTs);
+			
+			int tPls = 0, ctPls = 0;
+			final Iterator<Entry<Shooter, Team>> it = shtrs.entrySet().iterator();
+			while (it.hasNext()) {
+				final Entry<Shooter, Team> en = it.next();
+				switch (en.getValue()) {
+				case Ts:
+					if (++tPls > tmMx) {
+						if (en.getKey() instanceof BtShooter) {
+							it.remove();
+							((BtShooter) en.getKey()).remove();
+						} else {
+							tmMx = tPls;
+						}
+					}
+					break;
+				case CTs:
+					if (++ctPls > tmMx) {
+						if (en.getKey() instanceof BtShooter) {
+							it.remove();
+							((BtShooter) en.getKey()).remove();
+						} else {
+							tmMx = ctPls;
+						}
+					}
+					break;
+				case NA:
+					break;
+				}
 			}
-
-			for (int i = getTmAmt(Team.Ts, true); i < tmMx; i++) {
-				shtrs.put(new BtShooter(this, w), Team.Ts);
+			
+			for (int i = tPls; i < tmMx; i++) {
+				shtrs.put(BotManager.createBot(name, BtShooter.class, () -> new BtShooter(this)), Team.Ts);
+			}
+			
+			for (int i = ctPls; i < tmMx; i++) {
+				shtrs.put(BotManager.createBot(name, BtShooter.class, () -> new BtShooter(this)), Team.CTs);
 			}
 		}
 		
 		for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
 			final Player p = e.getKey().getPlayer();
 			if (p != null) {
-				Main.chgSbdTm(p.getScoreboard(), "tamt", "", "§4" + String.valueOf(getTmAmt(Team.Ts, true)) + (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."));
-				Main.chgSbdTm(p.getScoreboard(), "ctamt", "", "§3" + String.valueOf(getTmAmt(Team.CTs, true)) + (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
+				Main.chgSbdTm(p.getScoreboard(), "tamt", "", "§4" + String.valueOf(getTmAmt(Team.Ts, true, true)) + (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."));
+				Main.chgSbdTm(p.getScoreboard(), "ctamt", "", "§3" + String.valueOf(getTmAmt(Team.CTs, true, true)) + (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
 			}
 		}
 	}
 
 	private Team getMinTm() {
-		final int tn = getTmAmt(Team.Ts, true);
-		final int ctn = getTmAmt(Team.CTs, true);
+		final int tn = getTmAmt(Team.Ts, true, true);
+		final int ctn = getTmAmt(Team.CTs, true, true);
 		return tn < ctn ? Team.Ts : (tn == ctn ? (Main.srnd.nextBoolean() ? Team.Ts : Team.CTs) : Team.CTs);
 	}
 }

@@ -50,18 +50,18 @@ public class TripWire {
 			this.bs[i] = bs[i];
 		}
 		this.nt = null;
-		eif = new EntityItemFrame(EntityTypes.U, PacketUtils.getNMSWrld(bs[0].getWorld()));
+		eif = new EntityItemFrame(EntityTypes.af, PacketUtils.getNMSWrld(bs[0].getWorld()));
 		eif.j(true);
 		eif.e(true);
 		eif.setPosRaw(bs[0].getX() + 0.5d, bs[0].getY() - 1d, bs[0].getZ() + 0.5d, false);
 		this.tm = sh.arena().shtrs.get(sh);
 		final PacketPlayOutSpawnEntity pe = new PacketPlayOutSpawnEntity(eif);
-		final PacketPlayOutEntityMetadata pm = new PacketPlayOutEntityMetadata(eif.ae(), eif.ai(), true);
+		final PacketPlayOutEntityMetadata pm = new PacketPlayOutEntityMetadata(eif.af(), eif.aj().c());
 		for (final Entry<Shooter, Team> e : sh.arena().shtrs.entrySet()) {
 			if (e.getValue() == tm) {
 				final Player p = e.getKey().getPlayer();
 				if (p != null) {
-					shwNd(PacketUtils.getNMSPl(p).b, pe, pm);
+					shwNd(PacketUtils.getNMSPl(p).c, pe, pm);
 				}
 			}
 		}
@@ -73,7 +73,7 @@ public class TripWire {
 		if (this.nt != null) {
 			final Material m; 
 			final World w = PacketUtils.getNMSWrld(loc.getWorld());
-			final EntitySnowball sb = new EntitySnowball(EntityTypes.aJ, w);
+			final EntitySnowball sb = new EntitySnowball(EntityTypes.aP, w);
 			switch (this.nt) {
 				case FRAG:
 					m = Material.OAK_SAPLING;
@@ -104,24 +104,24 @@ public class TripWire {
 	public void chngNt(final ItemStack it, final Arena ar) {
 		this.nt = NadeType.getNdTp(it);
 		((ItemFrame) eif.getBukkitEntity()).setItem(it);
-		final PacketPlayOutEntityMetadata pp = new PacketPlayOutEntityMetadata(eif.ae(), eif.ai(), true);
+		final PacketPlayOutEntityMetadata pp = new PacketPlayOutEntityMetadata(eif.af(), eif.aj().c());
 		for (final Entry<Shooter, Team> e : ar.shtrs.entrySet()) {
 			if (e.getValue() == tm) {
 				final Player p = e.getKey().getPlayer();
 				if (p != null) {
-					PacketUtils.getNMSPl(p).b.a(pp);
+					PacketUtils.getNMSPl(p).c.a(pp);
 				}
 			}
 		}
 	}
 
 	public void hdNdAll(final Arena ar) {
-		final PacketPlayOutEntityDestroy pd = new PacketPlayOutEntityDestroy(eif.ae());
+		final PacketPlayOutEntityDestroy pd = new PacketPlayOutEntityDestroy(eif.af());
 		for (final Entry<Shooter, Team> e : ar.shtrs.entrySet()) {
 			if (tm == e.getValue()) {
 				final Player p = e.getKey().getPlayer();
 				if (p != null) {
-					PacketUtils.getNMSPl(p).b.a(pd);
+					PacketUtils.getNMSPl(p).c.a(pd);
 				}
 			}
 		}
@@ -142,7 +142,7 @@ public class TripWire {
 
 	public void shwNd(final PlayerConnection pc) {
 		pc.a(new PacketPlayOutSpawnEntity(eif));
-		pc.a(new PacketPlayOutEntityMetadata(eif.ae(), eif.ai(), true));
+		pc.a(new PacketPlayOutEntityMetadata(eif.af(), eif.aj().c()));
 	}
 
 	public void shwNd(final PlayerConnection pc, final PacketPlayOutSpawnEntity pe, final PacketPlayOutEntityMetadata pm) {

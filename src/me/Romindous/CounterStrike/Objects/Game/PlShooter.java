@@ -4,6 +4,7 @@ import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -32,14 +33,16 @@ import me.Romindous.CounterStrike.Game.Defusal;
 import me.Romindous.CounterStrike.Objects.EntityShootAtEntityEvent;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
-import me.Romindous.CounterStrike.Objects.Loc.WXYZ;
 import me.Romindous.CounterStrike.Objects.Skins.GunSkin;
-import me.Romindous.CounterStrike.Utils.Inventories;
 import me.Romindous.CounterStrike.Utils.PacketUtils;
 import net.minecraft.core.BaseBlockPosition;
 import ru.komiss77.Ostrov;
 import ru.komiss77.modules.player.Oplayer;
 import ru.komiss77.modules.player.PM;
+import ru.komiss77.modules.world.WXYZ;
+import ru.komiss77.notes.Slow;
+import ru.komiss77.utils.ItemUtils;
+import ru.komiss77.utils.MathUtil;
 import ru.komiss77.version.IServer;
 import ru.komiss77.version.VM;
 
@@ -49,7 +52,6 @@ public class PlShooter implements Shooter {
 	
 	public PlShooter(final Player p) {
 		name = p.getName();
-		shc = name.hashCode();
 		rclTm = 50; cldwn = 0; count = 0; shtTm = 0;
 		money = 0; kills = 0; spwnrs = 0; deaths = 0;
 		arena = null;
@@ -89,6 +91,7 @@ public class PlShooter implements Shooter {
 				if (gt == null || p == null) {
 					return;
 				}
+				
 				final boolean ps = ((Damageable)it.getItemMeta()).hasDamage();
 				if (ps) {
 					count++;
@@ -102,39 +105,52 @@ public class PlShooter implements Shooter {
 						count = 0;
 					} 
 				}
-				if (shtTm != 0) {
+				
+				if (shtTm == 0) {
+					if (count != 0 && !ps) {
+						count = count > rclTm + 1 ? rclTm : (count - 2 < 0) ? 0 : (count - 2);
+					}
+				} else {
 					shtTm--;
 					if (!ps) count++;
+					if (scope()) return;
 					if (count % gt.cld == 0) {
 						final int tr = count < rclTm ? count : rclTm;
 						if (it.getAmount() == 1) {
-							if (ps) {
-								return;
-							}
-							Main.setDmg(it, 0);
+							if (ps) return;
 							count = 0;
+							
+							if (gt.snp && p.isSneaking()) {
+								if (ItemUtils.isBlank(p.getInventory().getItemInOffHand(), false))
+									p.getInventory().setItemInOffHand(Main.spy);
+								scope(true);
+								return;
+							} else {
+								Main.setDmg(it, 0);
+							}
 						} else {
 							if (ps) {
 								Main.setDmg(it, it.getType().getMaxDurability());
 								count = 0;
-							} 
-							it.setAmount(it.getAmount() - 1);
+							}
+
+							if (gt.snp && p.isSneaking()) {
+								if (ItemUtils.isBlank(p.getInventory().getItemInOffHand(), false))
+									p.getInventory().setItemInOffHand(Main.spy);
+								scope(true);
+								return;
+							} else {
+								it.setAmount(it.getAmount() - 1);
+							}
 						} 
 						cldwn = gt.cld;
-						final boolean iw = (gt.snp && p.isSneaking());
 						for (byte i = gt.brst == 0 ? 1 : gt.brst; i > 0; i--) {
-							shoot(gt, !iw, tr);
+							shoot(gt, true, tr);
 						}
-						Main.plyWrldSht(p.getLocation(), gt.snd);
-						if (iw) {
-							PacketUtils.fkHlmtClnt(p, p.getInventory().getHelmet());
-							PacketUtils.zoom(p, false);
-							p.setSneaking(false);
-						}
+						p.setCooldown(gt.getMat(), gt.cld);
+						Main.plyWrldSnd(p.getLocation(), gt.snd);
 						//p.setVelocity(p.getVelocity().subtract(p.getEyeLocation().getDirection().multiply(gt.kb)));
 					}
-				} else if (count != 0 && !ps) {
-					count = count > rclTm + 1 ? rclTm : (count - 2 < 0) ? 0 : (count - 2);
 				}
 			}
 		}.runTaskTimer(Main.plug, 1L, 1L);
@@ -153,11 +169,19 @@ public class PlShooter implements Shooter {
 	
 	private final String name;
 	public String name() {return name;}
+	
+	public Oplayer oplayer() {return PM.getOplayer(name);}
 
 	public final LinkedList<Vector> pss;
 	public void rotPss() {pss.poll();pss.add(getEntity().getLocation().toVector());}
-	public Vector getPos(final boolean dir) 
+	public Vector getLoc(final boolean dir) 
 	{return dir ? pss.getLast().clone() : pss.getFirst().clone();}
+	
+	public WXYZ getPos() {return new WXYZ(getEntity().getLocation());}
+	
+	private boolean scope;
+	public boolean scope() {return scope;}
+	public boolean scope(final boolean scp) {return scope=scp;}
 	
 	private int shtTm;
 	public int shtTm() {return shtTm;}
@@ -201,20 +225,28 @@ public class PlShooter implements Shooter {
 	private PlayerInventory inv;
 	public ItemStack item(final EquipmentSlot slot) {return inv.getItem(slot);}
 	public ItemStack item(final int slot) {return inv.getItem(slot);}
-	public void item(final ItemStack it, final EquipmentSlot slot) {inv.setItem(slot, it);}
-	public void item(final ItemStack it, final int slot) {inv.setItem(slot, it);}
+	public void item(final ItemStack it, final EquipmentSlot slot) {
+		final GunType gt = GunType.getGnTp(item(slot));
+		if (gt != null && gt.snp) inv.setItemInOffHand(Main.air);
+		inv.setItem(slot, it);
+	}
+	public void item(final ItemStack it, final int slot) {
+		final GunType gt = GunType.getGnTp(item(slot));
+		if (gt != null && gt.snp) inv.setItemInOffHand(Main.air);
+		inv.setItem(slot, it);
+	}
 	public PlayerInventory inv() {return inv;}
 	public void inv(final PlayerInventory i) {inv = i;}
 	public void clearInv() {inv.clear();}
 	
-	public void dropIts(final Location loc, final Team tm, final boolean guns) {
+	public void dropIts(final Location loc) {
 		final World w = loc.getWorld();
-		ItemStack it = inv.getItem(3);
-		if (!Inventories.isBlankItem(it, false)) {
+		ItemStack it = item(3);
+		if (!ItemUtils.isBlank(it, false)) {
 			w.dropItem(loc, it);
 		}
-		it = inv.getItem(4);
-		if (!Inventories.isBlankItem(it, false)) {
+		it = item(4);
+		if (!ItemUtils.isBlank(it, false)) {
 			if (it.getAmount() == 1) {
 				w.dropItem(loc, it);
 			} else {
@@ -223,39 +255,36 @@ public class PlShooter implements Shooter {
 				w.dropItem(loc, it);
 			}
 		}
-		if (guns) {
-			it = inv.getItem(0);
-			if (!Inventories.isBlankItem(it, false)) {
+		
+		if (arena() instanceof Defusal) {
+			it = item(0);
+			if (!ItemUtils.isBlank(it, false)) {
 				w.dropItem(loc, it);
 			}
-			it = inv.getItem(1);
-			if (!Inventories.isBlankItem(it, false)) {
+			it = item(1);
+			if (!ItemUtils.isBlank(it, false)) {
 				w.dropItem(loc, it);
 			}
 		}
-		it = inv.getItem(7);
-		switch (tm) {
-		case Ts:
-			if (!Inventories.isBlankItem(it, false) && arena instanceof Defusal) {
-				final Defusal df = (Defusal) arena;
-				//bomb dropped
-				if (df.getTmAmt(Team.Ts, true, true) != 1) {
-					df.dropBomb(w.dropItem(loc, Main.bmb));
+		
+		it = item(7);
+		if (!ItemUtils.isBlank(it, false)) {
+			if (it.getType() == Main.bmb.getType()) {
+				if (arena instanceof Defusal) {
+					final Defusal df = (Defusal) arena;
+					//bomb dropped
+					if (df.getTmAmt(Team.Ts, true, true) != 1) {
+						df.dropBomb(w.dropItem(loc, Main.bmb));
+					}
+					if (df.indon) {
+						df.indSts(getPlayer());
+					}
 				}
-				if (df.indon) {
-					df.indSts(getPlayer());
-				}
-			}
-			break;
-		case CTs:
-			if (it != null && it.getType() == Material.SHEARS) {
+			} else if (it.getType() == Material.SHEARS) {
 				w.dropItem(loc, it);
 			}
-			break;
-		case NA:
-			break;
 		}
-		inv.clear();
+		clearInv();
 	}
 
 	private final EnumMap<GunType, GunSkin> skins;
@@ -300,6 +329,7 @@ public class PlShooter implements Shooter {
 	}
 
 	@Override
+	@Slow(priority = 4)
 	public void shoot(final GunType gt, final boolean dff, final int tr) {
 		final LivingEntity ent = getEntity();
 		final Location loc = ent.getEyeLocation();
@@ -312,26 +342,9 @@ public class PlShooter implements Shooter {
 				loc.setYaw((Main.srnd.nextFloat() - 0.5f) * gt.xsprd * rclTm() + loc.getYaw());
 			}
 		}
-		/*final LivingEntity ent = getEntity();
-		final Location loc = ent.getEyeLocation();
-		final float ptc, yaw;
-		if (dff) {
-			if (gt.brst == 0 && !gt.snp) {
-				ptc = loc.getPitch() - tr * gt.yrcl + ((float) ent.getVelocity().getY() + (ent.isInWater() ? 0.005f : 0.0784f)) * 40f;
-				yaw = (Main.srnd.nextFloat() - 0.5f) * gt.xsprd * tr + loc.getYaw();
-			} else {
-				loc.setPitch(ptc = (Main.srnd.nextFloat() - 0.5f) * gt.xsprd * rclTm + loc.getPitch() - tr * 0.1F + 
-					((float) ent.getVelocity().getY() + (ent.isInWater() ? 0.005f : 0.0784f)) * 40f);
-				loc.setYaw(yaw = (Main.srnd.nextFloat() - 0.5f) * gt.xsprd * rclTm + loc.getYaw());
-			}
-		} else {
-			ptc = loc.getPitch(); yaw = loc.getYaw();
-		}*/
 		final double lkx = -Math.sin(Math.toRadians((180f - loc.getYaw())));
 		final double lkz = -Math.cos(Math.toRadians((180f - loc.getYaw())));
-		LivingEntity srch = null;
-		Vector prp = null;
-		boolean h = false;
+		final TreeMap<Integer, LivingEntity> shot = new TreeMap<Integer, LivingEntity>();
 		for (final LivingEntity e : Main.getWLnts(loc.getWorld().getUID())) {
 			final BoundingBox ebx;
 			final double dx;
@@ -342,10 +355,9 @@ public class PlShooter implements Shooter {
 				if (e.getEntityId() == ent.getEntityId()) continue;
 				final Shooter sh = Shooter.getShooter(e, false);
 				if (sh == null || sh.isDead()) {
-					//ent.sendMessage("sh-" + sh + ", id-" + e.getEntityId() + ", ids-" + BotManager.npcs.keySet().toString());
 					continue;
 				}
-				final Vector lc = sh.getPos(false);
+				final Vector lc = sh.getLoc(false);
 				ebx = new BoundingBox(lc.getX(), lc.getY(), lc.getZ(), lc.getX(), lc.getY() + 
 				(sh instanceof PlShooter && ((Player) e).isSneaking() ? 1.5d : 1.9d), lc.getZ());
 				dx = lc.getX() - loc.getX();
@@ -364,19 +376,13 @@ public class PlShooter implements Shooter {
 			if (Math.sqrt(Math.pow(lkx - dx / ln, 2d) + Math.pow(lkz - dz / ln, 2d)) * ln < 0.4d) {
 				final double pty = loc.getY() + Math.tan(Math.toRadians(-loc.getPitch())) * ln;
 				if (pty < ebx.getMaxY() && pty > ebx.getMinY()) {
-					srch = e;
-					prp = new Vector(ebx.getCenterX(), ebx.getCenterY(), ebx.getCenterZ());
-					h = pty - ebx.getMinY() > ebx.getHeight() * 0.75d;
-					break;
-				} 
-			} 
+					shot.put(MathUtil.square((int) dx) + MathUtil.square((int) dz), e);
+				}
+			}
 		}
 		
 		final Vector vec = loc.getDirection().normalize().multiply(0.05d);
-		final boolean ex = srch != null;
-		final boolean hst = h;
-		final LivingEntity tgt = srch;
-		final Vector el = ex ? prp : null;
+		float dmg = gt.dmg;
 		/*new BukkitRunnable() {
 			public void run() {*/
 		int i = gt.snp ? 1600 : 1200;
@@ -387,6 +393,8 @@ public class PlShooter implements Shooter {
 		double y = 20d * vec.getY() + loc.getY();
 		double z = 20d * vec.getZ() + loc.getZ();
 		final IServer is = VM.getNmsServer();
+		LivingEntity tgt;
+		BoundingBox ebx;
 		
 		lp : while(true) {
 			//ent.sendMessage("route" + i);
@@ -414,6 +422,7 @@ public class PlShooter implements Shooter {
 					w.spawnParticle(Particle.BLOCK_CRACK, b.getLocation().add(0.5d, 0.5d, 0.5d), 40, 0.4d, 0.4d, 0.4d, b.getType().createBlockData());
 					b.setType(Material.AIR, false);
 					wls.add(new BaseBlockPosition(b.getX(), b.getY(), b.getZ()));
+					dmg *= 0.5d;
 				}
 				break;
 			case ACACIA_SLAB, BIRCH_SLAB, CRIMSON_SLAB, SPRUCE_SLAB, WARPED_SLAB, 
@@ -458,6 +467,7 @@ public class PlShooter implements Shooter {
 				b = w.getBlockAt((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
 				if (b.getBoundingBox().contains(x, y, z) && wls.add(new BaseBlockPosition(b.getX(), b.getY(), b.getZ()))) {
 					PacketUtils.blkCrckClnt(new WXYZ(b, 640));
+					dmg *= 0.5d;
 				}
 			case AIR, CAVE_AIR, VOID_AIR,
 			
@@ -483,50 +493,57 @@ public class PlShooter implements Shooter {
 				}
 			}
 			
-			if (ex && Math.pow(x - el.getX(), 2d) + Math.pow(z - el.getZ(), 2d) < 0.2d) {
-				/*new BukkitRunnable() {
-					@Override
-					public void run() {*/
-						if (/*pl.isValid() && tgt.isValid() && */tgt.getNoDamageTicks() == 0) {
-							double dmg = gt.dmg * Math.pow(0.5d, wls.size());
-							final String nm;
-							if (hst) {
-								dmg *= 2f * (tgt.getEquipment().getHelmet() == null ? 1f : 0.5f);
-								nm = "§c銑 " + String.valueOf((int)(dmg * 5.0F));
-							} else {
-								dmg *= tgt.getEquipment().getChestplate() == null ? 1f : 0.6f;
-								nm = "§6" + String.valueOf((int)(dmg * 5.0f));
-							}
-							if (ent instanceof Player) {
-								final Player pl = (Player) ent;
-								if (hst) pl.playSound(loc, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 2f);
-								pl.playSound(loc, Sound.BLOCK_END_PORTAL_FRAME_FILL, 2f, 2f);
-								Main.dmgArm(pl, tgt.getEyeLocation(), nm);
-							}
-							Bukkit.getPluginManager().callEvent(new EntityShootAtEntityEvent(ent, tgt, dmg, hst, wls.size() > 0, dff && gt.snp));
+			while (shot.size() != 0 && dmg > 0f) {
+				tgt = shot.firstEntry().getValue();
+				ebx = tgt.getBoundingBox();
+				final Shooter sh = Shooter.getShooter(tgt, false);
+				final boolean nr; 
+				if (sh == null) {
+					nr = Math.pow(x - ebx.getCenterX(), 2d) + Math.pow(z - ebx.getCenterZ(), 2d) < 0.2d;
+				} else {
+					final Vector vc = sh.getLoc(false);
+					nr = Math.pow(x - vc.getX(), 2d) + Math.pow(z - vc.getZ(), 2d) < 0.2d;
+				}
+				
+				if (nr) {
+					shot.pollFirstEntry();
+					if (tgt.getNoDamageTicks() == 0) {
+						final String nm;
+						final boolean hst = y - ebx.getMinY() > ebx.getHeight() * 0.75d;
+						final EntityShootAtEntityEvent ese;
+						if (hst) {
+							dmg *= 2f * (tgt.getEquipment().getHelmet() == null ? 1f : 0.5f);
+							ese = new EntityShootAtEntityEvent(ent, tgt, dmg, hst, wls.size() > 0, dff && gt.snp);
+							ese.callEvent();
+							nm = "§c銑" + String.valueOf(MathUtil.absInt( (int) ((dmg - ese.getDamage()) * 5.0d) ));
+						} else {
+							dmg *= tgt.getEquipment().getChestplate() == null ? 1f : 0.6f;
+							ese = new EntityShootAtEntityEvent(ent, tgt, dmg, hst, wls.size() > 0, dff && gt.snp);
+							ese.callEvent();
+							nm = "§6" + String.valueOf(MathUtil.absInt( (int) ((dmg - ese.getDamage()) * 5.0d) ));
 						}
-					/*}
-				}.runTask(plug);*/
-				break lp;
+						dmg = (float) ese.getDamage();
+						
+						if (ent instanceof Player) {
+							final Player pl = (Player) ent;
+							if (hst) pl.playSound(loc, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 2f);
+							pl.playSound(loc, Sound.BLOCK_END_PORTAL_FRAME_FILL, 2f, 2f);
+							Main.dmgInd(pl, tgt.getEyeLocation(), nm);
+						}
+					}
+				} else break;
 			}
 
 			if ((i--) < 0) {
 				break lp;
 			}
 		}
-		
-		/*if (dff) {
-			PacketUtils.sendRecoil(this, new Location(loc.getWorld(), loc.getX(), loc.getY(), loc.getZ(), yaw, ptc));
-		}
-			}
-		}.runTaskAsynchronously(plug);*/
 	}
 
 	
-	private final int shc;
 	@Override
 	public int hashCode() {
-		return shc;
+		return name.hashCode();
 	}
 	
 	@Override

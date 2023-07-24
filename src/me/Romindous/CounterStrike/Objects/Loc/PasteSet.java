@@ -1,15 +1,15 @@
 package me.Romindous.CounterStrike.Objects.Loc;
 
 import me.Romindous.CounterStrike.Objects.Map.TileSet;
-import net.minecraft.core.BaseBlockPosition;
+import ru.komiss77.modules.world.XYZ;
 
 public class PasteSet {
 	
 	public final TileSet ts;
 	public final byte rtt;
-	public final BaseBlockPosition loc;
+	public final XYZ loc;
 	
-	public PasteSet(final TileSet ts, final byte rtt, final BaseBlockPosition loc) {
+	public PasteSet(final TileSet ts, final byte rtt, final XYZ loc) {
 		this.ts = ts;
 		this.rtt = rtt;
 		this.loc = loc;

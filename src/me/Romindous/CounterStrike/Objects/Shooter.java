@@ -13,18 +13,20 @@ import org.bukkit.util.Vector;
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Game.Arena;
-import me.Romindous.CounterStrike.Game.Arena.Team;
-import me.Romindous.CounterStrike.Objects.Bots.BotManager;
-import me.Romindous.CounterStrike.Objects.Game.BtShooter;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Skins.GunSkin;
+import ru.komiss77.modules.bots.BotEntity;
+import ru.komiss77.modules.bots.BotManager;
+import ru.komiss77.modules.world.WXYZ;
+import ru.komiss77.notes.Slow;
 
 public interface Shooter {
 
 	public String name();
 	
 	public void rotPss();
-	public Vector getPos(final boolean dir);
+	public Vector getLoc(final boolean dir);
+	public WXYZ getPos();
 	
 	public Player getPlayer();
 	public LivingEntity getEntity();
@@ -65,7 +67,7 @@ public interface Shooter {
 	public void item(final ItemStack it, final int slot);
 	public Inventory inv();
 	public void clearInv();
-	public void dropIts(final Location loc, final Team tm, final boolean guns);
+	public void dropIts(final Location loc);
 
 	public int getModel(final GunType gt);
 	public GunSkin getSkin(final GunType gt);
@@ -79,6 +81,7 @@ public interface Shooter {
 	@Override
 	boolean equals(final Object o);
 	
+	@Slow(priority = 4)
 	public void shoot(final GunType gt, final boolean dff, final int tr);
 	
 	public static PlShooter getPlShooter(final String nm, final boolean crt) {
@@ -97,11 +100,8 @@ public interface Shooter {
 		if (le.getType() == EntityType.PLAYER) {
 			return getPlShooter(le.getName(), crt);
 		} else {
-			final BtShooter bh = BotManager.npcs.get(le.getEntityId());
-			if (bh == null) {
-				return crt ? new BtShooter(null, le.getWorld()) : null;
-			}
-			return bh;
+			final BotEntity bh = BotManager.rIdBots.get(le.getEntityId());
+			return bh != null && bh instanceof Shooter ? (Shooter) bh : null;
 		}
 	}
 

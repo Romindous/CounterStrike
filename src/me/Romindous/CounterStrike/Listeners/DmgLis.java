@@ -39,8 +39,10 @@ import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
 import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
+import net.minecraft.network.protocol.game.ClientboundHurtAnimationPacket;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
+import ru.komiss77.modules.bots.BotManager;
 import ru.komiss77.version.VM;
 
 public class DmgLis implements Listener {
@@ -60,7 +62,7 @@ public class DmgLis implements Listener {
 						if (sh.arena() == null) {
 							if (!(ee instanceof EntityShootAtEntityEvent) && dmgr.getType() == EntityType.PLAYER) {
 								e.setCancelled(((HumanEntity) dmgr).getGameMode() != GameMode.CREATIVE);
-								Main.dmgArm((Player) dmgr, ent.getEyeLocation(), "§6" + String.valueOf((ent.getEquipment().getChestplate() == null ? 4 : 2) * 5));
+								Main.dmgInd((Player) dmgr, ent.getEyeLocation(), "§6" + String.valueOf((ent.getEquipment().getChestplate() == null ? 4 : 2) * 5));
 							}
 						} else {
 							if (ee instanceof EntityShootAtEntityEvent) {
@@ -68,15 +70,15 @@ public class DmgLis implements Listener {
 								final EntityShootAtEntityEvent eee = (EntityShootAtEntityEvent) ee;
 								final GunType gt = GunType.getGnTp(sh.item(EquipmentSlot.HAND));
 								if (gt == null) return;
-								if (eee.hst && dmgr.getType() == EntityType.PLAYER) {
+								if (eee.isCritical() && dmgr.getType() == EntityType.PLAYER) {
 									ApiOstrov.addStat((Player) dmgr, Stat.CS_hshot);
 								}
 								
 								final Location loc = ent.getLocation();
-								prcDmg(ent, Shooter.getShooter(ent, false), 
+								eee.setDamage(prcDmg(ent, Shooter.getShooter(ent, false), 
 								sh, e.getDamage(), gt.icn, 0, gt.rwd, dmgr.hasPotionEffect(PotionEffectType.BLINDNESS), 
 								VM.getNmsServer().getFastMat(loc.getWorld(), loc.getBlockX(), loc.getBlockY() + 1, loc.getBlockZ()) == Material.POWDER_SNOW, 
-								eee.nscp, eee.hst, eee.wb);
+								eee.nscp, eee.isCritical(), eee.wb));
 							} else {
 								e.setCancelled(true);
 								//if player hits living
@@ -89,7 +91,7 @@ public class DmgLis implements Listener {
 										prcDmg(ent, Shooter.getShooter(ent, false), sh, e.getDamage(), 
 										"§f\u9298", 5, (short) GunType.knfRwd, false, false, false, false, false);
 										if (dmgr.getType() == EntityType.PLAYER) {
-											Main.dmgArm((Player) dmgr, ent.getEyeLocation(), "§6" + String.valueOf((int) e.getDamage() * 5));
+											Main.dmgInd((Player) dmgr, ent.getEyeLocation(), "§6" + String.valueOf((int) e.getDamage() * 5));
 										}
 									}
 									break;
@@ -150,12 +152,12 @@ public class DmgLis implements Listener {
 		}
 	}
 
-	public static void prcDmg(final LivingEntity target, final Shooter tgtsh, 
+	public static double prcDmg(final LivingEntity target, final Shooter tgtsh, 
 		final Shooter damager, final double dmg, final String icon, final int ndts) {
-		prcDmg(target, tgtsh, damager, dmg, icon, ndts, (short) 0, false, false, false, false, false);
+		return prcDmg(target, tgtsh, damager, dmg, icon, ndts, (short) 0, false, false, false, false, false);
 	}
 
-	public static void prcDmg(final LivingEntity target, final Shooter tgtsh, 
+	public static double prcDmg(final LivingEntity target, final Shooter tgtsh, 
 		final Shooter damager, final double dmg, final String icon, final int ndts, 
 		final short rwd, final boolean blind, final boolean smoked, 
 		final boolean noscp, final boolean head, final boolean walled) {
@@ -164,8 +166,10 @@ public class DmgLis implements Listener {
 		if (health > 0d) {//if entity isnt dying
 			if (tgtsh == null) {//target is not player
 				target.setHealth(health);
-				target.playEffect(EntityEffect.HURT);
+				target.playEffect(EntityEffect.THORNS_HURT);
 				target.setNoDamageTicks(ndts);
+				BotManager.sendWrldPckts(VM.getNmsServer().toNMS(target.getWorld()), 
+					new ClientboundHurtAnimationPacket(VM.getNmsServer().toNMS(target)));
 				if (target instanceof Mob && damager != null) {
 					((Mob) target).setTarget(damager.getEntity());
 				}
@@ -173,11 +177,13 @@ public class DmgLis implements Listener {
 				if (tgtsh.arena() != null) {
 					if (damager == null) {//damager is not player
 						target.setHealth(health);
-						target.playEffect(EntityEffect.HURT);
+						target.playEffect(EntityEffect.THORNS_HURT);
 						target.setNoDamageTicks(ndts);
+						BotManager.sendWrldPckts(VM.getNmsServer().toNMS(target.getWorld()), 
+							new ClientboundHurtAnimationPacket(VM.getNmsServer().toNMS(target)));
 						if (tgtsh instanceof BtShooter) {
-							((BtShooter) tgtsh).hurt();
-						}
+							((BtShooter) tgtsh).hurt(target);
+						} else ((Player) target).playSound(target, Sound.BLOCK_MUDDY_MANGROVE_ROOTS_FALL, 2f, 2f);
 					} else {//damager is player
 						switch (tgtsh.arena().gst) {
 						case ROUND:
@@ -186,11 +192,13 @@ public class DmgLis implements Listener {
 							}
 						case BEGINING:
 							target.setHealth(health);
-							target.playEffect(EntityEffect.HURT);
+							target.playEffect(EntityEffect.THORNS_HURT);
 							target.setNoDamageTicks(ndts);
+							BotManager.sendWrldPckts(VM.getNmsServer().toNMS(target.getWorld()), 
+								new ClientboundHurtAnimationPacket(VM.getNmsServer().toNMS(target)));
 							if (tgtsh instanceof BtShooter) {
-								((BtShooter) tgtsh).hurt();
-							}
+								((BtShooter) tgtsh).hurt(target);
+							} else ((Player) target).playSound(target, Sound.BLOCK_MUDDY_MANGROVE_ROOTS_FALL, 2f, 2f);
 							break;
 						default:
 							break;
@@ -198,6 +206,7 @@ public class DmgLis implements Listener {
 					}
 				}
 			}
+			return 0d;
 		} else {//if entity is dying
 			if (tgtsh == null) {//target is not player
 				final Invasion inv = Invasion.getMobInvasion(target.getEntityId());
@@ -258,7 +267,8 @@ public class DmgLis implements Listener {
 							target.getWorld().playSound(target.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, 10f, 2f);
 							SkinQuest.tryCompleteQuest(damager, Quest.АЗИМОВ, smoked && blind && head ? 1 : 0);
 							SkinQuest.tryCompleteQuest(damager, Quest.КРОВЬ, walled ? 1 : 0);
-							SkinQuest.tryCompleteQuest(damager, Quest.ПАНК, (int) damager.getEntity().getHealth());
+							final LivingEntity dle = damager.getEntity();
+							if (dle != null) SkinQuest.tryCompleteQuest(damager, Quest.ПАНК, (int) dle.getHealth());
 							ar.killSh(tgtsh);
 							break;
 						default:
@@ -267,6 +277,7 @@ public class DmgLis implements Listener {
 					}
 				}
 			}
+			return dmg - health;
 		}
 	}
    

@@ -52,12 +52,10 @@ import java.util.Arrays;
 import java.util.LinkedList;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.block.Block;
-import org.bukkit.block.CreatureSpawner;
+import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 
@@ -65,8 +63,9 @@ import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Objects.Map.Setup;
+import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
+import ru.komiss77.utils.TCUtils;
 
 public class Inventories {
 	
@@ -164,7 +163,7 @@ public class Inventories {
 	public static void updtGm(final Arena ar) {
 		byte n = 0;
 		for (final ItemStack it : GmInv.getContents()) {
-			if (it != null && it.hasItemMeta() && it.getItemMeta().getDisplayName().substring(2).equals(ar.name)) {
+			if (it != null && it.hasItemMeta() && TCUtils.toString(it.getItemMeta().displayName()).substring(2).equals(ar.name)) {
 				final String md;
 				switch (ar.getType()) {
 				case DEFUSAL:
@@ -251,7 +250,7 @@ public class Inventories {
 		return its;
 	}
 
-	public static ItemStack[] fillDfSpInv(final Block b, final byte sz, final boolean bg) {
+	public static ItemStack[] fillDfSpInv(final Mobber mb, final byte sz, final boolean bg) {
 		final ItemStack[] its = new ItemStack[sz];
 		
 		final Byte[] slts = new Byte[sz - 3];
@@ -266,7 +265,7 @@ public class Inventories {
 		final int[] chs = new int[] {clr == 11 ? 12 : 11, clr <= 12 ? 13 : 12, clr <= 13 ? 14 : 13};
 		
 		final LinkedList<Byte> ls = new LinkedList<Byte>(Arrays.asList(slts));
-		for (byte i = (byte) ((bg ? 10 : 6) * getSpnrDf((CreatureSpawner) b.getState()) + 8); i >= 0; i--) {
+		for (byte i = (byte) ((bg ? 10 : 6) * getSpnrDf(mb.et) + 8); i >= 0; i--) {
 			its[ls.remove(Main.srnd.nextInt(ls.size()))] = Main.mkItm(STRING, "§8~-~-~", clr);
 		}
 		
@@ -289,8 +288,8 @@ public class Inventories {
 		return its;
 	}
 	   
-	private static int getSpnrDf(final CreatureSpawner sp) {
-		switch (sp.getSpawnedType()) {
+	private static int getSpnrDf(final EntityType et) {
+		switch (et) {
 		case ZOMBIE_VILLAGER:
 		default:
 			return 1;
@@ -347,8 +346,8 @@ public class Inventories {
 		its[GunType.chstSlt] = new ItemStack(LEATHER_CHESTPLATE);
 		final LeatherArmorMeta cm = (LeatherArmorMeta) its[49].getItemMeta();
 		cm.setColor(Color.RED);
-		cm.setDisplayName("§cКуртка Террориста §f\u9266");
-		cm.setLore(Arrays.asList("§7Цена: §d" + GunType.chstPrc + " §6⛃"));
+		cm.displayName(TCUtils.format("§cКуртка Террориста §f\u9266"));
+		cm.lore(Arrays.asList(TCUtils.format("§7Цена: §d" + GunType.chstPrc + " §6⛃")));
 		its[GunType.chstSlt].setItemMeta(cm);
 		its[TP7.slt] = Main.mkItm(STONE_HOE, "§dTP-7 " + TP7.icn, 10, "§7Цена: §d" + TP7.prc + " §6⛃");
 		its[SMOKE.slt] = Main.mkItm(DARK_OAK_SAPLING, "§7Дымовая Граната " + SMOKE.icn, 10, "§7Цена: §d" + SMOKE.prc + " §6⛃");
@@ -379,24 +378,13 @@ public class Inventories {
 		its[GunType.chstSlt] = new ItemStack(LEATHER_CHESTPLATE);
 		final LeatherArmorMeta cm = (LeatherArmorMeta) its[49].getItemMeta();
 		cm.setColor(Color.TEAL);
-		cm.setDisplayName("§3Жилет Спецназа §f\u9266");
-		cm.setLore(Arrays.asList("§7Цена: §d" + GunType.chstPrc + " §6⛃"));
+		cm.displayName(TCUtils.format("§3Жилет Спецназа §f\u9266"));
+		cm.lore(Arrays.asList(TCUtils.format("§7Цена: §d" + GunType.chstPrc + " §6⛃")));
 		its[GunType.chstSlt].setItemMeta(cm);
 		its[TP7.slt] = Main.mkItm(STONE_HOE, "§dTP-7 " + TP7.icn, 10, "§7Цена: §d" + TP7.prc + " §6⛃");
 		its[SMOKE.slt] = Main.mkItm(DARK_OAK_SAPLING, "§7Дымовая Граната " + SMOKE.icn, 10, "§7Цена: §d" + SMOKE.prc + " §6⛃");
 		its[DECOY.slt] = Main.mkItm(JUNGLE_SAPLING, "§2Отвлекающая Граната " + DECOY.icn, 10, "§7Цена: §d" + DECOY.prc + " §6⛃");
 		its[DGL.slt] = Main.mkItm(STONE_PICKAXE, "§dDGL " + DGL.icn, 10, "§7Цена: §d" + DGL.prc + " §6⛃");
 		CTShop.setContents(its);
-	}
-
-	public static boolean isBlankItem(final ItemStack item, final boolean checkMeta) {
-		return item == null || item.getType().isAir() || (checkMeta && !item.hasItemMeta());
-	}
-
-	public static String getCleanTitle(final InventoryView iv) {
-		final Component ttl = iv.title();
-		if (ttl instanceof TextComponent)
-			return ChatColor.stripColor(((TextComponent) ttl).content());
-		return "";
 	}
 }

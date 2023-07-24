@@ -1,15 +1,13 @@
 package me.Romindous.CounterStrike.Game;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Difficulty;
 import org.bukkit.GameRule;
 import org.bukkit.Location;
@@ -20,7 +18,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitTask;
-import org.bukkit.util.Vector;
 
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Objects.Shooter;
@@ -29,14 +26,16 @@ import me.Romindous.CounterStrike.Objects.Game.GameType;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Game.TripWire;
 import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
-import me.Romindous.CounterStrike.Objects.Loc.Spot;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
 import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
 import me.Romindous.CounterStrike.Utils.Inventories;
 import me.Romindous.CounterStrike.Utils.PacketUtils;
 import net.minecraft.EnumChatFormat;
-import net.minecraft.core.BaseBlockPosition;
 import ru.komiss77.ApiOstrov;
+import ru.komiss77.Ostrov;
+import ru.komiss77.modules.world.XYZ;
+import ru.komiss77.notes.Slow;
+import ru.komiss77.utils.TCUtils;
 
 public class Arena {
 	
@@ -47,11 +46,10 @@ public class Arena {
 	public final World w;
 	public final byte min;
 	public final byte max;
-	protected final BaseBlockPosition[] TSps;
-	protected final BaseBlockPosition[] CTSps;
-	protected final Spot[] spots;
-	protected final BaseBlockPosition[] TPss;
-	protected final BaseBlockPosition[] CTPss;
+//	public final Area area;
+	protected final XYZ[] TSpawns;
+	protected final XYZ[] CTSawns;
+	protected final XYZ[] spots;
 	public final boolean bots;
 	public final boolean rnd;
 	protected BukkitTask tsk;
@@ -59,8 +57,8 @@ public class Arena {
 	public GameState gst;
 	
 	public Arena(final String name, final byte min, final byte max, 
-		final BaseBlockPosition[] TSps, final BaseBlockPosition[] CTSps, final World w, 
-		final Spot[] spots, final boolean rnd, final boolean bots) {
+		final XYZ[] TSpawns, final XYZ[] CTSawns, final XYZ[] spots, 
+		final World w, final boolean rnd, final boolean bots) {
 		this.w = w;
 		w.setTime(6000L);
 		w.setDifficulty(Difficulty.EASY);
@@ -68,32 +66,19 @@ public class Arena {
 		w.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
 		w.setGameRule(GameRule.NATURAL_REGENERATION, false);
 		this.gst = GameState.WAITING;
-		this.TSps = TSps;
-		this.CTSps = CTSps;
+		this.TSpawns = TSpawns;
+		this.CTSawns = CTSawns;
 		this.spots = spots;
-		final ArrayList<BaseBlockPosition> Ts = new ArrayList<>();
-		final ArrayList<BaseBlockPosition> CTs = new ArrayList<>();
-		for (final Spot sp : spots) {
-			switch (sp.tm) {
-			case Ts:
-				Ts.add(sp);
-				break;
-			case CTs:
-				CTs.add(sp);
-				break;
-			default:
-				break;
-			}
-		}
-
-		this.TPss = Ts.toArray(new BaseBlockPosition[Ts.size()]);
-		this.CTPss = CTs.toArray(new BaseBlockPosition[CTs.size()]);
+		
+//		this.area = area;
 		this.name = name;
 		this.bots = bots;
 		this.rnd = rnd;
 		this.min = min;
 		this.max = max;
 		this.tm = 0;
+		
+		Ostrov.async(() -> ApiOstrov.shuffle(spots));
 	}
 
 	protected Arena getArena() {
@@ -160,6 +145,7 @@ public class Arena {
 			Bukkit.getConsoleSender().sendMessage("removeing arena");
 			Main.mapBlds.remove(ar.name).remove(ar.w, 3);
 		}
+		Ostrov.async(() -> Inventories.fillGmInv());
 		ar = null;
 	}
 
@@ -213,19 +199,33 @@ public class Arena {
 		final Team tm = shtrs.get(org);
 		return tm == null ? false : tm == shtrs.get(cmp);
 	}
-
+	
+	public int getTmAmt(final Team tm, final boolean bots, final boolean alv) {
+		int n = 0;
+		for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
+			if (e.getValue() == tm) {
+				if (alv && e.getKey().isDead()) continue;
+				if (e.getKey() instanceof PlShooter || bots) {
+					n++;
+				} 
+			}
+		}
+		return n;
+	}
+	
+	@Slow(priority = 3)
 	public boolean canOpnShp(final Location loc, final Team tm) {
 		switch (tm) {
 		case Ts:
-			for (final BaseBlockPosition b : TSps) {
-				if (Math.abs(loc.getBlockX() - b.u()) < 3 && Math.abs(loc.getBlockZ() - b.w()) < 3) {
+			for (final XYZ b : TSpawns) {
+				if (Math.abs(loc.getBlockX() - b.x) < 3 && Math.abs(loc.getBlockZ() - b.z) < 3) {
 					return true;
 				}
 			}
 			break;
 		case CTs:
-			for (final BaseBlockPosition b : CTSps) {
-				if (Math.abs(loc.getBlockX() - b.u()) < 3 && Math.abs(loc.getBlockZ() - b.w()) < 3) {
+			for (final XYZ b : CTSawns) {
+				if (Math.abs(loc.getBlockX() - b.x) < 3 && Math.abs(loc.getBlockZ() - b.z) < 3) {
 					return true;
 				}
 			}
@@ -243,87 +243,42 @@ public class Arena {
 	public GameType getType() {
 		return GameType.DEFUSAL;
 	}
-
-	public BaseBlockPosition getClosestPos(final BaseBlockPosition loc, final int part, final boolean CTps) {
-		final List<BaseBlockPosition> bbps = Arrays.asList(CTps ? CTPss : TPss);
-		Collections.shuffle(bbps, Main.srnd);
+	
+	@Slow(priority = 2)
+	public XYZ getClosestPos(final XYZ loc, final int dst) {
+		final XYZ lc = loc.clone().add(Main.srnd.nextBoolean() ? dst : -dst, 
+			Main.srnd.nextBoolean() ? dst : -dst, Main.srnd.nextBoolean() ? dst : -dst);
 		int bbi = 0;
 		int dd = Integer.MAX_VALUE;
-		for (int i = bbps.size() >> part; i > 0; i--) {
-			final int d = distSq(loc, bbps.get(i));
+		for (int i = spots.length - 1; i >= 0; i--) {
+			final int d = lc.distSq(spots[i]);
 			if (d < dd) {
 				bbi = i;
 				dd = d;
 			}
 		}
-		return bbps.get(bbi);
+//		final XYZ dif = spots[bbi];
+//		w.getPlayers().forEach(p -> p.sendBlockChange(dif.getCenterLoc(w), Material.STONE.createBlockData()));
+		return spots[bbi];
 	}
 
-	public static int distSq(final BaseBlockPosition from, final BaseBlockPosition to) {
-		final int dx = from.u() - to.u(), dy = from.v() - to.v(), dz = from.w() - to.w();
-		return dx * dx + dy * dy + dz * dz;
-		
-	}
-
-	public static String getTime(final short t, final ChatColor cc) {
-		return String.valueOf(cc) + (t / 60 > 9 ? t / 60 : "0" + (t / 60))
+	public static String getTime(final short t, final String cc) {
+		return cc + (t / 60 > 9 ? t / 60 : "0" + (t / 60))
 			+ "§7:"
-			+ String.valueOf(cc) + (t % 60 > 9 ? t % 60 : "0" + (t % 60));
+			+ cc + (t % 60 > 9 ? t % 60 : "0" + (t % 60));
 	}
 
 	public short getTime() {
 		return tm;
 	}
-
+	
+	@Slow(priority = 1)
 	protected static void editLr(final ItemStack it, final boolean add, final String lmnt) {
 		final ItemMeta im = it.getItemMeta();
-		final LinkedList<String> lr = new LinkedList<String>(im.getLore());
-		if (add) {
-			lr.add(lmnt);
-		} else {
-			lr.remove(lmnt);
-		}
-		im.setLore(lr);
+		final List<String> lr = im.lore().stream().map(TCUtils::toString).collect(Collectors.toList());
+		if (add) lr.add(lmnt);
+		else lr.remove(lmnt);
+		im.lore(lr.stream().map(TCUtils::format).collect(Collectors.toList()));
 		it.setItemMeta(im);
-	}
-
-	public Spot[] getPoss() {
-		return spots;
-	}
-
-	public Spot getClosePos(final World w, final BaseBlockPosition org, final boolean trace, final boolean must) {
-		Spot spot = null;
-		int dd = Integer.MAX_VALUE;
-		if (trace) {
-			final Location loc = new Location(w, org.u() + 0.5d, org.v() + 0.5d, org.w() + 0.5d);
-			for (final Spot s : spots) {
-				final int d = distSq(org, s);
-				if ((spot == null || d < dd) && Main.rayThruSoft(loc, 
-						new Vector(s.u() + 0.5d, s.v() + 0.5d, s.w() + 0.5d), 1d)) {
-					spot = s;
-					dd = d;
-				}
-			}
-			
-			if (spot == null && must) {
-				for (final Spot s : spots) {
-					final int d = distSq(org, s);
-					if (spot == null || d < dd) {
-						spot = s;
-						dd = d;
-					}
-				}
-			}
-		} else {
-			for (final Spot s : spots) {
-				final int d = distSq(org, s);
-				if (spot == null || d < dd) {
-					spot = s;
-					dd = d;
-				}
-			}
-		}
-		
-		return spot;
 	}
 }

@@ -10,18 +10,18 @@ import org.bukkit.entity.Mob;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
-import com.destroystokyo.paper.entity.Pathfinder.PathResult;
 import com.destroystokyo.paper.entity.ai.Goal;
 import com.destroystokyo.paper.entity.ai.GoalKey;
 import com.destroystokyo.paper.entity.ai.GoalType;
 
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Game.Arena.Team;
-import me.Romindous.CounterStrike.Listeners.DmgLis;
 import me.Romindous.CounterStrike.Game.Invasion;
+import me.Romindous.CounterStrike.Listeners.DmgLis;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Game.GameState;
-import net.minecraft.core.BaseBlockPosition;
+import ru.komiss77.modules.world.AStarPath;
+import ru.komiss77.modules.world.WXYZ;
 
 public class GoalGoToSite implements Goal<Mob> {
 	
@@ -29,6 +29,7 @@ public class GoalGoToSite implements Goal<Mob> {
 
     private final GoalKey<Mob> key;
 	private final Invasion ar;
+	private final AStarPath ap;
 	private Shooter tgt;
 	private int tick = 0;
     
@@ -37,6 +38,10 @@ public class GoalGoToSite implements Goal<Mob> {
         this.mob = mob;
         this.ar = ar;
         this.tgt = null;
+        
+        ap = new AStarPath(mob, 1000);
+        ap.setTgt(new WXYZ(Main.srnd.nextBoolean() || ar.bds.getViewRange() == 0f 
+        	? ar.ads.getLocation() : ar.bds.getLocation()));
     }
  
     @Override
@@ -73,7 +78,7 @@ public class GoalGoToSite implements Goal<Mob> {
 					}
 				}
 			} else {
-				final Vector pos = tgt.getPos(true);
+				final Vector pos = tgt.getLoc(true);
 				if (!Main.rayThruAir(eyel, pos, 0.1F)) {
 					tgt = null;
 				}
@@ -81,26 +86,19 @@ public class GoalGoToSite implements Goal<Mob> {
 			
 			final Location pthTo;
 			if (tgt == null || tgt.isDead()) {
-				final BaseBlockPosition ap = ar.ast.da();
-	    		if (ar.bst.bW()) {
-	    			final BaseBlockPosition bp = ar.bst.da();
-	    			pthTo = Main.twoDisQuared(new BaseBlockPosition(lc.getBlockX(), lc.getBlockY(), lc.getBlockZ()), ap) < Main.twoDisQuared(new BaseBlockPosition(lc.getBlockX(), lc.getBlockY(), lc.getBlockZ()), bp) 
-	    				? new Location(mob.getWorld(), ap.u(), ap.v(), ap.w()) : new Location(mob.getWorld(), bp.u(), bp.v(), bp.w());
-	    		} else {
-	    			pthTo = new Location(mob.getWorld(), ap.u(), ap.v(), ap.w());
-				}
+				ap.tickGo(Mobber.getMbSpd(mob.getType()));
 			} else {//attack
 				final LivingEntity le = tgt.getEntity();
-				final Location ll = (pthTo = le.getLocation());
-				//Bukkit.getLogger().info("" + loc.distanceSquared(ll));
-				if (lc.distanceSquared(ll) < 4d) {
+				if (le == null) {
+					tgt = null;
+					return;
+				}
+				pthTo = le.getEyeLocation();
+				if (lc.distanceSquared(pthTo) < 4d) {
 					DmgLis.prcDmg(le, tgt, null, Mobber.getMbPow(mob.getType()) * 0.4d + 1d, Team.NA.clr + mob.getName() + " §f\u929a", 5);
 				}
-			}
-			//Bukkit.getLogger().info(pthTo.toString());
-    		final PathResult pth = mob.getPathfinder().findPath(pthTo);
-    		if (pth != null) {
-    			mob.getPathfinder().moveTo(pth);
+				
+				mob.getPathfinder().moveTo(pthTo, Mobber.getMbSpd(mob.getType()));
 			}
     	}
     }

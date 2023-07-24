@@ -6,8 +6,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -21,8 +19,9 @@ import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Map.MapManager;
 import me.Romindous.CounterStrike.Objects.Map.Setup;
 import me.Romindous.CounterStrike.Objects.Map.TypeChoose;
-import net.minecraft.core.BaseBlockPosition;
 import ru.komiss77.ApiOstrov;
+import ru.komiss77.modules.world.WXYZ;
+import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.utils.inventory.SmartInventory;
 
 public class CSCmd implements CommandExecutor, TabCompleter {
@@ -96,14 +95,10 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 					//установка лобби
 				} else if (args.length == 1) {
 					if (args[0].equalsIgnoreCase("setlobby")) {
-						final Location loc = p.getLocation();
-						Main.lobby = new BaseBlockPosition(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
-						Main.ars.set("lobby.world", loc.getWorld().getName());
-						Main.ars.set("lobby.x", loc.getBlockX());
-						Main.ars.set("lobby.y", loc.getBlockY());
-						Main.ars.set("lobby.z", loc.getBlockZ());
+						Main.lobby = new WXYZ(p.getLocation());
+						Main.ars.set("lobby", new XYZ(Main.lobby.getCenterLoc()).toString());
 						p.sendMessage(Main.prf() + "Точка лобби сохранена на " + 
-								"(§5" + loc.getBlockX() + "§7, §5" +loc.getBlockY() + "§7, §5" + loc.getBlockZ() + "§7)!");
+							"(§5" + Main.lobby.x + "§7, §5" + Main.lobby.y + "§7, §5" + Main.lobby.z + "§7)!");
 						try {
 							Main.ars.save(new File(Main.folder + File.separator + "arenas.yml"));
 						} catch (IOException e) {
@@ -170,7 +165,7 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 			                        .build().open(p);
 									return true;
 								} else {
-									p.sendMessage(Main.prf() + ChatColor.RED + "Ни одной карты еще не создано!");
+									p.sendMessage(Main.prf() + "§cНи одной карты еще не создано!");
 									return true;
 								}
 							} else {

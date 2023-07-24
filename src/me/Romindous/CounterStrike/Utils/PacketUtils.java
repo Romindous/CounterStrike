@@ -21,7 +21,6 @@ import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Game.Arena.Team;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
-import me.Romindous.CounterStrike.Objects.Loc.WXYZ;
 import net.minecraft.EnumChatFormat;
 import net.minecraft.commands.arguments.ArgumentAnchor.Anchor;
 import net.minecraft.core.BlockPosition;
@@ -45,6 +44,7 @@ import net.minecraft.world.entity.player.PlayerAbilities;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.scores.ScoreboardTeam;
 import net.minecraft.world.scores.ScoreboardTeamBase.EnumNameTagVisibility;
+import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.version.VM;
 
 public class PacketUtils {
@@ -71,7 +71,7 @@ public class PacketUtils {
 	public static void sendNmTg(final Shooter of, final String prf, final String sfx, final EnumChatFormat clr) {
 		final EntityLiving ep = getNMSLE(of.getEntity());
 		if (ep == null) return;
-		final Scoreboard sb = ep.cD().aF();
+		final Scoreboard sb = ep.cI().aF();
 		final ScoreboardTeam st = sb.g(of.name());
 		st.b(IChatBaseComponent.a(prf));
 		st.c(IChatBaseComponent.a(sfx));
@@ -84,22 +84,22 @@ public class PacketUtils {
 		final PacketPlayOutScoreboardTeam modDf = PacketPlayOutScoreboardTeam.a(st, false);
 		sb.d(st);
 		if (of.arena() == null) {
-			for (final EntityHuman e : ep.s.w()) {
-				final NetworkManager nm = ((EntityPlayer) e).networkManager;
+			for (final EntityHuman e : ep.dI().v()) {
+				final NetworkManager nm = ((EntityPlayer) e).c.h;
 				nm.a(pt); nm.a(crt); nm.a(add); nm.a(modSm);
 			}
 		} else {
 			switch (of.arena().gst) {
 			case WAITING:
-				for (final EntityHuman e : ep.s.w()) {
-					final NetworkManager nm = ((EntityPlayer) e).networkManager;
+				for (final EntityHuman e : ep.dI().v()) {
+					final NetworkManager nm = ((EntityPlayer) e).c.h;
 					nm.a(pt); nm.a(crt); nm.a(add); nm.a(modSm);
 				}
 				break;
 			case BEGINING, FINISH:
 				for (final Shooter sh : of.arena().shtrs.keySet()) {
 					if (sh instanceof PlShooter) {
-						final NetworkManager nm = getNMSPl(sh.getPlayer()).networkManager;
+						final NetworkManager nm = getNMSPl(sh.getPlayer()).c.h;
 						nm.a(pt); nm.a(crt); nm.a(add); nm.a(modSm);
 					}
 				}
@@ -108,7 +108,7 @@ public class PacketUtils {
 				final Team tm = of.arena().shtrs.get(of);
 				for (final Entry<Shooter, Team> e : of.arena().shtrs.entrySet()) {
 					if (e.getKey() instanceof PlShooter) {
-						final NetworkManager nm = getNMSPl(e.getKey().getPlayer()).networkManager;
+						final NetworkManager nm = getNMSPl(e.getKey().getPlayer()).c.h;
 						nm.a(pt); nm.a(crt); nm.a(add); nm.a(e.getValue() == tm ? modSm : modDf);
 					}
 				}
@@ -122,17 +122,16 @@ public class PacketUtils {
 		//учирает игрока final PacketPlayOutScoreboardTeam pt = PacketPlayOutScoreboardTeam.a(st, p.getName(), a.b);
 	}
 	
-	public static void sendNmTg(final NetworkManager to, final Player of, final String prf, 
+	public static void sendNmTg(final NetworkManager to, final Shooter of, final String prf, 
 			final String sfx, final boolean show, final EnumChatFormat clr) {
-		final EntityPlayer tgt = getNMSPl(of);
-		final Scoreboard sb = tgt.c.aF();
-		final ScoreboardTeam st = sb.g(tgt.displayName);
+		final Scoreboard sb = VM.getNmsServer().toNMS().aF();
+		final ScoreboardTeam st = sb.g(of.name());
 		st.b(IChatBaseComponent.a(prf));
 		st.c(IChatBaseComponent.a(sfx));
 		st.a(clr);
 		final PacketPlayOutScoreboardTeam pt = PacketPlayOutScoreboardTeam.a(st);
 		final PacketPlayOutScoreboardTeam crt = PacketPlayOutScoreboardTeam.a(st, true);
-		final PacketPlayOutScoreboardTeam add = PacketPlayOutScoreboardTeam.a(st, tgt.displayName, a.a);
+		final PacketPlayOutScoreboardTeam add = PacketPlayOutScoreboardTeam.a(st, of.name(), a.a);
 		final PacketPlayOutScoreboardTeam modSm = PacketPlayOutScoreboardTeam.a(st, false);
 		st.a(EnumNameTagVisibility.b);
 		final PacketPlayOutScoreboardTeam modDf = PacketPlayOutScoreboardTeam.a(st, false);
@@ -140,28 +139,28 @@ public class PacketUtils {
 	}
   
 	public static void sendTtlSbTtl(final Player p, final String ttl, final String sbttl, final int tm) {
-		final PlayerConnection pc = getNMSPl(p).b;
+		final PlayerConnection pc = getNMSPl(p).c;
 		pc.a(new ClientboundSetTitleTextPacket(IChatBaseComponent.a(ttl)));
 		pc.a(new ClientboundSetSubtitleTextPacket(IChatBaseComponent.a(sbttl)));
 		pc.a(new ClientboundSetTitlesAnimationPacket(2, tm, 20));
 	}
   
 	public static void sendTtl(final Player p, final String ttl, final int tm) {
-		final PlayerConnection pc = getNMSPl(p).b;
+		final PlayerConnection pc = getNMSPl(p).c;
 		pc.a(new ClientboundSetTitleTextPacket(IChatBaseComponent.a(ttl)));
 		pc.a(new ClientboundSetSubtitleTextPacket(IChatBaseComponent.a(" ")));
 		pc.a(new ClientboundSetTitlesAnimationPacket(2, tm, 20));
 	}
   
 	public static void sendSbTtl(final Player p, final String sbttl, final int tm) {
-		final PlayerConnection pc = getNMSPl(p).b;
+		final PlayerConnection pc = getNMSPl(p).c;
 		pc.a(new ClientboundSetTitleTextPacket(IChatBaseComponent.a(" ")));
 		pc.a(new ClientboundSetSubtitleTextPacket(IChatBaseComponent.a(sbttl)));
 		pc.a(new ClientboundSetTitlesAnimationPacket(2, tm, 20));
 	}
   
 	public static void sendAcBr(final Player p, final String msg, final int tm) {
-		final PlayerConnection pc = getNMSPl(p).b;
+		final PlayerConnection pc = getNMSPl(p).c;
 		pc.a(new ClientboundSetActionBarTextPacket(IChatBaseComponent.a(msg)));
 		pc.a(new ClientboundSetTitlesAnimationPacket(2, tm, 20));
 	}
@@ -179,11 +178,11 @@ public class PacketUtils {
 			//final PotionEffect slw = p.getPotionEffect(PotionEffectType.SLOW);
 			if (in) {
 				fov.setFloat(pab, 256f);
-				getNMSPl(p).b.a(pab);
+				getNMSPl(p).c.a(pab);
 				fkHlmtClnt(p, Main.cp);
 			} else {
 				fov.setFloat(pab, 0.1f);
-				getNMSPl(p).b.a(pab);
+				getNMSPl(p).c.a(pab);
 				fkHlmtClnt(p, p.getInventory().getHelmet());
 			}
 		}
@@ -243,8 +242,8 @@ public class PacketUtils {
   
  	public static void blkCrckClnt(final WXYZ bl) {
  		final PacketPlayOutBlockBreakAnimation pb = new PacketPlayOutBlockBreakAnimation((id == 1000 ? (id = 0) : id++) + 10000, new BlockPosition(bl.x, bl.y, bl.z), getNxtStg(bl));
- 		for (final EntityHuman e : getNMSWrld(bl.w).w()) {
- 			((EntityPlayer) e).b.a(pb);
+ 		for (final EntityHuman e : getNMSWrld(bl.w).v()) {
+ 			((EntityPlayer) e).c.a(pb);
  		}
  	}
   
@@ -264,6 +263,6 @@ public class PacketUtils {
  	
 	public static void sendRecoil(final PlShooter sh, final Location rot) {
 		final Location lc = rot.add(rot.getDirection().multiply(40d));
-		getNMSPl(sh.getPlayer()).b.a(new PacketPlayOutLookAt(Anchor.b, lc.getX(), lc.getY(), lc.getZ()));
+		getNMSPl(sh.getPlayer()).c.a(new PacketPlayOutLookAt(Anchor.b, lc.getX(), lc.getY(), lc.getZ()));
 	}
 }

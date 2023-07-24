@@ -10,7 +10,7 @@ import com.google.common.base.Function;
 
 public class EntityShootAtEntityEvent extends EntityDamageByEntityEvent {
 
-	public final boolean hst;
+	private final boolean hst;
 	public final boolean wb;
 	public final boolean nscp;
 
@@ -34,5 +34,10 @@ public class EntityShootAtEntityEvent extends EntityDamageByEntityEvent {
 	@SuppressWarnings("deprecation")
 	private static Map<DamageModifier, Function<Double, Double>> makeDmgFnks(final double dmg) {
 		fnks.put(DamageModifier.BASE, d -> {return dmg;}); return fnks;
+	}
+	
+	@Override
+	public boolean isCritical() {
+		return hst;
 	}
 }

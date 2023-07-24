@@ -39,10 +39,7 @@ import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Game.Arena.Team;
 import me.Romindous.CounterStrike.Game.Defusal;
 import me.Romindous.CounterStrike.Objects.Shooter;
-import me.Romindous.CounterStrike.Objects.Bots.BotManager;
 import me.Romindous.CounterStrike.Objects.Game.GameState;
-import me.Romindous.CounterStrike.Utils.PacketUtils;
-import me.clip.deluxechat.events.DeluxeChatEvent;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -50,6 +47,8 @@ import ru.komiss77.enums.Data;
 import ru.komiss77.events.BungeeDataRecieved;
 import ru.komiss77.events.LocalDataLoadEvent;
 import ru.komiss77.modules.player.Oplayer;
+import ru.komiss77.utils.ItemUtils;
+import ru.komiss77.utils.TCUtils;
  
 public class MainLis implements Listener {
 	
@@ -84,7 +83,6 @@ public class MainLis implements Listener {
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onData(final LocalDataLoadEvent e) {
 		Main.lobbyPl(e.getPlayer());
-		BotManager.injectPlayer(e.getPlayer());
 		final String title;
 		switch (new Random().nextInt(4)) {
 		case 0:
@@ -117,7 +115,6 @@ public class MainLis implements Listener {
 
 	@EventHandler
 	public void onQuit(final PlayerQuitEvent e) {
-		BotManager.removePlayer(e.getPlayer());
 		final Shooter pr = Shooter.getPlShooter(e.getPlayer().getName(), true);
 		if (pr.arena() != null) {
 			pr.arena().rmvPl(pr); 	
@@ -130,14 +127,12 @@ public class MainLis implements Listener {
 		final Item drop = e.getItemDrop();
 		final ItemStack it = drop.getItemStack();
 		final Shooter pr = Shooter.getPlShooter(p.getName(), true);
-		if (GunType.getGnTp(it) != null) {
-			if (pr.arena() == null) {
-				drop.remove();
-				p.getInventory().setItemInMainHand(new ItemStack(Material.AIR));
-				return;
-			}
-			drop.setItemStack(it);
-			p.getInventory().setItemInMainHand(null);
+		final GunType gt = GunType.getGnTp(it);
+		if (gt != null) {
+			if (pr.arena() == null) drop.remove();
+			else drop.setItemStack(it);
+			p.getInventory().setItemInMainHand(Main.air);
+			if (gt.snp) p.getInventory().setItemInOffHand(Main.air);
 		} else {
 			switch (it.getType()) {
 			case BONE:
@@ -149,6 +144,7 @@ public class MainLis implements Listener {
 			case MAGMA_CREAM:
 			case CAMPFIRE:
 			case CRIMSON_BUTTON:
+			case TOTEM_OF_UNDYING:
 				e.setCancelled(e.getPlayer().getGameMode() != GameMode.CREATIVE);
 				break;
 			case GOLDEN_APPLE:
@@ -191,8 +187,8 @@ public class MainLis implements Listener {
 				}
 			} else if (nt != null) {
 				if (nt.prm) {
-					if (inv.getItem(3) == null) {
-						inv.setItem(3, it);
+					if (inv.getItem(NadeType.prmSlot) == null) {
+						inv.setItem(NadeType.prmSlot, it);
 						e.getItem().remove();
 					} else {
 						e.getItem().setPickupDelay(10);
@@ -200,7 +196,7 @@ public class MainLis implements Listener {
 				} else {
 					final ItemStack i = inv.getItem(4);
 					if (i == null) {
-						inv.setItem(4, it);
+						inv.setItem(NadeType.scdSlot, it);
 						e.getItem().remove();
 					} else if (i.getType() == it.getType() && i.getAmount() == 1) {
 						i.setAmount(2);
@@ -291,12 +287,10 @@ public class MainLis implements Listener {
 	public void onShift(final PlayerToggleSneakEvent e) {
 		final Player p = e.getPlayer();
 		final GunType gt = GunType.getGnTp(p.getInventory().getItemInMainHand());
-		if (gt != null && gt.snp) {
-			if (e.isSneaking()) {
-				PacketUtils.zoom(p, true);
-			} else {
-				PacketUtils.zoom(p, false);
-			}
+		if (gt != null && gt.snp && !e.isSneaking()) {
+			Shooter.getPlShooter(p.getName(), true).scope(false);
+			if (!ItemUtils.isBlank(p.getInventory().getItemInOffHand(), false))
+				p.getInventory().setItemInOffHand(Main.air);
 		}
 	}
 	
@@ -333,7 +327,8 @@ public class MainLis implements Listener {
 				while (pl.hasNext()) {
 					final Audience rec = pl.next();
 					if (rec instanceof Player) {
-						sendSpigotMsg(Main.prf().replace('[', '<').replace(']', '>') + snd.getName() + " §7[§d" + ar.name + "§7] ≫ " + msg, (Player) rec);
+						rec.sendMessage(TCUtils.format(Main.prf().replace('[', '<').replace(']', '>') 
+							+ snd.getName() + " §7[§d" + ar.name + "§7] ≫ " + msg));
 						if (Main.eqlsCompStr(((Player) rec).getServer().motd(), snd.getServer().motd())) {
 							pl.remove();
 						}
@@ -348,8 +343,8 @@ public class MainLis implements Listener {
 						for (final Shooter sh : ar.shtrs.keySet()) {
 							final Player p = sh.getPlayer();
 							if (p != null) {
-								sendSpigotMsg("§7[Всем] " + tm.clr + 
-										snd.getName() + " §7≫ " + msg.replaceFirst("!", ""), p);
+								p.sendMessage(TCUtils.format("§7[Всем] " + tm.clr + 
+									snd.getName() + " §7≫ " + msg.replaceFirst("!", "")));
 							}
 						}
 					}
@@ -358,8 +353,8 @@ public class MainLis implements Listener {
 						if (n.getValue() == tm) {
 							final Player p = n.getKey().getPlayer();
 							if (p != null) {
-								sendSpigotMsg("§7[" + tm.icn + "§7] " + 
-										snd.getName() + " §7≫ " + msg.replaceFirst("!", ""), p);
+								p.sendMessage(TCUtils.format("§7[" + tm.icn + "§7] " + 
+									snd.getName() + " §7≫ " + msg.replaceFirst("!", "")));
 							}
 						}
 					}
@@ -369,34 +364,4 @@ public class MainLis implements Listener {
 		}
         e.viewers().clear();
     }
-	
-	@EventHandler
-    public void Dchat(final DeluxeChatEvent e) {
-        final Arena ar = Shooter.getPlShooter(e.getPlayer().getName(), true).arena();
-        if (ar != null) {
-			switch (ar.gst) {
-			case WAITING:
-			case BEGINING:
-			case FINISH:
-	            e.getDeluxeFormat().setPrefix(Main.prf() + "§7<§5" + ar.name + "§7> ");
-			case BUYTIME:
-			case ROUND:
-			case ENDRND:
-	            e.setCancelled(true);
-	            return;
-			}
-        }
-        /*final Iterator<Player> recipients = e.getRecipients().iterator();
-        while (recipients.hasNext()) {
-            final Player recipient = recipients.next();
-            if (!recipient.getWorld().getName().equalsIgnoreCase(p.getWorld().getName())) {
-                recipients.remove();
-            }
-        }*/
-    }
-	
-	@SuppressWarnings("deprecation")
-	public static void sendSpigotMsg(final String msg, final Player p) {
-		p.spigot().sendMessage(new net.md_5.bungee.api.chat.TextComponent(msg));
-	}
 }

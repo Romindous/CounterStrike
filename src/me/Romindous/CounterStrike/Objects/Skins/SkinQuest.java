@@ -53,7 +53,7 @@ public class SkinQuest implements InventoryProvider {
 							gn = new ItemBuilder(gt.getMat())
 							.name("§5" + gt.toString()).setModelData(GunType.defCMD + i)
 							.lore(Arrays.asList("§7Ванильная общивка снаряжения!"))
-							.enchantment(Enchantment.BINDING_CURSE).build();
+							.addEnchant(Enchantment.BINDING_CURSE).build();
 							its.set(oslt + i, ClickableItem.empty(gn));
 						} else {
 							gn = new ItemBuilder(gt.getMat())
@@ -71,7 +71,7 @@ public class SkinQuest implements InventoryProvider {
 						gn = new ItemBuilder(gt.getMat()).setModelData(GunType.defCMD + i)
 						.name("§5" + gt.toString() + " '" + Main.nrmlzStr(q.toString()) + "'")
 						.lore(Arrays.asList("§7Для получения:", q.msg, " ", "§eКлик §7==> Сброс"))
-						.enchantment(Enchantment.BINDING_CURSE).build();
+						.addEnchant(Enchantment.BINDING_CURSE).build();
 						its.set(oslt + i, ClickableItem.of(gn, e -> {
 							pl.playSound(pl.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 2f, 1.5f);
 							sh.setModel(gt, GunType.defCMD);
