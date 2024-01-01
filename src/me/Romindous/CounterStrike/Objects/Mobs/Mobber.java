@@ -1,8 +1,7 @@
 package me.Romindous.CounterStrike.Objects.Mobs;
 
-import me.Romindous.CounterStrike.Game.Invasion;
-import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Objects.Game.GameState;
+import java.lang.ref.WeakReference;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -17,10 +16,12 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.PiglinBrute;
 import org.bukkit.scheduler.BukkitRunnable;
+
+import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Game.Invasion;
+import me.Romindous.CounterStrike.Objects.Game.GameState;
 import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.version.VM;
-
-import java.lang.ref.WeakReference;
 
 public class Mobber extends BukkitRunnable {
 	
@@ -75,6 +76,7 @@ public class Mobber extends BukkitRunnable {
 			case STRAY -> 10f;
             default -> 8f;
         };
+
         final Location loc = ind.getLocation();
 		final Mob mb = (Mob) ar.w.spawnEntity(Main.getNrLoc(loc), et, false);
 		mb.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(getMbSpd(et));
