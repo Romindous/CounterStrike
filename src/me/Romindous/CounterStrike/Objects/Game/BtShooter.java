@@ -58,7 +58,6 @@ public class BtShooter extends BotEntity implements Shooter {
 		money = 0; kills = 0; spwnrs = 0; deaths = 0;
 		arena = ar; rid = -1; willBuy = false;
 		tgtSh = null; tgtLe = new WeakReference<>(null);
-		
 		pss = new LinkedList<>();
 //		setGoal(mb -> new BotGoal(this, mb));
 //		onDamage(e -> {});
