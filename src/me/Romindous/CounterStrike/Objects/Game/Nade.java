@@ -27,6 +27,7 @@ import me.Romindous.CounterStrike.Enums.NadeType;
 import me.Romindous.CounterStrike.Listeners.DmgLis;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import ru.komiss77.modules.world.WXYZ;
+import ru.komiss77.utils.LocationUtil;
 import ru.komiss77.version.IServer;
 import ru.komiss77.version.VM;
 
@@ -60,14 +61,13 @@ public class Nade {
 						if (sh.arena() != null) {
 							DmgLis.prcDmg(le, Shooter.getShooter(le, false), sh, d, NadeType.FRAG.icn, 2, NadeType.nadeRwd, false, false, false, false, false);
 						}
-						Main.dmgInd(dmgr, le.getEyeLocation(), "§6" + String.valueOf((int)(d * 5.0f)));
-					} else if (e instanceof Player && ((Player) e).getGameMode() == GameMode.SURVIVAL) {
-						final Player pl = (Player) e;
-						final double d = 20d - e.getLocation().distanceSquared(loc) * 0.4d * (pl.getInventory().getChestplate() == null ? 1d : 0.4d);
+						Main.dmgInd(dmgr, le.getEyeLocation(), "§6" + (int) (d * 5.0f));
+					} else if (e instanceof final Player pl && pl.getGameMode() == GameMode.SURVIVAL) {
+                        final double d = 20d - e.getLocation().distanceSquared(loc) * 0.4d * (pl.getInventory().getChestplate() == null ? 1d : 0.4d);
 						if (sh.arena() != null) {
 							DmgLis.prcDmg(pl, Shooter.getShooter(pl, false), sh, d, NadeType.FRAG.icn, 2, NadeType.nadeRwd, false, false, false, false, false);
 						}
-						Main.dmgInd(dmgr, pl.getEyeLocation(), "§6" + String.valueOf((int)(d * 5.0f)));
+						Main.dmgInd(dmgr, pl.getEyeLocation(), "§6" + (int) (d * 5.0f));
 					}
 				}
 				break;
@@ -148,7 +148,7 @@ public class Nade {
 						final Shooter she = Shooter.getShooter(le, false);
 						if (she != null) {
 							if (!she.isDead() && Math.abs((px / pl - dx / dl) * (px / pl - dx / dl) + (pz / pl - dz / dl) * (pz / pl - dz / dl)) < 1) {
-								if (Main.rayThruAir(loc, eloc.toVector(), 0.1F)) {
+								if (LocationUtil.rayThruAir(loc, eloc.toVector(), 0.1F)) {
 									if (dmgr != null && dmgr.getEntityId() != le.getEntityId()) {
 										dmgr.playSound(eloc, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 4f, 1f);
 									}

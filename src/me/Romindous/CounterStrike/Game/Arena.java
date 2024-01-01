@@ -20,6 +20,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitTask;
 
 import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Menus.BotMenu;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Game.GameState;
 import me.Romindous.CounterStrike.Objects.Game.GameType;
@@ -36,6 +37,7 @@ import ru.komiss77.Ostrov;
 import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.notes.Slow;
 import ru.komiss77.utils.TCUtils;
+import ru.komiss77.utils.inventory.SmartInventory;
 
 public class Arena {
 	
@@ -50,8 +52,9 @@ public class Arena {
 	protected final XYZ[] TSpawns;
 	protected final XYZ[] CTSawns;
 	protected final XYZ[] spots;
-	public final boolean bots;
+	public final SmartInventory botInv;
 	public final boolean rnd;
+	public boolean bots;
 	protected BukkitTask tsk;
 	protected short tm;
 	public GameState gst;
@@ -72,12 +75,14 @@ public class Arena {
 		
 //		this.area = area;
 		this.name = name;
-		this.bots = bots;
 		this.rnd = rnd;
 		this.min = min;
 		this.max = max;
 		this.tm = 0;
 		
+		botInv = bots ? SmartInventory.builder().id(name + " Bots").title("         §чИграть с Ботами?")
+    			.provider(new BotMenu(this)).size(1, 9).build() : null;
+		this.bots = botInv != null;
 		Ostrov.async(() -> ApiOstrov.shuffle(spots));
 	}
 
@@ -112,16 +117,12 @@ public class Arena {
 		}
 		
 		public Team getOpst() {
-			switch (this) {
-			case Ts:
-				return CTs;
-			case CTs:
-				return Ts;
-			case NA:
-				return NA;
-			}
-			return NA;
-		}
+            return switch (this) {
+                case Ts -> CTs;
+                case CTs -> Ts;
+                case NA -> NA;
+            };
+        }
 	}
 
 	public static void end(Arena ar) {
@@ -177,8 +178,8 @@ public class Arena {
 		final Player p = sh.getPlayer();
 		if (p == null) return;
 		SkinQuest.tryCompleteQuest(sh, Quest.ЛАТУНЬ, sh.money());
-		PacketUtils.sendAcBr(p, (n < 0 ? "§5" : "§d+") + String.valueOf(n) + " §6⛃", 20);
-		Main.chgSbdTm(p.getScoreboard(), "mn", "", "§d" + String.valueOf(sh.money()) + " §6⛃");
+		PacketUtils.sendAcBr(p, (n < 0 ? "§5" : "§d+") + n + " §6⛃", 20);
+		Main.chgSbdTm(p.getScoreboard(), "mn", "", "§d" + sh.money() + " §6⛃");
 	}
 
 	public void addKll(final Shooter sh) {
@@ -197,7 +198,7 @@ public class Arena {
 	public boolean isSmTm(final Shooter org, final Shooter cmp) {
 		if (cmp.arena() == null || org.arena() == null || !org.arena().name.equals(cmp.arena().name)) return true;
 		final Team tm = shtrs.get(org);
-		return tm == null ? false : tm == shtrs.get(cmp);
+		return tm != null && tm == shtrs.get(cmp);
 	}
 	
 	public int getTmAmt(final Team tm, final boolean bots, final boolean alv) {
@@ -237,8 +238,7 @@ public class Arena {
 	}
 
 	public void chngTm(final Shooter sh, final Team nv) {
-		return;
-	}
+    }
 	
 	public GameType getType() {
 		return GameType.DEFUSAL;

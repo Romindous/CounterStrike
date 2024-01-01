@@ -7,5 +7,4 @@ public enum ActType {
 	PICK_BOMB,
 	DIRECT,
 	GO_SPOT,
-	;
 }

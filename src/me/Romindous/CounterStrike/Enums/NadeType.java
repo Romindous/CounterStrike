@@ -2,6 +2,7 @@ package me.Romindous.CounterStrike.Enums;
 
 import org.bukkit.block.BlockFace;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 public enum NadeType {
 	
@@ -31,24 +32,16 @@ public enum NadeType {
 		this.popOn = popOn;
 	}
   
-	public static NadeType getNdTp(final ItemStack it) {
-		if (it == null) {
-			return null;
-		}
-		switch (it.getType()) {
-			case OAK_SAPLING:
-				return FRAG;
-			case ACACIA_SAPLING:
-				return FLAME;
-			case DARK_OAK_SAPLING:
-				return SMOKE;
-			case BIRCH_SAPLING:
-				return FLASH;
-			case JUNGLE_SAPLING:
-				return DECOY;
-			default:
-				return null;
-		}
+	public static @Nullable NadeType getNdTp(final ItemStack it) {
+		if (it == null) return null;
+        return switch (it.getType()) {
+            case OAK_SAPLING -> FRAG;
+            case ACACIA_SAPLING -> FLAME;
+            case DARK_OAK_SAPLING -> SMOKE;
+            case BIRCH_SAPLING -> FLASH;
+            case JUNGLE_SAPLING -> DECOY;
+            default -> null;
+        };
 	}
 	
 	public boolean hasPopFace(final BlockFace bf) {

@@ -1,7 +1,8 @@
 package me.Romindous.CounterStrike.Objects.Mobs;
 
-import java.lang.ref.WeakReference;
-
+import me.Romindous.CounterStrike.Game.Invasion;
+import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.Game.GameState;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -16,12 +17,10 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.PiglinBrute;
 import org.bukkit.scheduler.BukkitRunnable;
-
-import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Game.Invasion;
-import me.Romindous.CounterStrike.Objects.Game.GameState;
 import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.version.VM;
+
+import java.lang.ref.WeakReference;
 
 public class Mobber extends BukkitRunnable {
 	
@@ -70,23 +69,13 @@ public class Mobber extends BukkitRunnable {
 	}
 
 	public void spwnMb() {
-		final float hlth;
-		switch (et) {
-		case ZOMBIE_VILLAGER:
-		default:
-			hlth = 8f;
-			break;
-		case STRAY:
-			hlth = 10f;
-			break;
-		case VINDICATOR:
-			hlth = 8f;
-			break;
-		case PIGLIN_BRUTE:
-			hlth = 12f;
-			break;
-		}
-		final Location loc = ind.getLocation();
+		final float hlth = switch (et) {
+			case PIGLIN_BRUTE -> 12f;
+			case PILLAGER -> 8f;
+			case STRAY -> 10f;
+            default -> 8f;
+        };
+        final Location loc = ind.getLocation();
 		final Mob mb = (Mob) ar.w.spawnEntity(Main.getNrLoc(loc), et, false);
 		mb.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(getMbSpd(et));
 		mb.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(hlth);
@@ -103,31 +92,21 @@ public class Mobber extends BukkitRunnable {
 	}
 	
 	public static double getMbSpd(final EntityType e) {
-		switch (e) {
-		case ZOMBIE_VILLAGER:
-		default:
-			return 0.4d;
-		case STRAY:
-			return 0.45d;
-		case VINDICATOR:
-			return 0.55d;
-		case PIGLIN_BRUTE:
-			return 0.5d;
-		}
+        return switch (e) {
+			case PIGLIN_BRUTE -> 0.52d;
+			case PILLAGER -> 0.55d;
+			case STRAY -> 0.52d;
+            default -> 0.50d;
+        };
 	}
 	
 	public static int getMbPow(final EntityType e) {
-		switch (e) {
-		case ZOMBIE_VILLAGER:
-		default:
-			return 0;
-		case STRAY:
-			return 1;
-		case VINDICATOR:
-			return 2;
-		case PIGLIN_BRUTE:
-			return 3;
-		}
+        return switch (e) {
+			case PIGLIN_BRUTE -> 3;
+			case PILLAGER -> 2;
+			case STRAY -> 1;
+            default -> 0;
+        };
 	}
 
 	public Material getType() {

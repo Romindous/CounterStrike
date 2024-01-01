@@ -52,13 +52,13 @@ public class SkinQuest implements InventoryProvider {
 						if (shm == GunType.defCMD) {
 							gn = new ItemBuilder(gt.getMat())
 							.name("§5" + gt.toString()).setModelData(GunType.defCMD + i)
-							.lore(Arrays.asList("§7Ванильная общивка снаряжения!"))
+							.addLore(Arrays.asList("§7Ванильная общивка снаряжения!"))
 							.addEnchant(Enchantment.BINDING_CURSE).build();
 							its.set(oslt + i, ClickableItem.empty(gn));
 						} else {
 							gn = new ItemBuilder(gt.getMat())
 							.name("§5" + gt.toString()).setModelData(GunType.defCMD + i)
-							.lore(Arrays.asList("§7Ванильная общивка снаряжения!", " ", "§6Клик §7==> Выбор")).build();
+							.addLore(Arrays.asList("§7Ванильная общивка снаряжения!", " ", "§6Клик §7==> Выбор")).build();
 							its.set(oslt + i, ClickableItem.of(gn, e -> {
 								pl.playSound(pl.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 2f, 1.5f);
 								sh.setModel(gt, GunType.defCMD);
@@ -70,7 +70,7 @@ public class SkinQuest implements InventoryProvider {
 					if (shm == q.cmd) {
 						gn = new ItemBuilder(gt.getMat()).setModelData(GunType.defCMD + i)
 						.name("§5" + gt.toString() + " '" + Main.nrmlzStr(q.toString()) + "'")
-						.lore(Arrays.asList("§7Для получения:", q.msg, " ", "§eКлик §7==> Сброс"))
+						.addLore(Arrays.asList("§7Для получения:", q.msg, " ", "§eКлик §7==> Сброс"))
 						.addEnchant(Enchantment.BINDING_CURSE).build();
 						its.set(oslt + i, ClickableItem.of(gn, e -> {
 							pl.playSound(pl.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 2f, 1.5f);
@@ -81,7 +81,7 @@ public class SkinQuest implements InventoryProvider {
 						if (sh.hasModel(gt, i + GunType.defCMD) || op.hasGroup("warior")) {
 							gn = new ItemBuilder(gt.getMat()).setModelData(GunType.defCMD + i)
 							.name("§5" + gt.toString() + " '" + Main.nrmlzStr(q.toString()) + "'")
-							.lore(Arrays.asList("§7Для получения:", q.msg, " ", "§6Клик §7==> Выбор")).build();
+							.addLore(Arrays.asList("§7Для получения:", q.msg, " ", "§6Клик §7==> Выбор")).build();
 							its.set(oslt + i, ClickableItem.of(gn, e -> {
 								pl.playSound(pl.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 2f, 1.5f);
 								sh.setModel(gt, q.cmd);
@@ -90,7 +90,7 @@ public class SkinQuest implements InventoryProvider {
 						} else {
 							gn = new ItemBuilder(Material.GRAY_DYE).setModelData(GunType.defCMD + i)
 							.name("§5" + gt.toString() + " '" + Main.nrmlzStr(q.toString()) + "'")
-							.lore(Arrays.asList("§7Для получения:", q.msg)).build();
+							.addLore(Arrays.asList("§7Для получения:", q.msg)).build();
 							//its.set(oslt + i, ClickableItem.empty(gn));
 							its.set(oslt + i, ClickableItem.empty(gn));
 						}

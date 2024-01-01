@@ -73,13 +73,13 @@ public class Bomb extends WXYZ {
 					if (bnd > 0 && is.getFastMat(w, X + x, Y + y, Z + z).isAir() && is.getFastMat(w, X + x, Y + y - 1, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 6) {
 						for (final Player p : b.getWorld().getPlayers()) {
 							p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Material.FIRE.createBlockData());
-							cls.add(new XYZ("", x, y, z));
+							cls.add(new XYZ("", X + x, Y + y, Z + z));
 						} 
 					} else if (is.getFastMat(w, X + x, Y + y, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 10) {
 						for (final Player p : b.getWorld().getPlayers()) {
 							p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Material.COAL_BLOCK.createBlockData());
-							cls.add(new XYZ("", x, y, z));
-						} 
+							cls.add(new XYZ("", X + x, Y + y, Z + z));
+						}
 					}
 				} 
 			} 
@@ -115,7 +115,7 @@ public class Bomb extends WXYZ {
 		Ostrov.async(() -> {
 			final Map<Position, BlockData> bls = new HashMap<>();
 			for (final XYZ bl : cls) {
-				bls.put(bl.getCenterLoc(w), w.getBlockData(X + bl.x, Y + bl.y, Z + bl.z));
+				bls.put(bl.getCenterLoc(w), w.getBlockData(bl.x, bl.y, bl.z));
 			}
 			
 			for (final Player p : w.getPlayers()) {

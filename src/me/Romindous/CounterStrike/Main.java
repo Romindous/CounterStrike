@@ -1,47 +1,6 @@
 package me.Romindous.CounterStrike;
 
-import java.io.File;
-import java.io.IOException;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map.Entry;
-import java.util.UUID;
-
-import org.bukkit.Bukkit;
-import org.bukkit.Color;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Particle;
-import org.bukkit.World;
-import org.bukkit.World.Environment;
-import org.bukkit.attribute.Attribute;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
-import org.bukkit.event.Listener;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.Damageable;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.LeatherArmorMeta;
-import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scoreboard.Criteria;
-import org.bukkit.scoreboard.DisplaySlot;
-import org.bukkit.scoreboard.Objective;
-import org.bukkit.scoreboard.Scoreboard;
-import org.bukkit.scoreboard.ScoreboardManager;
-import org.bukkit.scoreboard.Team;
-import org.bukkit.util.Vector;
-import org.joml.Vector3f;
-
 import com.mojang.math.Transformation;
-
 import io.papermc.paper.adventure.PaperAdventure;
 import me.Romindous.CounterStrike.Commands.CSCmd;
 import me.Romindous.CounterStrike.Enums.GunType;
@@ -49,11 +8,7 @@ import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Game.Defusal;
 import me.Romindous.CounterStrike.Game.Gungame;
 import me.Romindous.CounterStrike.Game.Invasion;
-import me.Romindous.CounterStrike.Listeners.DmgLis;
-import me.Romindous.CounterStrike.Listeners.InterrLis;
-import me.Romindous.CounterStrike.Listeners.InventLis;
-import me.Romindous.CounterStrike.Listeners.MainLis;
-import me.Romindous.CounterStrike.Objects.Shooter;
+import me.Romindous.CounterStrike.Listeners.*;
 import me.Romindous.CounterStrike.Objects.Bots.BotType__;
 import me.Romindous.CounterStrike.Objects.Game.GameState;
 import me.Romindous.CounterStrike.Objects.Game.GameType;
@@ -61,6 +16,7 @@ import me.Romindous.CounterStrike.Objects.Game.Nade;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Map.MapBuilder;
 import me.Romindous.CounterStrike.Objects.Map.Setup;
+import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Utils.Inventories;
 import me.Romindous.CounterStrike.Utils.PacketUtils;
 import net.kyori.adventure.text.Component;
@@ -76,6 +32,22 @@ import net.minecraft.world.entity.Display.BillboardConstraints;
 import net.minecraft.world.entity.Display.TextDisplay;
 import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.entity.EntityTypes;
+import org.bukkit.*;
+import org.bukkit.World.Environment;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+import org.bukkit.event.Listener;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.Damageable;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scoreboard.*;
+import org.bukkit.util.Vector;
+import org.joml.Vector3f;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.Ostrov;
 import ru.komiss77.enums.Stat;
@@ -85,8 +57,13 @@ import ru.komiss77.modules.world.WorldManager.Generator;
 import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.utils.ItemBuilder;
 import ru.komiss77.utils.TCUtils;
-import ru.komiss77.version.IServer;
 import ru.komiss77.version.VM;
+
+import java.io.File;
+import java.io.IOException;
+import java.security.SecureRandom;
+import java.util.*;
+import java.util.Map.Entry;
  
 public final class Main extends JavaPlugin implements Listener {
 	
@@ -95,7 +72,6 @@ public final class Main extends JavaPlugin implements Listener {
 	public static WXYZ lobby;
 	public static ScoreboardManager smg;
 	public static YamlConfiguration ars;
-	public static YamlConfiguration config;
 	public static final SecureRandom srnd = new SecureRandom();
     public static final LivingEntity[] a = new LivingEntity[0];
 	public static final HashMap<UUID, LivingEntity[]> wlents = new HashMap<>();
@@ -124,6 +100,7 @@ public final class Main extends JavaPlugin implements Listener {
 		smg = getServer().getScoreboardManager();
 		
 		loadConfigs();
+		getServer().getPluginManager().registerEvents(new ChatLis(), this);
 		getServer().getPluginManager().registerEvents(new DmgLis(), this);
 		getServer().getPluginManager().registerEvents(new InterrLis(), this);
 		getServer().getPluginManager().registerEvents(new MainLis(), this);
@@ -136,14 +113,8 @@ public final class Main extends JavaPlugin implements Listener {
 		//game stuff (5 tick)
 		new BukkitRunnable() {
 			public void run() {
-	
-	            final Iterator<WXYZ> ci = Main.ckracks.iterator();
-	            while (ci.hasNext()) {
-	            	final WXYZ lc = ci.next();
-	                if (((lc.pitch = (lc.pitch >> 3) - 1 << 3 ^ lc.pitch & 0x7) >> 3) == 0) {
-	                	ci.remove();
-	                }
-	            }
+
+                Main.ckracks.removeIf(lc -> ((lc.pitch = (lc.pitch >> 3) - 1 << 3 ^ lc.pitch & 7) >> 3) == 0);
 	            
 	            final Iterator<Entry<Player, BaseBlockPosition>> pi = Main.plnts.entrySet().iterator();
 	            while (pi.hasNext()) {
@@ -163,8 +134,7 @@ public final class Main extends JavaPlugin implements Listener {
 	            	if ((bl.pitch--) == 0) {
 	            		bl.getBlock().setType(Material.AIR, false);
 	            		nbi.remove();
-	            		continue;
-	            	}
+                    }
 	            } 
 	
 	            final Iterator<Nade> ni = Main.nades.iterator();
@@ -279,7 +249,6 @@ public final class Main extends JavaPlugin implements Listener {
         }
         catch (IOException | NullPointerException e) {
         	e.printStackTrace();
-            return;
         }
 	}
 
@@ -349,7 +318,7 @@ public final class Main extends JavaPlugin implements Listener {
 		ob.getScore(" ")
 		.setScore(1);
 		
-		ob.getScore("§e   ostrov77.su")
+		ob.getScore("§e     ostrov77.ru")
 		.setScore(0);
 		p.setScoreboard(sb);
 	}
@@ -383,7 +352,7 @@ public final class Main extends JavaPlugin implements Listener {
    }
    
    public static ItemStack mkItm(final Material mt, final String nm, final int mdl, final String... lr) {
-	   return new ItemBuilder(mt).name(nm).setModelData(mdl).lore(Arrays.asList(lr)).build();
+	   return new ItemBuilder(mt).name(nm).setModelData(mdl).addLore(Arrays.asList(lr)).build();
    }
    
    public static boolean isHdMat(final ItemStack it, final Material mt) {
@@ -393,7 +362,7 @@ public final class Main extends JavaPlugin implements Listener {
    public static void setDmg(final ItemStack it, final int d) {
 	   final Damageable dg = (Damageable) it.getItemMeta();
        dg.setDamage(it.getType().getMaxDurability() - d);
-       it.setItemMeta((ItemMeta) dg);
+       it.setItemMeta(dg);
    }
    
    public static String prf() {
@@ -432,7 +401,7 @@ public final class Main extends JavaPlugin implements Listener {
 			tm.suffix(Component.text(sfx));
 		}
 	}
-
+	
 	private static final XYZ[] eml = new XYZ[0];
 	
 	public Arena crtArena(final String nm, final GameType gt) {
@@ -451,15 +420,15 @@ public final class Main extends JavaPlugin implements Listener {
 			case DEFUSAL:
 			default:
 				ar = new Defusal(stp.nm, stp.min, stp.max, mb.getCTSpawns(), mb.getTSpawns(), eml, w, mb.getASite(), mb.getBSite(), (byte) 6, true, false);
-				actvarns.put(nm, (Defusal) ar);
+				actvarns.put(nm, ar);
 				break;
 			case INVASION:
 				ar = new Invasion(stp.nm, stp.min, stp.max, mb.getCTSpawns(), mb.getTSpawns(), eml, w, mb.getASite(), mb.getBSite(), true, false);
-				actvarns.put(nm, (Invasion) ar);
+				actvarns.put(nm, ar);
 				break;
 			case GUNGAME:
 				ar = new Gungame(stp.nm, stp.min, stp.max, mb.getCTSpawns(), mb.getTSpawns(), eml, w, true, false);
-				actvarns.put(nm, (Gungame) ar);
+				actvarns.put(nm, ar);
 				break;
 			}
 			mapBlds.put(nm, mb);
@@ -470,15 +439,15 @@ public final class Main extends JavaPlugin implements Listener {
 			case DEFUSAL:
 			default:
 				ar = new Defusal(stp.nm, stp.min, stp.max, stp.tSpawns, stp.ctSpawns, stp.spots, w, stp.A, stp.B, (byte) 6, false, stp.bots);
-				actvarns.put(nm, (Defusal) ar);
+				actvarns.put(nm, ar);
 				break;
 			case INVASION:
 				ar = new Invasion(stp.nm, stp.min, stp.max, stp.tSpawns, stp.ctSpawns, stp.spots, w, stp.A, stp.B, false, stp.bots);
-				actvarns.put(nm, (Invasion) ar);
+				actvarns.put(nm, ar);
 				break;
 			case GUNGAME:
 				ar = new Gungame(stp.nm, stp.min, stp.max, stp.tSpawns, stp.ctSpawns, stp.spots, w, false, stp.bots);
-				actvarns.put(nm, (Gungame) ar);
+				actvarns.put(nm, ar);
 				break;
 			}
 		}
@@ -556,123 +525,6 @@ public final class Main extends JavaPlugin implements Listener {
 
 	public static void brdcst(final String msg) {
 		Bukkit.broadcast(Component.text(msg));
-	}
-	
-	public static boolean rayThruAir(final Location org, final Vector to, final double inc) {
-		final Vector ch = org.toVector().subtract(to);
-		if (ch.lengthSquared() < inc) return true;
-		final Vector vec = ch.normalize().multiply(inc);
-		final IServer is = VM.getNmsServer();
-		final World w = org.getWorld();
-		while (true) {
-			to.add(vec);
-			final Material mt = is.getFastMat(w, to.getBlockX(), to.getBlockY(), to.getBlockZ());
-			switch (mt) {
-			default:
-				if (mt.isCollidable() && mt.isOccluding()) {
-					if (w.getBlockAt(to.getBlockX(), to.getBlockY(), to.getBlockZ()).getBoundingBox().contains(to)) {
-						return false;
-					}
-				}
-				break;
-			case POWDER_SNOW:
-				return false;
-			}
-			if (Math.abs(to.getX() - org.getX()) < inc && Math.abs(to.getY() - org.getY()) < inc && Math.abs(to.getZ() - org.getZ()) < inc) {
-				return true;
-			}
-		}
-	}
-	
-	public static boolean rayThruSoft(final Location org, final Vector to, final double inc) {
-		//final Vector tt = to.clone();
-		final Vector ch = org.toVector().subtract(to);
-		if (ch.lengthSquared() < inc) return true;
-		final Vector vec = ch.normalize().multiply(inc);
-		final IServer is = VM.getNmsServer();
-		final World w = org.getWorld();
-		while (true) {
-			to.add(vec);
-			switch (is.getFastMat(w, to.getBlockX(), to.getBlockY(), to.getBlockZ())) {
-			default:
-				if (w.getBlockAt(to.getBlockX(), to.getBlockY(), to.getBlockZ()).getBoundingBox().contains(to)) {
-					return false;
-				}
-			case OAK_LEAVES, ACACIA_LEAVES, BIRCH_LEAVES, JUNGLE_LEAVES, 
-			SPRUCE_LEAVES, DARK_OAK_LEAVES, MANGROVE_LEAVES, AZALEA_LEAVES,
-			FLOWERING_AZALEA_LEAVES, 
-			
-			GLASS, WHITE_STAINED_GLASS, GLASS_PANE, 
-			WHITE_STAINED_GLASS_PANE, DIAMOND_ORE, 
-			COAL_ORE, IRON_ORE, EMERALD_ORE, 
-			
-			ACACIA_SLAB, BIRCH_SLAB, CRIMSON_SLAB, SPRUCE_SLAB, WARPED_SLAB, 
-			DARK_OAK_SLAB, OAK_SLAB, JUNGLE_SLAB, PETRIFIED_OAK_SLAB, MANGROVE_SLAB, 
-			
-			ACACIA_STAIRS, BIRCH_STAIRS, CRIMSON_STAIRS, SPRUCE_STAIRS, 
-			WARPED_STAIRS, DARK_OAK_STAIRS, OAK_STAIRS, JUNGLE_STAIRS, MANGROVE_STAIRS, 
-			
-			ACACIA_PLANKS, BIRCH_PLANKS, CRIMSON_PLANKS, SPRUCE_PLANKS, 
-			WARPED_PLANKS, DARK_OAK_PLANKS, OAK_PLANKS, JUNGLE_PLANKS, MANGROVE_PLANKS, 
-			
-			ACACIA_TRAPDOOR, BIRCH_TRAPDOOR, CRIMSON_TRAPDOOR, DARK_OAK_TRAPDOOR, 
-			JUNGLE_TRAPDOOR, MANGROVE_TRAPDOOR, OAK_TRAPDOOR, SPRUCE_TRAPDOOR, WARPED_TRAPDOOR, 
-			
-			ACACIA_WOOD, BIRCH_WOOD, CRIMSON_HYPHAE, SPRUCE_WOOD, 
-			WARPED_HYPHAE, DARK_OAK_WOOD, OAK_WOOD, JUNGLE_WOOD, MANGROVE_WOOD, 
-			
-			ACACIA_LOG, BIRCH_LOG, CRIMSON_STEM, SPRUCE_LOG, 
-			WARPED_STEM, DARK_OAK_LOG, OAK_LOG, JUNGLE_LOG, MANGROVE_LOG, 
-			
-			ACACIA_SIGN, ACACIA_WALL_SIGN, BIRCH_SIGN, BIRCH_WALL_SIGN, CRIMSON_SIGN, 
-			CRIMSON_WALL_SIGN, SPRUCE_SIGN, SPRUCE_WALL_SIGN, WARPED_SIGN, 
-			WARPED_WALL_SIGN, DARK_OAK_SIGN, DARK_OAK_WALL_SIGN, OAK_SIGN, 
-			OAK_WALL_SIGN, JUNGLE_SIGN, JUNGLE_WALL_SIGN, MANGROVE_SIGN, MANGROVE_WALL_SIGN, 
-			
-			STRIPPED_ACACIA_WOOD, STRIPPED_BIRCH_WOOD, STRIPPED_CRIMSON_HYPHAE, STRIPPED_SPRUCE_WOOD, 
-			STRIPPED_WARPED_HYPHAE, STRIPPED_DARK_OAK_WOOD, STRIPPED_OAK_WOOD, STRIPPED_JUNGLE_WOOD, 
-			STRIPPED_MANGROVE_WOOD, 
-			
-			STRIPPED_ACACIA_LOG, STRIPPED_BIRCH_LOG, STRIPPED_CRIMSON_STEM, STRIPPED_SPRUCE_LOG, 
-			STRIPPED_WARPED_STEM, STRIPPED_DARK_OAK_LOG, STRIPPED_OAK_LOG, STRIPPED_JUNGLE_LOG, 
-			STRIPPED_MANGROVE_LOG, 
-			
-			ACACIA_FENCE, BIRCH_FENCE, CRIMSON_FENCE, SPRUCE_FENCE, WARPED_FENCE, DARK_OAK_FENCE, 
-			OAK_FENCE, JUNGLE_FENCE, MANGROVE_FENCE, ACACIA_FENCE_GATE, BIRCH_FENCE_GATE, CRIMSON_FENCE_GATE, 
-			SPRUCE_FENCE_GATE, WARPED_FENCE_GATE, DARK_OAK_FENCE_GATE, OAK_FENCE_GATE, JUNGLE_FENCE_GATE, MANGROVE_FENCE_GATE,
-			
-			OAK_DOOR, ACACIA_DOOR, BIRCH_DOOR, CRIMSON_DOOR, DARK_OAK_DOOR, 
-			JUNGLE_DOOR, MANGROVE_DOOR, WARPED_DOOR, SPRUCE_DOOR, 
-			
-			BARREL, BEEHIVE, BEE_NEST, NOTE_BLOCK, JUKEBOX, CRAFTING_TABLE, 
-			
-			AIR, CAVE_AIR, VOID_AIR, 
-			
-			SEAGRASS, TALL_SEAGRASS, WEEPING_VINES, TWISTING_VINES, 
-			
-			BLACK_CARPET, BLUE_CARPET, BROWN_CARPET, CYAN_CARPET, GRAY_CARPET, 
-			GREEN_CARPET, LIGHT_BLUE_CARPET, LIGHT_GRAY_CARPET, LIME_CARPET, 
-			MAGENTA_CARPET, MOSS_CARPET, ORANGE_CARPET, PINK_CARPET, 
-			PURPLE_CARPET, RED_CARPET, WHITE_CARPET, YELLOW_CARPET, 
-			
-			WATER, IRON_BARS, CHAIN, STRUCTURE_VOID, COBWEB, SNOW, 
-			POWDER_SNOW, BARRIER, TRIPWIRE, LADDER, RAIL, POWERED_RAIL, 
-			DETECTOR_RAIL, ACTIVATOR_RAIL, CAMPFIRE, SOUL_CAMPFIRE:
-				break;
-			}
-			
-			if (Math.abs(to.getX() - org.getX()) < inc && Math.abs(to.getY() - org.getY()) < inc && Math.abs(to.getZ() - org.getZ()) < inc) {
-				/*while (true) {
-					tt.add(vec);
-					final Block b = w.getBlockAt(tt.getBlockX(), tt.getBlockY(), tt.getBlockZ());
-					if (b.getType().isAir()) b.setType(Material.OAK_WOOD, false);
-					if (Math.abs(tt.getX() - org.getX()) < inc && Math.abs(tt.getZ() - org.getZ()) < inc) {
-						break;
-					}
-				}*/
-				return true;
-			}
-		}
 	}
 
 	public static <G> G rndElmt(G[] arr) {

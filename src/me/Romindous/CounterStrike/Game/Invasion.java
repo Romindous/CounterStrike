@@ -1,36 +1,23 @@
 package me.Romindous.CounterStrike.Game;
 
-import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map.Entry;
-
-import org.bukkit.Bukkit;
-import org.bukkit.Color;
-import org.bukkit.FireworkEffect;
+import me.Romindous.CounterStrike.Listeners.MainLis;
+import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.Game.*;
+import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
+import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
+import me.Romindous.CounterStrike.Objects.Shooter;
+import me.Romindous.CounterStrike.Objects.Skins.Quest;
+import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
+import me.Romindous.CounterStrike.Utils.Inventories;
+import me.Romindous.CounterStrike.Utils.PacketUtils;
+import net.kyori.adventure.text.Component;
+import net.minecraft.network.protocol.game.PacketPlayOutEntityDestroy;
+import org.bukkit.*;
 import org.bukkit.FireworkEffect.Type;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Particle;
-import org.bukkit.Sound;
-import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.*;
 import org.bukkit.entity.Display.Billboard;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Firework;
-import org.bukkit.entity.Item;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Mob;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.TextDisplay;
-import org.bukkit.entity.Turtle;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -42,23 +29,6 @@ import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.util.Transformation;
 import org.joml.Vector3f;
-
-import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Listeners.MainLis;
-import me.Romindous.CounterStrike.Objects.Shooter;
-import me.Romindous.CounterStrike.Objects.Game.BtShooter;
-import me.Romindous.CounterStrike.Objects.Game.GameState;
-import me.Romindous.CounterStrike.Objects.Game.GameType;
-import me.Romindous.CounterStrike.Objects.Game.PlShooter;
-import me.Romindous.CounterStrike.Objects.Game.TripWire;
-import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
-import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
-import me.Romindous.CounterStrike.Objects.Skins.Quest;
-import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
-import me.Romindous.CounterStrike.Utils.Inventories;
-import me.Romindous.CounterStrike.Utils.PacketUtils;
-import net.kyori.adventure.text.Component;
-import net.minecraft.network.protocol.game.PacketPlayOutEntityDestroy;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.Ostrov;
 import ru.komiss77.enums.Stat;
@@ -67,6 +37,13 @@ import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.notes.Slow;
 import ru.komiss77.utils.TCUtils;
 import ru.komiss77.version.VM;
+
+import java.lang.ref.WeakReference;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map.Entry;
 
 public class Invasion extends Arena {
 	
@@ -145,6 +122,7 @@ public class Invasion extends Arena {
 			case WAITING:
 			case BEGINING:
 				shtrs.put(sh, Team.CTs);
+				sh.item(Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10), 4);
 				sh.item(Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10), 6);
 				sh.item(Main.mkItm(Material.SLIME_BALL, "§cВыход", 10), 8);
 				p.teleport(Main.getNrLoc(Main.rndElmt(CTSawns), w));
@@ -179,7 +157,7 @@ public class Invasion extends Arena {
 						Main.chgSbdTm(pl.getScoreboard(), "amt", "", "§3" + getTmAmt(Team.CTs, true, true) + " §7чел.");
 						Main.chgSbdTm(pl.getScoreboard(), "bhp", "", "§6" + String.valueOf(bpc) + "%");
 					} else {
-						((BtShooter) s).updateAll(PacketUtils.getNMSPl(p).c.h);
+						((BtShooter) s).updateAll(p);
 					}
 					PacketUtils.sendNmTg(PacketUtils.getNMSPl(p).c.h, s, Team.CTs.icn + " ", 
 						" §7[" + s.kills() + "-" + s.spwnrs() + "-" + s.deaths() + "]", true, Team.CTs.clr);
@@ -375,7 +353,7 @@ public class Invasion extends Arena {
 			e.remove();
 		}
 		
-		if (bots) {
+		if (botInv != null && bots) {
 			for (int i = (max >> 1) - shtrs.size(); i > 0; i--) {
 				shtrs.put(BotManager.createBot(name, BtShooter.class, () -> new BtShooter(this)), Team.CTs);
 			}
@@ -423,7 +401,7 @@ public class Invasion extends Arena {
 			gst = GameState.ROUND;
 			ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ИГРА, "§7[§5CS§7]", "§dВторжение", " ", "§7Игроков: §5" + shtrs.size() + "§7/§5" + this.max, "", shtrs.size());
 			Inventories.updtGm(this);
-			final ArrayList<Player> pls = new ArrayList<>();
+//			final ArrayList<Player> pls = new ArrayList<>();
 			for (final Shooter sh : shtrs.keySet()) {
 				sh.item(Main.air, 8);
 				final Player p = sh.getPlayer();
@@ -431,7 +409,6 @@ public class Invasion extends Arena {
 					PacketUtils.sendTtlSbTtl(p, "§4Ночь", "§7Крепитесь и защищайте точки!", 50);
 					Main.chgSbdTm(p.getScoreboard(), "gst", "", "§5Ночь");
 					p.playSound(p.getLocation(), "cs.info.night", 10f, 1f);
-					pls.add(p);
 				}
 			}
 			
@@ -451,9 +428,9 @@ public class Invasion extends Arena {
 						mb.et = EntityType.STRAY;
 						break;
 					case STRAY:
-						mb.et = EntityType.VINDICATOR;
+						mb.et = EntityType.PILLAGER;
 						break;
-					case VINDICATOR:
+					case PILLAGER:
 						mb.et = EntityType.PIGLIN_BRUTE;
 						break;
 					default:
@@ -653,7 +630,7 @@ public class Invasion extends Arena {
 		.setScore(7);
 		ob.getScore("   ")
 		.setScore(6);
-		Main.crtSbdTm(sb, "amt", "", "§7Игроков: ", "§3" + String.valueOf(shtrs.size()) + " §7чел.");
+		Main.crtSbdTm(sb, "amt", "", "§7Игроков: ", "§3" + shtrs.size() + " §7чел.");
 		ob.getScore("§7Игроков: ")
 		.setScore(5);
 		Main.crtSbdTm(sb, "sts", "", "§7Точки: ", shtrs.size() == 1 ? "§bA" : "§bA §7и §6B");
@@ -700,7 +677,7 @@ public class Invasion extends Arena {
 		.setScore(5);
 		ob.getScore("  ")
 		.setScore(4);
-		Main.crtSbdTm(sb, "mn", "", "§7Монет: ", "§d" + String.valueOf(sh.money()) + " §6⛃");
+		Main.crtSbdTm(sb, "mn", "", "§7Монет: ", "§d" + sh.money() + " §6⛃");
 		ob.getScore("§7Монет: ")
 		.setScore(3);
 		ob.getScore("§7=-=-=-=-=-=-=-")
@@ -742,7 +719,7 @@ public class Invasion extends Arena {
 		.setScore(5);
 		ob.getScore("  ")
 		.setScore(4);
-		ob.getScore("§7Монет: §d" + String.valueOf(sh.money()) + " §6⛃")
+		ob.getScore("§7Монет: §d" + sh.money() + " §6⛃")
 		.setScore(3);
 		ob.getScore("§7=-=-=-=-=-=-=-")
 		.setScore(2);

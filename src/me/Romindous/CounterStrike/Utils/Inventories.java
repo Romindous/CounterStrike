@@ -164,21 +164,13 @@ public class Inventories {
 		byte n = 0;
 		for (final ItemStack it : GmInv.getContents()) {
 			if (it != null && it.hasItemMeta() && TCUtils.toString(it.getItemMeta().displayName()).substring(2).equals(ar.name)) {
-				final String md;
-				switch (ar.getType()) {
-				case DEFUSAL:
-				default:
-					md = "Классика";
-					break;
-				case GUNGAME:
-					md = "Эстафета";
-					break;
-				case INVASION:
-					md = "Вторжение";
-					break;
-				}
-				
-				switch (ar.gst) {
+				final String md = switch (ar.getType()) {
+					case INVASION -> "Вторжение";
+					case GUNGAME -> "Эстафета";
+                    default -> "Классика";
+                };
+
+                switch (ar.gst) {
 				case WAITING:
 					GmInv.setItem(n, Main.mkItm(GREEN_CONCRETE_POWDER, "§d" + ar.name, 1, "§2Ожидание", "§7Игроков: §2" + ar.shtrs.size() + "§7/§2" + ar.min, " ", "§7Режим: §d" + md));
 					break;
@@ -289,17 +281,12 @@ public class Inventories {
 	}
 	   
 	private static int getSpnrDf(final EntityType et) {
-		switch (et) {
-		case ZOMBIE_VILLAGER:
-		default:
-			return 1;
-		case STRAY:
-			return 2;
-		case VINDICATOR:
-			return 3;
-		case PIGLIN_BRUTE:
-			return 4;
-		}
+        return switch (et) {
+			case PIGLIN_BRUTE -> 4;
+			case PILLAGER -> 3;
+			case STRAY -> 2;
+            default -> 1;
+        };
 	}
 
 	public static void fillLbbInv() {

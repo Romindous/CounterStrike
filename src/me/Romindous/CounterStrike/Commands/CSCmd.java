@@ -1,10 +1,11 @@
 package me.Romindous.CounterStrike.Commands;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
-
+import me.Romindous.CounterStrike.Game.Arena;
+import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.Map.MapManager;
+import me.Romindous.CounterStrike.Objects.Map.Setup;
+import me.Romindous.CounterStrike.Objects.Map.TypeChoose;
+import me.Romindous.CounterStrike.Objects.Shooter;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -12,26 +13,23 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryType;
-
-import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Game.Arena;
-import me.Romindous.CounterStrike.Objects.Shooter;
-import me.Romindous.CounterStrike.Objects.Map.MapManager;
-import me.Romindous.CounterStrike.Objects.Map.Setup;
-import me.Romindous.CounterStrike.Objects.Map.TypeChoose;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.utils.inventory.SmartInventory;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
 
 public class CSCmd implements CommandExecutor, TabCompleter {
 	
 	@Override
 	public List<String> onTabComplete(final CommandSender send, final Command cmd, final String al, final String[] args) {
 		final LinkedList<String> sugg = new LinkedList<String>();
-		if (send instanceof Player) {
-			final Player p = (Player) send;
-			if (p.hasPermission("ostrov.builder")) {
+		if (send instanceof final Player p) {
+            if (p.hasPermission("ostrov.builder")) {
 				if (args.length == 1) {
 					sugg.add("join");
 					sugg.add("leave");
@@ -41,9 +39,7 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 					sugg.add("setlobby");
 					sugg.add("reload");
 				} else if (args[0].equalsIgnoreCase("edit")) {
-					for (final String s : Main.nnactvarns.keySet()) {
-						sugg.add(s);
-					}
+                    sugg.addAll(Main.nnactvarns.keySet());
 				} 
 			} else {
 				if (args.length == 1) {
@@ -65,9 +61,8 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 	 */
 	@Override
 	public boolean onCommand(final CommandSender send, final Command cmd, final String label, final String[] args) {
-		if (label.equalsIgnoreCase("cs") && send instanceof Player) {
-			final Player p = (Player) send;
-			//админ комманды
+		if (label.equalsIgnoreCase("cs") && send instanceof final Player p) {
+            //админ комманды
 			if (ApiOstrov.isLocalBuilder(p, false)) {
 				//создание карты
 				if (args.length == 2) {
@@ -140,12 +135,11 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 		                        .provider(new TypeChoose(stp))
 		                        .title("§d§l      Выбор Типа Игры")
 		                        .build().open(p);
-								return true;
-							} else {
+                            } else {
 								partyJoinMap(sh, p, ar);
-								return true;
-							}
-						} else {
+                            }
+                            return true;
+                        } else {
 							p.sendMessage(Main.prf() + "§cВы уже на карте, используйте §d/cs leave§c для выхода!");
 							return false;
 						}
@@ -166,7 +160,7 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 									return true;
 								} else {
 									p.sendMessage(Main.prf() + "§cНи одной карты еще не создано!");
-									return true;
+									return false;
 								}
 							} else {
 								partyJoinMap(sh, p, ar);
@@ -174,14 +168,14 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 							}
 						} else {
 							p.sendMessage(Main.prf() + "§cВы уже на карте, используйте §d/cs leave§c для выхода!");
-							return true;
+							return false;
 						}
 						//помощь
 					} else if (args[0].equalsIgnoreCase("leave")) {
 						final Arena ar = Shooter.getPlShooter(p.getName(), true).arena();
 						if (ar == null) {
 							p.sendMessage(Main.prf() + "§cВы не находитесь в игре!");
-							return true;
+							return false;
 						} else {
 							ar.rmvPl(Shooter.getPlShooter(p.getName(), true));
 							return true;
@@ -189,23 +183,25 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 						//помощь
 					} else if (args[0].equalsIgnoreCase("help")) {
 						if (ApiOstrov.isLocalBuilder(p, false)) {
-							p.sendMessage("§5-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n"
-							+ "§dПомощь по коммандам:\n"
-							+ "§d/cs join (название) §7- присоединится к игре\n"
-							+ "§d/cs leave §7- выход из игры\n"
-							+ "§d/cs help §7- этот текст\n"
-							+ "§d/cs edit (название) §7- редактирование карты\n"
-							+ "§d/cs setlobby §7- установка лобби\n"
-							+ "§d/cs reload §7- перезагрузка конфигов\n"
-							+ "§5-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
+							p.sendMessage("""
+								§5-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+								§dПомощь по коммандам:
+								§d/cs join (название) §7- присоединится к игре
+								§d/cs leave §7- выход из игры
+								§d/cs help §7- этот текст
+								§d/cs edit (название) §7- редактирование карты
+								§d/cs setlobby §7- установка лобби
+								§d/cs reload §7- перезагрузка конфигов
+								§5-=-=-=-=-=-=-=-=-=-=-=-=-=-=-""");
 							return true;
 						}
-						p.sendMessage("§5-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n"
-						+ "§dПомощь по коммандам:\n"
-						+ "§d/cs join (название) §7- присоединится к игре\n"
-						+ "§d/cs leave §7- выход из игры\n"
-						+ "§d/cs help §7- этот текст\n"
-						+ "§5-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
+						p.sendMessage("""
+							§5-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+							§dПомощь по коммандам:
+							§d/cs join (название) §7- присоединится к игре
+							§d/cs leave §7- выход из игры
+							§d/cs help §7- этот текст
+							§5-=-=-=-=-=-=-=-=-=-=-=-=-=-=-""");
 						return true;
 					}
 				}

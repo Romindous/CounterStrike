@@ -6,5 +6,5 @@ public enum GameState {
 	BUYTIME,
 	ROUND,
 	ENDRND,
-	FINISH;
+	FINISH,
 }

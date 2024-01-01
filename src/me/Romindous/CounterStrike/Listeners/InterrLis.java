@@ -18,7 +18,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 import org.bukkit.event.entity.EntityInteractEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
@@ -32,6 +31,7 @@ import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Enums.NadeType;
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Game.Arena.Team;
+import me.Romindous.CounterStrike.Menus.BotMenu;
 import me.Romindous.CounterStrike.Game.Defusal;
 import me.Romindous.CounterStrike.Game.Gungame;
 import me.Romindous.CounterStrike.Game.Invasion;
@@ -48,9 +48,6 @@ import me.Romindous.CounterStrike.Utils.Inventories;
 import me.Romindous.CounterStrike.Utils.PacketUtils;
 import net.kyori.adventure.text.Component;
 import net.minecraft.core.BaseBlockPosition;
-import net.minecraft.world.entity.EntityTypes;
-import net.minecraft.world.entity.monster.EntityShulker;
-import net.minecraft.world.level.World;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.modules.world.WXYZ;
@@ -117,8 +114,9 @@ public class InterrLis implements Listener {
 				final ItemStack mh = p.getInventory().getItemInMainHand();
 				final GunType gt = GunType.getGnTp(mh);
 				if (p.isSneaking() && sh.scope() && sh.shtTm() == 0) {
+//					p.sendMessage("f");
 					sh.scope(false);
-					final boolean hd = ((Damageable)mh.getItemMeta()).hasDamage();
+					final boolean hd = ((Damageable) mh.getItemMeta()).hasDamage();
 					if ((sh.count() == 0 || hd) && sh.cldwn() == 0) {
 						if (mh.getAmount() == 1) {
 							if (hd) return;
@@ -243,7 +241,7 @@ public class InterrLis implements Listener {
 						}
 					}
 				}
-				final Snowball sb = (Snowball) p.launchProjectile(Snowball.class);
+				final Snowball sb = p.launchProjectile(Snowball.class);
 				sb.setItem(it.clone());
 				it.setAmount(it.getAmount() - 1);
 				p.getInventory().setItemInMainHand(it);
@@ -337,12 +335,12 @@ public class InterrLis implements Listener {
 					case CRIMSON_BUTTON:
 						e.setCancelled(false);
 						break;
-					case STICK:
+					/*case STICK:
 						final World w = PacketUtils.getNMSWrld(p.getWorld());
 						final EntityShulker ind = new EntityShulker(EntityTypes.aG, w);
 						ind.setPosRaw(p.getLocation().getX() + 0.5d, p.getLocation().getY(), p.getLocation().getZ() + 0.5d, false);
 						w.addFreshEntity(ind, SpawnReason.CUSTOM);
-						break;
+						break;*/
 					case GOLD_NUGGET:
 					case SHEARS:
 						final boolean bg = it.getType() == Material.GOLD_NUGGET;
@@ -398,7 +396,7 @@ public class InterrLis implements Listener {
 						}
 						break;
 					case CAMPFIRE:
-						if (it.hasItemMeta() && TCUtils.toString(it.getItemMeta().displayName()).equals("§dВыбор Игры")) {
+						if (it.hasItemMeta() && TCUtils.stripColor(it.getItemMeta().displayName()).equals("Выбор Игры")) {
 							final Inventory inv = Inventories.GmInv;
 							if (ItemUtils.isBlank(inv.getItem(4), false)) {
 								Inventories.fillGmInv();
@@ -408,7 +406,7 @@ public class InterrLis implements Listener {
 						}
 						break;
 					case TOTEM_OF_UNDYING:
-						if (it.hasItemMeta() && TCUtils.toString(it.getItemMeta().displayName()).equals("§eВыбор Обшивки")) {
+						if (it.hasItemMeta() && TCUtils.stripColor(it.getItemMeta().displayName()).equals("Выбор Обшивки")) {
 							SmartInventory.builder().size(6, 9)
                             .id("Skins "+p.getName())
                             .title("§6Выберите Обшивку")
@@ -417,7 +415,7 @@ public class InterrLis implements Listener {
 						}
 						break;
 					case NETHER_STAR:
-						if (it.hasItemMeta() && TCUtils.toString(it.getItemMeta().displayName()).equals("§eВыбор Комманды")) {
+						if (it.hasItemMeta() && TCUtils.stripColor(it.getItemMeta().displayName()).equals("Выбор Комманды")) {
 							sh = Shooter.getPlShooter(p.getName(), true);
 							p.playSound(p.getLocation(), Sound.BLOCK_CONDUIT_ATTACK_TARGET, 1f, 2f);
 							if (sh.arena() != null) {
@@ -437,13 +435,24 @@ public class InterrLis implements Listener {
 	                        .build().open(p);
 						}
 						break;
+					case HEART_OF_THE_SEA:
+						if (it.hasItemMeta() && TCUtils.stripColor(it.getItemMeta().displayName()).equals("Боторейка")) {
+							sh = Shooter.getPlShooter(p.getName(), true);
+							if (sh.arena() != null && sh.arena().botInv != null) {
+								p.playSound(p.getLocation(), Sound.BLOCK_BREWING_STAND_BREW, 1f, 1.6f);
+								final BotMenu bm = (BotMenu) sh.arena().botInv.getProvider();
+								if (bm.its == null) sh.arena().botInv.open(p);
+								else bm.reopen(p, bm.its);
+							}
+						}
+						break;
 					case MAGMA_CREAM:
-						if (it.hasItemMeta() && TCUtils.toString(it.getItemMeta().displayName()).equals("§4Выход в Лобби")) {
+						if (it.hasItemMeta() && TCUtils.stripColor(it.getItemMeta().displayName()).equals("Выход в Лобби")) {
 							ApiOstrov.sendToServer(p, "lobby1", "");
 						}
 						break;
 					case SLIME_BALL:
-						if (it.hasItemMeta() && TCUtils.toString(it.getItemMeta().displayName()).equals("§cВыход")) {
+						if (it.hasItemMeta() && TCUtils.stripColor(it.getItemMeta().displayName()).equals("Выход")) {
 							final Arena ar = Shooter.getPlShooter(p.getName(), true).arena();
 							if (ar == null) {
 								p.sendMessage(Main.prf() + "§cВы не находитесь в игре!");

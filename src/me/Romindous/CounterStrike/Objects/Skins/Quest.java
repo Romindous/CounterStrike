@@ -1,6 +1,7 @@
 package me.Romindous.CounterStrike.Objects.Skins;
 
 import me.Romindous.CounterStrike.Enums.GunType;
+import org.jetbrains.annotations.Nullable;
 
 public enum Quest {
 
@@ -31,96 +32,58 @@ public enum Quest {
 		this.cmd = GunType.defCMD + cmd;
 	}
 	
-	public static Quest getQuest(final GunType gt, final int cmd) {
+	public static @Nullable Quest getQuest(final GunType gt, final int cmd) {
 		//Bukkit.broadcast(Component.text("gt-" + gt.toString() + ", cmd-" + cmd));
-		switch (gt) {
-		case AK47:
-			switch (cmd) {
-			case 11:
-				return ТОКСИК;
-			default:
-				return null;
-			}
-		case AWP:
-			switch (cmd) {
-			case 11:
-				return АЗИМОВ;
-			default:
-				return null;
-			}
-		case DGL:
-			switch (cmd) {
-			case 11:
-				return ЛАТУНЬ;
-			default:
-				return null;
-			}
-		case M4:
-			switch (cmd) {
-			case 11:
-				return ВОЙ;
-			default:
-				return null;
-			}
-		case MP5:
-			switch (cmd) {
-			case 11:
-				return ЛГБТ;
-			default:
-				return null;
-			}
-		case NGV:
-			switch (cmd) {
-			case 11:
-				return ГРУЗЧИК;
-			default:
-				return null;
-			}
-		case NOVA:
-			switch (cmd) {
-			case 11:
-				return ПАНК;
-			default:
-				return null;
-			}
-		case P90:
-			switch (cmd) {
-			case 11:
-				return ДЮНА;
-			default:
-				return null;
-			}
-		case SCAR:
-			switch (cmd) {
-			case 11:
-				return ЗЕМЛЯ;
-			default:
-				return null;
-			}
-		case SG13:
-			switch (cmd) {
-			case 11:
-				return КРОВЬ;
-			default:
-				return null;
-			}
-		case TP7:
-			switch (cmd) {
-			case 11:
-				return ОКЕАН;
-			default:
-				return null;
-			}
-		case USP:
-			switch (cmd) {
-			case 11:
-				return ДУША;
-			default:
-				return null;
-			}
-		default:
-			return null;
-		}
+        return switch (gt) {
+            case AK47 -> switch (cmd) {
+                case 11 -> ТОКСИК;
+                default -> null;
+            };
+            case AWP -> switch (cmd) {
+                case 11 -> АЗИМОВ;
+                default -> null;
+            };
+            case DGL -> switch (cmd) {
+                case 11 -> ЛАТУНЬ;
+                default -> null;
+            };
+            case M4 -> switch (cmd) {
+                case 11 -> ВОЙ;
+                default -> null;
+            };
+            case MP5 -> switch (cmd) {
+                case 11 -> ЛГБТ;
+                default -> null;
+            };
+            case NGV -> switch (cmd) {
+                case 11 -> ГРУЗЧИК;
+                default -> null;
+            };
+            case NOVA -> switch (cmd) {
+                case 11 -> ПАНК;
+                default -> null;
+            };
+            case P90 -> switch (cmd) {
+                case 11 -> ДЮНА;
+                default -> null;
+            };
+            case SCAR -> switch (cmd) {
+                case 11 -> ЗЕМЛЯ;
+                default -> null;
+            };
+            case SG13 -> switch (cmd) {
+                case 11 -> КРОВЬ;
+                default -> null;
+            };
+            case TP7 -> switch (cmd) {
+                case 11 -> ОКЕАН;
+                default -> null;
+            };
+            case USP -> switch (cmd) {
+                case 11 -> ДУША;
+                default -> null;
+            };
+        };
 	}
 	
 }

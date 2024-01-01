@@ -20,9 +20,9 @@ public class GunSkin {
 	
 	@Override
 	public String toString() {
-		final StringBuffer sb = new StringBuffer(unlocked.length << 2);
+		final StringBuilder sb = new StringBuilder(unlocked.length << 2);
 		for (final int s : unlocked) {
-			sb.append(":" + String.valueOf(s));
+			sb.append(":").append(s);
 		}
 		return chosen + ";" + (sb.isEmpty() ? String.valueOf(GunType.defCMD) : sb.substring(1));
 	}

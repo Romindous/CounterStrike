@@ -56,13 +56,13 @@ public class Setup {
 			bots = ar.getBoolean("bots");
 			
 			final List<XYZ> tSps = ar.getStringList("tspawns").stream().map(XYZ::fromString).toList();
-			tSpawns = tSps.toArray(new XYZ[tSps.size()]);
+			tSpawns = tSps.toArray(new XYZ[0]);
 			
 			final List<XYZ> ctSps = ar.getStringList("ctspawns").stream().map(XYZ::fromString).toList();
-			ctSpawns = ctSps.toArray(new XYZ[ctSps.size()]);
+			ctSpawns = ctSps.toArray(new XYZ[0]);
 			
 			final List<XYZ> tPss = ar.getStringList("spots").stream().map(XYZ::fromString).toList();
-			spots = tPss.toArray(new XYZ[tPss.size()]);
+			spots = tPss.toArray(new XYZ[0]);
 			
 			A = XYZ.fromString(ar.getString("asite"));
 			B = XYZ.fromString(ar.getString("bsite"));
@@ -79,7 +79,7 @@ public class Setup {
 		final ConfigurationSection ar = conf.createSection("arenas." + nm);
 		ar.set("min", min);
 		ar.set("max", max);
-		ar.set("fin", fin);
+		ar.set("fin", true);
 		ar.set("rnd", rndM);
 		ar.set("bots", bots);
 		for (final GameType gt : GameType.values()) {

@@ -22,6 +22,7 @@ import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Game.GameState;
 import ru.komiss77.modules.world.AStarPath;
 import ru.komiss77.modules.world.WXYZ;
+import ru.komiss77.utils.LocationUtil;
 
 public class GoalGoToSite implements Goal<Mob> {
 	
@@ -39,7 +40,7 @@ public class GoalGoToSite implements Goal<Mob> {
         this.ar = ar;
         this.tgt = null;
         
-        ap = new AStarPath(mob, 1000);
+        ap = new AStarPath(mob, 1000, false);
         ap.setTgt(new WXYZ(Main.srnd.nextBoolean() || ar.bds.getViewRange() == 0f 
         	? ar.ads.getLocation() : ar.bds.getLocation()));
     }
@@ -64,7 +65,8 @@ public class GoalGoToSite implements Goal<Mob> {
     
     @Override
     public void tick() {
-    	if (((tick++) & 3) == 0 && ar.gst != GameState.FINISH && !mob.hasPotionEffect(PotionEffectType.BLINDNESS)) {
+    	tick++;
+    	if ((tick & 3) == 0 && ar.gst != GameState.FINISH && !mob.hasPotionEffect(PotionEffectType.BLINDNESS)) {
     		final Location eyel = mob.getEyeLocation();
     		final Location lc = mob.getEyeLocation();
     		
@@ -72,14 +74,14 @@ public class GoalGoToSite implements Goal<Mob> {
 				for (final Entry<Shooter, Team> en : ar.shtrs.entrySet()) {
 					if (en.getKey().isDead()) continue;
 					final LivingEntity le = en.getKey().getEntity();
-					if (le != null && Main.rayThruAir(eyel, le.getEyeLocation().toVector(), 0.1F)) {
+					if (le != null && LocationUtil.rayThruAir(eyel, le.getEyeLocation().toVector(), 0.1F)) {
 						tgt = Shooter.getShooter(le, false);
 						break;
 					}
 				}
 			} else {
 				final Vector pos = tgt.getLoc(true);
-				if (!Main.rayThruAir(eyel, pos, 0.1F)) {
+				if (!LocationUtil.rayThruAir(eyel, pos, 0.1F)) {
 					tgt = null;
 				}
 			}
@@ -87,7 +89,7 @@ public class GoalGoToSite implements Goal<Mob> {
 			final Location pthTo;
 			if (tgt == null || tgt.isDead()) {
 				ap.tickGo(Mobber.getMbSpd(mob.getType()));
-			} else {//attack
+			} else if ((tick & 7) == 0) {//attack
 				final LivingEntity le = tgt.getEntity();
 				if (le == null) {
 					tgt = null;
@@ -95,6 +97,7 @@ public class GoalGoToSite implements Goal<Mob> {
 				}
 				pthTo = le.getEyeLocation();
 				if (lc.distanceSquared(pthTo) < 4d) {
+					mob.swingMainHand();
 					DmgLis.prcDmg(le, tgt, null, Mobber.getMbPow(mob.getType()) * 0.4d + 1d, Team.NA.clr + mob.getName() + " §f\u929a", 5);
 				}
 				

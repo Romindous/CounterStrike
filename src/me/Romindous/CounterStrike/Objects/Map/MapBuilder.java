@@ -1,29 +1,23 @@
 package me.Romindous.CounterStrike.Objects.Map;
 
-import java.io.File;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Map.Entry;
-
+import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.Game.GameType;
+import me.Romindous.CounterStrike.Objects.Loc.PasteSet;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
-
-import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Objects.Game.GameType;
-import me.Romindous.CounterStrike.Objects.Loc.PasteSet;
 import ru.komiss77.Ostrov;
 import ru.komiss77.modules.world.Schematic;
 import ru.komiss77.modules.world.Schematic.Rotate;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.modules.world.XYZ;
+
+import java.io.File;
+import java.util.*;
+import java.util.Map.Entry;
 
 public class MapBuilder {
 	
@@ -263,14 +257,8 @@ public class MapBuilder {
 				final int d = Math.abs(X - x) + Math.abs(Z - z);
 				if (d < maxCheckDist) {
 					final TileType tileAtXZ = en.getValue();
-					final Iterator<TileType> it = possible.iterator();
-					while (it.hasNext()) {
-						final TileType possibility = it.next();
-						if (!tileAtXZ.canPlaceNear(possibility, d)) {
-							//Bukkit.getConsoleSender().sendMessage("excluding-" + ttt.toString() + " d-" + d);
-							it.remove();
-						}
-					}
+                    //Bukkit.getConsoleSender().sendMessage("excluding-" + ttt.toString() + " d-" + d);
+                    possible.removeIf(pos -> !tileAtXZ.canPlaceNear(pos, d));
 				}
 			}
 			
@@ -461,6 +449,6 @@ public class MapBuilder {
 	}
 	
 	public enum Floor {
-		TOP, MID, BOT;
+		TOP, MID, BOT,
 	}
 }

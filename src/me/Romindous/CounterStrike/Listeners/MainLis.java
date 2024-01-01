@@ -1,7 +1,5 @@
 package me.Romindous.CounterStrike.Listeners;
 
-import java.util.Iterator;
-import java.util.Map.Entry;
 import java.util.Random;
 
 import org.bukkit.GameMode;
@@ -31,7 +29,6 @@ import org.spigotmc.event.entity.EntityDismountEvent;
 
 import com.destroystokyo.paper.event.player.PlayerJumpEvent;
 
-import io.papermc.paper.event.player.AsyncChatEvent;
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Enums.NadeType;
@@ -40,15 +37,12 @@ import me.Romindous.CounterStrike.Game.Arena.Team;
 import me.Romindous.CounterStrike.Game.Defusal;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Game.GameState;
-import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import ru.komiss77.enums.Data;
 import ru.komiss77.events.BungeeDataRecieved;
 import ru.komiss77.events.LocalDataLoadEvent;
 import ru.komiss77.modules.player.Oplayer;
 import ru.komiss77.utils.ItemUtils;
-import ru.komiss77.utils.TCUtils;
  
 public class MainLis implements Listener {
 	
@@ -83,34 +77,24 @@ public class MainLis implements Listener {
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onData(final LocalDataLoadEvent e) {
 		Main.lobbyPl(e.getPlayer());
-		final String title;
-		switch (new Random().nextInt(4)) {
-		case 0:
-			title = "Добро пожаловать!";
-			break;
-		case 1:
-			title = "Приятной игры!";
-			break;
-		case 2:
-			title = "Желаем удачи!";
-			break;
-		case 3:
-			title = "Развлекайтесь!";
-			break;
-		default:
-			title = "";
-			break;
-		}
-		e.getPlayer().sendPlayerListHeaderAndFooter(Component.text("§7<§5Counter Strike§7>\n" + title), 
+		final String title = switch (new Random().nextInt(4)) {
+            case 0 -> "Добро пожаловать!";
+            case 1 -> "Приятной игры!";
+            case 2 -> "Желаем удачи!";
+            case 3 -> "Развлекайтесь!";
+            default -> "";
+        };
+
+        e.getPlayer().sendPlayerListHeaderAndFooter(Component.text("§7<§5Counter Strike§7>\n" + title),
 			Component.text("§7Сейчас в игре: §d" + getPlaying() + "§7 человек!"));
 	}
 	
 	public static byte getPlaying() {
-		byte in = 0;
+		int in = 0;
 		for (final Arena ar : Main.actvarns.values()) {
 			in += ar.shtrs.size();
 		}
-		return in;
+		return (byte) in;
 	}
 
 	@EventHandler
@@ -296,72 +280,11 @@ public class MainLis implements Listener {
 	
 	@EventHandler
 	public void onTgt(final EntityTargetEvent e) {
-		if (e.getEntity() instanceof Mob) {
-			final Mob mb = (Mob) e.getEntity();
-			if (mb.hasPotionEffect(PotionEffectType.BLINDNESS)) {
+		if (e.getEntity() instanceof final Mob mb) {
+            if (mb.hasPotionEffect(PotionEffectType.BLINDNESS)) {
 				mb.setTarget(null);
 				e.setTarget(null);
 			}
 		}
 	}
-	
-	@EventHandler
-	public void onChat(final AsyncChatEvent e) {
-		final String msg = ((TextComponent) e.message()).content();
-		if (msg.startsWith("/")) {
-			return;
-		}
-		final Player snd = e.getPlayer();
-		final Shooter pr = Shooter.getPlShooter(snd.getName(), true);
-		final Arena ar = pr.arena();
-		//если на арене
-		if (ar == null) {
-			return;
-		} else {
-			final Team tm = ar.shtrs.get(pr);
-			switch (ar.gst) {
-			case WAITING:
-			case BEGINING:
-			case FINISH:
-				final Iterator<Audience> pl = e.viewers().iterator();
-				while (pl.hasNext()) {
-					final Audience rec = pl.next();
-					if (rec instanceof Player) {
-						rec.sendMessage(TCUtils.format(Main.prf().replace('[', '<').replace(']', '>') 
-							+ snd.getName() + " §7[§d" + ar.name + "§7] ≫ " + msg));
-						if (Main.eqlsCompStr(((Player) rec).getServer().motd(), snd.getServer().motd())) {
-							pl.remove();
-						}
-					}
-		        }
-				return;
-			case BUYTIME:
-			case ROUND:
-			case ENDRND:
-				if (msg.startsWith("!")) {
-					if (msg.length() > 1) {
-						for (final Shooter sh : ar.shtrs.keySet()) {
-							final Player p = sh.getPlayer();
-							if (p != null) {
-								p.sendMessage(TCUtils.format("§7[Всем] " + tm.clr + 
-									snd.getName() + " §7≫ " + msg.replaceFirst("!", "")));
-							}
-						}
-					}
-				} else {
-					for (final Entry<Shooter, Team> n : ar.shtrs.entrySet()) {
-						if (n.getValue() == tm) {
-							final Player p = n.getKey().getPlayer();
-							if (p != null) {
-								p.sendMessage(TCUtils.format("§7[" + tm.icn + "§7] " + 
-									snd.getName() + " §7≫ " + msg.replaceFirst("!", "")));
-							}
-						}
-					}
-				}
-				break;
-			}
-		}
-        e.viewers().clear();
-    }
 }

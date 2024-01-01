@@ -1,21 +1,8 @@
 package me.Romindous.CounterStrike.Objects.Bots;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
-import org.bukkit.entity.EntityType;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
-
-import com.mojang.datafixers.util.Pair;
-
-import ru.komiss77.Ostrov;
-
 public enum BotType__ {
 	
-	REGULAR(EntityType.HUSK, "soja", "Corwin4_", "ProKirill", "Colorsss", "scbro", "fnf_", 
+	/*REGULAR(EntityType.HUSK, "soja", "Corwin4_", "ProKirill", "Colorsss", "scbro", "fnf_",
 		"UEI", "jakubak", "Scail", "shyrezz", "EpexLord", "Stijnaaa", "Tatyan", "Zadan", 
 			"Dark_Chara", "devim", "CrashGod", "skarti", "arthuga", "boysi");
 	
@@ -47,5 +34,5 @@ public enum BotType__ {
 			//final Property pr = (Property) ds.bf().t().get(0).fq().getProperties().get("textures").toArray()[0];
 			return new Pair<String, String>("", "");
 		}
-	}
+	}*/
 }

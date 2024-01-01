@@ -1,4 +1,4 @@
-package me.Romindous.CounterStrike.Objects.Bots;
+	package me.Romindous.CounterStrike.Objects.Bots;
 
 import static me.Romindous.CounterStrike.Objects.Bots.ActType.DIRECT;
 import static me.Romindous.CounterStrike.Objects.Bots.ActType.GO_SPOT;
@@ -59,7 +59,7 @@ public class BotGoal implements Goal<Mob> {
 	private static final int ACT_TIME = 1;
 	private static final double NEAR_DST_SQ = 8d;
 	private static final BlockData bdt = crtBtnDt();
-	private static final WeakReference<LivingEntity> nrf = new WeakReference<LivingEntity>(null);
+	private static final WeakReference<LivingEntity> nrf = new WeakReference<>(null);
     private static final GoalKey<Mob> key = GoalKey.of(Mob.class, new NamespacedKey(Main.plug, "bot"));
     
     private final BtShooter bot;
@@ -79,7 +79,7 @@ public class BotGoal implements Goal<Mob> {
     public BotGoal(final BtShooter bot, final Mob hs) {
         this.bot = bot;
         this.rplc = hs;
-        this.arp = new AStarPath(rplc, 2000);
+        this.arp = new AStarPath(rplc, 2000, true);
 		this.pth = rplc.getPathfinder();
 		this.tLoc = null;
 		this.tick = Main.srnd.nextInt(16);
@@ -143,8 +143,8 @@ public class BotGoal implements Goal<Mob> {
 						for (final Entry<Shooter, Team> en : bot.arena().shtrs.entrySet()) {
 							if (!en.getKey().isDead() && en.getValue() != tm) {
 								final LivingEntity le = en.getKey().getEntity();
-								if (le != null && le.getEntityId() != rplc.getEntityId() && Main.rayThruAir(eyel, le.getEyeLocation().toVector(), 0.1d)) {
-									bot.tgtLe = new WeakReference<LivingEntity>((bot.tgtSh = en.getKey()).getEntity());
+								if (le != null && le.getEntityId() != rplc.getEntityId() && LocationUtil.rayThruAir(eyel, le.getEyeLocation().toVector(), 0.1d)) {
+									bot.tgtLe = new WeakReference<>((bot.tgtSh = en.getKey()).getEntity());
 									agro = 0;
 									break;
 								}
@@ -153,7 +153,7 @@ public class BotGoal implements Goal<Mob> {
 					} else {//track tgt
 						agro+=4;
 						final LivingEntity tgt = bot.tgtSh.getEntity();
-						if (tgt == null || !Main.rayThruAir(eyel, tgt.getEyeLocation().toVector(), 0.1F)) {
+						if (tgt == null || !LocationUtil.rayThruAir(eyel, tgt.getEyeLocation().toVector(), 0.1F)) {
 							changeTLoc(bot.tgtSh.getPos(), DIRECT);
 							bot.tgtLe = nrf;
 							bot.tgtSh = null;
@@ -167,8 +167,8 @@ public class BotGoal implements Goal<Mob> {
 						for (final Entry<Shooter, Team> en : bot.arena().shtrs.entrySet()) {
 							if (!en.getKey().isDead()) {
 								final LivingEntity le = en.getKey().getEntity();
-								if (le != null && le.getEntityId() != rplc.getEntityId() && Main.rayThruAir(eyel, le.getEyeLocation().toVector(), 0.1d)) {
-									bot.tgtLe = new WeakReference<LivingEntity>((bot.tgtSh = en.getKey()).getEntity());
+								if (le != null && le.getEntityId() != rplc.getEntityId() && LocationUtil.rayThruAir(eyel, le.getEyeLocation().toVector(), 0.1d)) {
+									bot.tgtLe = new WeakReference<>((bot.tgtSh = en.getKey()).getEntity());
 									agro = 0;
 									break;
 								}
@@ -177,7 +177,7 @@ public class BotGoal implements Goal<Mob> {
 					} else {//track tgt
 						agro+=4;
 						final LivingEntity tgt = bot.tgtSh.getEntity();
-						if (tgt == null || !Main.rayThruAir(eyel, bot.tgtSh.getEntity().getEyeLocation().toVector(), 0.1F)) {
+						if (tgt == null || !LocationUtil.rayThruAir(eyel, bot.tgtSh.getEntity().getEyeLocation().toVector(), 0.1F)) {
 							changeTLoc(bot.tgtSh.getPos(), DIRECT);
 							bot.tgtLe = nrf;
 							bot.tgtSh = null;
@@ -188,19 +188,19 @@ public class BotGoal implements Goal<Mob> {
 					if (bot.tgtLe.get() == null || !bot.tgtLe.get().isValid()) {//look for tgt
 						bot.tgtLe = nrf;
 //						Bukkit.broadcast(Component.text("scaning for mobs"));
-						for (final Monster le : LocationUtil.getChEnts(bot.getPos(), SPOT_DST << 1, Monster.class)) {
-							if (le.isValid() && le.getType() != rplc.getType() && Main.rayThruAir(eyel, le.getEyeLocation().toVector(), 0.1d)) {
-								bot.tgtLe = new WeakReference<LivingEntity>(le);
-								bot.tgtSh = null;
-								agro = 0;
-								break;
-							}
+						final Monster ntgt = LocationUtil.getClsChEnt(bot.getPos(), SPOT_DST << 1, Monster.class, le -> 
+						{return le.isValid() && le.getType() != rplc.getType() && LocationUtil.rayThruAir(eyel, le.getEyeLocation().toVector(), 0.1d);
+						});
+						if (ntgt != null) {
+							bot.tgtLe = new WeakReference<>(ntgt);
+							bot.tgtSh = null;
+							agro = 0;
 						}
 					} else {//track tgt
 						agro+=4;
 						final LivingEntity tle = bot.tgtLe.get();
-						if (tle == null || !tle.isValid() || !Main.rayThruAir(eyel, tle.getEyeLocation().toVector(), 0.1F)) {
-//							changeTLoc(bot.tgtSh.getPos(), DIRECT);
+						if (tle == null || !tle.isValid() || !LocationUtil.rayThruAir(eyel, tle.getEyeLocation().toVector(), 0.1F)) {
+							changeTLoc(new WXYZ(tle.getLocation()), DIRECT);
 							bot.tgtLe = nrf;
 							bot.tgtSh = null;
 						}
@@ -216,26 +216,29 @@ public class BotGoal implements Goal<Mob> {
 				vc = tgt.subtract(loc.toVector());
 				if (bot.getHandSlot() == 2) {
 					if (vc.lengthSquared() < NEAR_DST_SQ) {
-						changeTLoc(getStrfLoc(loc, vc, -2), DIRECT);
+						if (agro > REACT) changeTLoc(getStrfLoc(loc, vc, -2), DIRECT);
 						BotManager.sendWrldPckts(VM.getNmsServer().toNMS(bot.w), new PacketPlayOutAnimation(bot, 0));
 						if ((tick & 3) == 0) DmgLis.prcDmg(le, bot.tgtSh, bot, le.getEquipment().getChestplate() == null ? 3d : 2d, 
-							"§f\u9298", 5, (short) GunType.knfRwd, false, false, false, false, false);
+							"§f\u9298", 5, GunType.knfRwd, false, false, false, false, false);
 					} else {
-						changeTLoc(getStrfLoc(loc, vc, 8), DIRECT);
+						if (agro > REACT) changeTLoc(getStrfLoc(loc, vc, 8), DIRECT);
 					}
 				} else {
 					if (!rld && agro > REACT) {
 						bot.tryShoot(rplc, eyel);
 						bot.tryShoot(rplc, eyel);
 					}
-					changeTLoc(getStrfLoc(loc, vc, -2), DIRECT);
+					
+					if (agro > REACT) changeTLoc(getStrfLoc(loc, vc, -2), DIRECT);
 				}
 			} else {//go places
+				final Location dir;
 				switch (bot.getHandSlot()) {
 				case 2, 3, 4:
 				default:
 					bot.switchToGun();
-					vc = eyel.getDirection();
+					dir = arp.getNextLoc();
+					vc = dir == null ? eyel.getDirection() : dir.subtract(loc).toVector().setY(0d);
 					if ((tick & 7) == 0) {
 						bot.tryBuy();
 					}
@@ -244,7 +247,8 @@ public class BotGoal implements Goal<Mob> {
 					//nades, knif
 					if (ItemUtils.isBlank(bot.item(EquipmentSlot.HAND), false))
 						bot.switchToGun();
-					vc = eyel.getDirection();
+					dir = arp.getNextLoc();
+					vc = dir == null ? eyel.getDirection() : dir.subtract(loc).toVector().setY(0d);
 					if ((tick & 7) == 0) {
 						bot.tryBuy();
 					}
@@ -257,7 +261,9 @@ public class BotGoal implements Goal<Mob> {
 						Sound.ENTITY_GENERIC_EAT : Sound.BLOCK_TRIPWIRE_CLICK_ON, 2f, 1f);
 						BotManager.sendWrldPckts(VM.getNmsServer().toNMS(bot.w), new PacketPlayOutAnimation(bot, 0));
 					}
-					vc = tLoc == null ? eyel.getDirection() : new Vector(tLoc.x - eyel.getX(), tLoc.y - eyel.getY(), tLoc.z - eyel.getZ());
+					dir = arp.getNextLoc();
+					vc = tLoc == null ? (dir == null ? eyel.getDirection() : dir.subtract(loc).toVector().setY(0d)) 
+						: new Vector(tLoc.x - eyel.getX(), tLoc.y - eyel.getY(), tLoc.z - eyel.getZ());
 					break;
 				}
 				
@@ -408,31 +414,16 @@ public class BotGoal implements Goal<Mob> {
 		
 		bot.pickupIts(loc);
 		
-		bot.move(loc, vc, true);
-
-		if (bot.tryJump(loc, rplc, vc)) {
-			return;
-		}
-		
 		vc.setY(0d);
 		if (rplc.isInWater()) {
 			rplc.setVelocity(rplc.getVelocity().setY(0.1d).add(vc.multiply(0.05d)));
 		} else if (tLoc != null) {
-			if (rplc.isOnGround()) {
-				
-				if (act == DIRECT) {
-					pth.moveTo(tLoc.getCenterLoc(bot.w), 1.25d);
-					return;
-				}
-
-//				pth.moveTo(tLoc.getCenterLoc(bot.w), 1.4d);
-				arp.tickGo(1.4d);
-
-			} else {
-				if (pth.hasPath()) pth.stopPathfinding();
-				rplc.setVelocity(rplc.getVelocity().add(vc.multiply(0.05d)));
-			}
+			if (act == DIRECT) {
+				pth.moveTo(tLoc.getCenterLoc(bot.w), 1.25d);
+			} else arp.tickGo(1.4d);
 		}
+		
+		bot.move(loc, vc, true);
     }
     
     private void changeTLoc(final XYZ nlc, final ActType at) {

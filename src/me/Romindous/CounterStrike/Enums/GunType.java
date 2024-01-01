@@ -76,64 +76,37 @@ public enum GunType {
 		if (it == null) {
 			return null;
 		}
-		switch (it.getType()) {
-			case NETHERITE_AXE:
-				return AWP;
-			case NETHERITE_HOE:
-				return SCAR;
-			case IRON_HOE:
-				return AK47;
-			case IRON_AXE:
-				return M4;
-			case IRON_PICKAXE:
-				return NGV;
-			case GOLDEN_HOE:
-				return P90;
-			case GOLDEN_AXE:
-				return MP5;
-			case WOODEN_HOE:
-				return SG13;
-			case WOODEN_AXE:
-				return NOVA;
-			case STONE_HOE:
-				return TP7;
-			case STONE_AXE:
-				return USP;
-			case STONE_PICKAXE:
-				return DGL;
-			default:
-				return null;
-		}
+        return switch (it.getType()) {
+            case NETHERITE_AXE -> AWP;
+            case NETHERITE_HOE -> SCAR;
+            case IRON_HOE -> AK47;
+            case IRON_AXE -> M4;
+            case IRON_PICKAXE -> NGV;
+            case GOLDEN_HOE -> P90;
+            case GOLDEN_AXE -> MP5;
+            case WOODEN_HOE -> SG13;
+            case WOODEN_AXE -> NOVA;
+            case STONE_HOE -> TP7;
+            case STONE_AXE -> USP;
+            case STONE_PICKAXE -> DGL;
+            default -> null;
+        };
 	}
 
 	public Material getMat() {
-		switch (this) {
-		case AWP:
-			return Material.NETHERITE_AXE;
-		case SCAR:
-			return Material.NETHERITE_HOE;
-		case AK47:
-			return Material.IRON_HOE;
-		case M4:
-			return Material.IRON_AXE;
-		case NGV:
-			return Material.IRON_PICKAXE;
-		case P90:
-			return Material.GOLDEN_HOE;
-		case MP5:
-			return Material.GOLDEN_AXE;
-		case SG13:
-			return Material.WOODEN_HOE;
-		case NOVA:
-			return Material.WOODEN_AXE;
-		case TP7:
-			return Material.STONE_HOE;
-		case USP:
-			return Material.STONE_AXE;
-		case DGL:
-			return Material.STONE_PICKAXE;
-		default:
-			return Material.AIR;
-		}
+        return switch (this) {
+            case AWP -> Material.NETHERITE_AXE;
+            case SCAR -> Material.NETHERITE_HOE;
+            case AK47 -> Material.IRON_HOE;
+            case M4 -> Material.IRON_AXE;
+            case NGV -> Material.IRON_PICKAXE;
+            case P90 -> Material.GOLDEN_HOE;
+            case MP5 -> Material.GOLDEN_AXE;
+            case SG13 -> Material.WOODEN_HOE;
+            case NOVA -> Material.WOODEN_AXE;
+            case TP7 -> Material.STONE_HOE;
+            case USP -> Material.STONE_AXE;
+            case DGL -> Material.STONE_PICKAXE;
+        };
 	}
 }

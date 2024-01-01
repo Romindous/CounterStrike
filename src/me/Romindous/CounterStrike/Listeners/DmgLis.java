@@ -51,24 +51,20 @@ public class DmgLis implements Listener {
 	public void onDmg(final EntityDamageEvent e) {
 		switch (e.getCause()) {
 		case ENTITY_ATTACK:
-			if (e instanceof EntityDamageByEntityEvent) {
-				final EntityDamageByEntityEvent ee = (EntityDamageByEntityEvent) e;
-				if (e.getEntity() instanceof LivingEntity && ee.getDamager() instanceof LivingEntity && !e.getEntity().isInvulnerable()) {
-					final LivingEntity ent = (LivingEntity) e.getEntity();
-					final LivingEntity dmgr = (LivingEntity) ee.getDamager();
-					final Shooter sh = Shooter.getShooter(dmgr, false);
+			if (e instanceof final EntityDamageByEntityEvent ee) {
+                if (e.getEntity() instanceof final LivingEntity ent && ee.getDamager() instanceof final LivingEntity dmgr && !e.getEntity().isInvulnerable()) {
+                    final Shooter sh = Shooter.getShooter(dmgr, false);
 					if (sh != null) {
 						//if player shoots living
 						if (sh.arena() == null) {
 							if (!(ee instanceof EntityShootAtEntityEvent) && dmgr.getType() == EntityType.PLAYER) {
 								e.setCancelled(((HumanEntity) dmgr).getGameMode() != GameMode.CREATIVE);
-								Main.dmgInd((Player) dmgr, ent.getEyeLocation(), "§6" + String.valueOf((ent.getEquipment().getChestplate() == null ? 4 : 2) * 5));
+								Main.dmgInd((Player) dmgr, ent.getEyeLocation(), "§6" + (ent.getEquipment().getChestplate() == null ? 4 : 2) * 5);
 							}
 						} else {
-							if (ee instanceof EntityShootAtEntityEvent) {
+							if (ee instanceof final EntityShootAtEntityEvent eee) {
 								//need to deal damage
-								final EntityShootAtEntityEvent eee = (EntityShootAtEntityEvent) ee;
-								final GunType gt = GunType.getGnTp(sh.item(EquipmentSlot.HAND));
+                                final GunType gt = GunType.getGnTp(sh.item(EquipmentSlot.HAND));
 								if (gt == null) return;
 								if (eee.isCritical() && dmgr.getType() == EntityType.PLAYER) {
 									ApiOstrov.addStat((Player) dmgr, Stat.CS_hshot);
@@ -89,9 +85,9 @@ public class DmgLis implements Listener {
 									if (ent.getNoDamageTicks() == 0) {
 										e.setDamage(ent.getEquipment().getChestplate() == null ? 3d : 2d);
 										prcDmg(ent, Shooter.getShooter(ent, false), sh, e.getDamage(), 
-										"§f\u9298", 5, (short) GunType.knfRwd, false, false, false, false, false);
+										"§f\u9298", 5, GunType.knfRwd, false, false, false, false, false);
 										if (dmgr.getType() == EntityType.PLAYER) {
-											Main.dmgInd((Player) dmgr, ent.getEyeLocation(), "§6" + String.valueOf((int) e.getDamage() * 5));
+											Main.dmgInd((Player) dmgr, ent.getEyeLocation(), "§6" + (int) e.getDamage() * 5);
 										}
 									}
 									break;
@@ -121,9 +117,8 @@ public class DmgLis implements Listener {
 		case FIRE:
 			e.setDamage(2d);
 			e.setCancelled(true);
-			if (e.getEntity() instanceof LivingEntity && !e.getEntity().isInvulnerable()) {
-				final LivingEntity ent = (LivingEntity) e.getEntity();
-				final Shooter sh = Shooter.getShooter(ent, false);
+			if (e.getEntity() instanceof final LivingEntity ent && !e.getEntity().isInvulnerable()) {
+                final Shooter sh = Shooter.getShooter(ent, false);
 				if (sh != null) {
 					if (sh.arena() != null && sh.arena().gst != GameState.BUYTIME) {
 						prcDmg(ent, sh, null, sh instanceof PlShooter ? e.getDamage() : e.getDamage() * 0.1d, "§f\u9295", 5);
@@ -177,13 +172,15 @@ public class DmgLis implements Listener {
 				if (tgtsh.arena() != null) {
 					if (damager == null) {//damager is not player
 						target.setHealth(health);
-						target.playEffect(EntityEffect.THORNS_HURT);
 						target.setNoDamageTicks(ndts);
-						BotManager.sendWrldPckts(VM.getNmsServer().toNMS(target.getWorld()), 
-							new ClientboundHurtAnimationPacket(VM.getNmsServer().toNMS(target)));
 						if (tgtsh instanceof BtShooter) {
 							((BtShooter) tgtsh).hurt(target);
-						} else ((Player) target).playSound(target, Sound.BLOCK_MUDDY_MANGROVE_ROOTS_FALL, 2f, 2f);
+						} else {
+							((Player) target).playSound(target, Sound.BLOCK_MUDDY_MANGROVE_ROOTS_FALL, 2f, 2f);
+							BotManager.sendWrldPckts(VM.getNmsServer().toNMS(target.getWorld()), 
+								new ClientboundHurtAnimationPacket(VM.getNmsServer().toNMS(target)));
+							target.getWorld().playSound(target.getLocation(), Sound.ENTITY_GENERIC_HURT, 1f, 1.2f);
+						}
 					} else {//damager is player
 						switch (tgtsh.arena().gst) {
 						case ROUND:
@@ -192,13 +189,15 @@ public class DmgLis implements Listener {
 							}
 						case BEGINING:
 							target.setHealth(health);
-							target.playEffect(EntityEffect.THORNS_HURT);
 							target.setNoDamageTicks(ndts);
-							BotManager.sendWrldPckts(VM.getNmsServer().toNMS(target.getWorld()), 
-								new ClientboundHurtAnimationPacket(VM.getNmsServer().toNMS(target)));
 							if (tgtsh instanceof BtShooter) {
 								((BtShooter) tgtsh).hurt(target);
-							} else ((Player) target).playSound(target, Sound.BLOCK_MUDDY_MANGROVE_ROOTS_FALL, 2f, 2f);
+							} else {
+								((Player) target).playSound(target, Sound.BLOCK_MUDDY_MANGROVE_ROOTS_FALL, 2f, 2f);
+								BotManager.sendWrldPckts(VM.getNmsServer().toNMS(target.getWorld()), 
+									new ClientboundHurtAnimationPacket(VM.getNmsServer().toNMS(target)));
+								target.getWorld().playSound(target.getLocation(), Sound.ENTITY_GENERIC_HURT, 1f, 1.2f);
+							}
 							break;
 						default:
 							break;
@@ -277,7 +276,7 @@ public class DmgLis implements Listener {
 					}
 				}
 			}
-			return dmg - health;
+			return -health;
 		}
 	}
    

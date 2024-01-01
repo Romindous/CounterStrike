@@ -64,7 +64,7 @@ public enum TileSet {
 	public final String[] schems;
 	public final int height;		//height of the tile placement
 	
-	private TileSet(final TileType org, final TileType[][] frm, final boolean rndmRtt, final boolean ignrAir, final int dY, final String... schms) {
+	TileSet(final TileType org, final TileType[][] frm, final boolean rndmRtt, final boolean ignrAir, final int dY, final String... schms) {
 		this.rotateRnd = rndmRtt;
 		this.ignrAir = ignrAir;
 		this.schems = schms;

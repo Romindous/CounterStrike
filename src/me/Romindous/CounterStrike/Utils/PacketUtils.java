@@ -242,8 +242,8 @@ public class PacketUtils {
   
  	public static void blkCrckClnt(final WXYZ bl) {
  		final PacketPlayOutBlockBreakAnimation pb = new PacketPlayOutBlockBreakAnimation((id == 1000 ? (id = 0) : id++) + 10000, new BlockPosition(bl.x, bl.y, bl.z), getNxtStg(bl));
- 		for (final EntityHuman e : getNMSWrld(bl.w).v()) {
- 			((EntityPlayer) e).c.a(pb);
+ 		for (final EntityPlayer e : getNMSWrld(bl.w).v()) {
+ 			e.c.a(pb);
  		}
  	}
   
