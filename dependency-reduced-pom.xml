@@ -53,7 +53,7 @@
     <dependency>
       <groupId>io.papermc.paper</groupId>
       <artifactId>paper-api</artifactId>
-      <version>1.20.1-R0.1-SNAPSHOT</version>
+      <version>1.20.4-R0.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -79,14 +79,14 @@
       <artifactId>ru.komiss77</artifactId>
       <version>1.0</version>
       <scope>system</scope>
-      <systemPath>C:/Users/Romindous/Downloads/new_test/plugins/Ostrov-2.0.jar</systemPath>
+      <systemPath>C:/Users/Romindous/Downloads/new_test/plugins/Ostrov.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>org.bukkit</groupId>
       <artifactId>craftbukkit</artifactId>
-      <version>1.20.1-R0.1-SNAPSHOT</version>
+      <version>1.20.4-R0.1-SNAPSHOT</version>
       <scope>system</scope>
-      <systemPath>C:/Users/Romindous/Downloads/new_test/versions/1.20.1/paper-1.20.1.jar</systemPath>
+      <systemPath>C:/Users/Romindous/Downloads/new_test/versions/1.20.4/paper-1.20.4.jar</systemPath>
     </dependency>
   </dependencies>
   <properties>

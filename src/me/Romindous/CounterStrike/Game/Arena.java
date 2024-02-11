@@ -1,49 +1,53 @@
 package me.Romindous.CounterStrike.Game;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
-
-import org.bukkit.Bukkit;
-import org.bukkit.Difficulty;
-import org.bukkit.GameRule;
-import org.bukkit.Location;
-import org.bukkit.World;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.scheduler.BukkitTask;
-
+import me.Romindous.CounterStrike.Enums.GameState;
+import me.Romindous.CounterStrike.Enums.GameType;
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Menus.BotMenu;
-import me.Romindous.CounterStrike.Objects.Shooter;
-import me.Romindous.CounterStrike.Objects.Game.GameState;
-import me.Romindous.CounterStrike.Objects.Game.GameType;
+import me.Romindous.CounterStrike.Objects.Game.BtShooter;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Game.TripWire;
 import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
+import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
 import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
 import me.Romindous.CounterStrike.Utils.Inventories;
 import me.Romindous.CounterStrike.Utils.PacketUtils;
-import net.minecraft.EnumChatFormat;
+import org.bukkit.*;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.scheduler.BukkitTask;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.Ostrov;
+import ru.komiss77.modules.bots.BotManager;
+import ru.komiss77.modules.player.PM;
 import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.notes.Slow;
 import ru.komiss77.utils.TCUtils;
 import ru.komiss77.utils.inventory.SmartInventory;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
+
 public class Arena {
+
+	public final static HashMap<XYZ, TripWire> tblks = new HashMap<>();
+	public final static String T_AMT = "tamt", CT_AMT = "ctamt", LIMIT = "rem",
+		MONEY = "mn", STAGE = "gst", SCORE = "scr", RED_IND = "ind";
+
+	protected static int botID = 0;
 	
 	public final HashMap<Shooter, Team> shtrs = new HashMap<>();
 	public final HashSet<BrknBlck> brkn = new HashSet<>();
-	public final LinkedList<TripWire> tws = new LinkedList<>();
+	public final HashSet<TripWire> tws = new HashSet<>();
 	public final String name;
 	public final World w;
 	public final byte min;
@@ -53,10 +57,11 @@ public class Arena {
 	protected final XYZ[] CTSawns;
 	protected final XYZ[] spots;
 	public final SmartInventory botInv;
+	public final SmartInventory teamInv;
 	public final boolean rnd;
 	public boolean bots;
 	protected BukkitTask tsk;
-	protected short tm;
+	protected short time;
 	public GameState gst;
 	
 	public Arena(final String name, final byte min, final byte max, 
@@ -78,18 +83,16 @@ public class Arena {
 		this.rnd = rnd;
 		this.min = min;
 		this.max = max;
-		this.tm = 0;
+		this.time = 0;
 		
 		botInv = bots ? SmartInventory.builder().id(name + " Bots").title("         §чИграть с Ботами?")
-    			.provider(new BotMenu(this)).size(1, 9).build() : null;
+			.provider(new BotMenu(this)).size(1, 9).build() : null;
+		teamInv = SmartInventory.builder().id(name + " Team").title("         §eВыбор Комманды")
+			.provider(new BotMenu(this)).type(InventoryType.HOPPER).build();
 		this.bots = botInv != null;
 		Ostrov.async(() -> ApiOstrov.shuffle(spots));
 	}
 
-	protected Arena getArena() {
-		return this;
-	}
-	
 //	public static Arena getPlArena(final Shooter pl) {
 //		for (final Arena ar : Main.actvarns) {
 //			if (ar.shtrs.keySet().contains(pl)) {
@@ -104,51 +107,55 @@ public class Arena {
 	
 	public enum Team {
 		
-		Ts(EnumChatFormat.e, "§4\u9265"),
-		CTs(EnumChatFormat.d, "§3\u9264"),
-		NA(EnumChatFormat.h, "");
+		Ts("§4", "\u9265", "tfight", "tfinish"),
+		CTs("§3", "\u9264", "ctfight", "ctfinish"),
+		SPEC("§7", "§8(Зритель)", "sfight", "sfinish");
 		
 		public final String icn;
-		public final EnumChatFormat clr;
+		public final String goSnd;
+		public final String finSnd;
+		public final String clr;
 		
-		Team(final EnumChatFormat clr, final String icn) {
+		Team(final String clr, final String icn, final String goSnd, final String finSnd) {
 			this.clr = clr;
-			this.icn = icn;
+			this.icn = clr + icn;
+			this.goSnd = goSnd;
+			this.finSnd = finSnd;
 		}
 		
 		public Team getOpst() {
             return switch (this) {
                 case Ts -> CTs;
                 case CTs -> Ts;
-                case NA -> NA;
+                case SPEC -> SPEC;
             };
         }
 	}
 
-	public static void end(Arena ar) {
-		ar.gst = GameState.WAITING;
-		ApiOstrov.sendArenaData(ar.name, ru.komiss77.enums.GameState.ОЖИДАНИЕ, "§7[§5CS§7]", "§8Не Выбрано", " ", "§7Игроков: §50§7/§5" + ar.min, "", 0);
-		Main.actvarns.remove(ar.name);
-		for (final Shooter sh : ar.shtrs.keySet()) {
+	public void end() {
+		gst = GameState.WAITING;
+		ApiOstrov.sendArenaData(name, ru.komiss77.enums.GameState.ОЖИДАНИЕ, "§7[§5CS§7]",
+			"§8Не Выбрано", " ", "§7Игроков: §50§7/§5" + min, "", 0);
+		Main.actvarns.remove(name);
+		for (final Shooter sh : shtrs.keySet()) {
 			if (sh instanceof PlShooter) {
 				Main.lobbyPl(sh.getPlayer());
 			}
 		}
-		ar.shtrs.clear();
-		Inventories.updtGm(ar);
-		for (final Entity e : ar.w.getEntities()) {
+		shtrs.clear();
+		Inventories.updtGm(this);
+		for (final Entity e : w.getEntities()) {
 			if (e.getType() != EntityType.PLAYER) {
 				e.remove();
 			}
 		}
 		
-		if (ar.rnd) {
-			Bukkit.getConsoleSender().sendMessage("removeing arena");
-			Main.mapBlds.remove(ar.name).remove(ar.w, 3);
+		if (rnd) {
+			Bukkit.getConsoleSender().sendMessage("removing arena");
+			Main.mapBlds.remove(name).remove(w, 3);
 		}
 		Ostrov.async(() -> Inventories.fillGmInv());
-		ar = null;
-	}
+    }
 
 	public boolean addPl(final Shooter sh) {
 		final Player p = sh.getPlayer();
@@ -178,8 +185,8 @@ public class Arena {
 		final Player p = sh.getPlayer();
 		if (p == null) return;
 		SkinQuest.tryCompleteQuest(sh, Quest.ЛАТУНЬ, sh.money());
-		PacketUtils.sendAcBr(p, (n < 0 ? "§5" : "§d+") + n + " §6⛃", 20);
-		Main.chgSbdTm(p.getScoreboard(), "mn", "", "§d" + sh.money() + " §6⛃");
+		PacketUtils.sendAcBr(p, (n < 0 ? "§5" : "§d+") + n + " §6⛃");
+		PM.getOplayer(p).score.getSideBar().update(MONEY, "§7Монет: §d" + sh.money() + " §6⛃");
 	}
 
 	public void addKll(final Shooter sh) {
@@ -192,7 +199,7 @@ public class Arena {
 	
 	public String getShtrNm(final Shooter sh) {
 		final Team tm = sh == null ? null : shtrs.get(sh);
-		return (tm == null ? Team.NA.clr : tm.clr) + sh.name();
+		return (tm == null ? Team.SPEC.clr : tm.clr) + sh.name();
 	}
 
 	public boolean isSmTm(final Shooter org, final Shooter cmp) {
@@ -206,48 +213,160 @@ public class Arena {
 		for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
 			if (e.getValue() == tm) {
 				if (alv && e.getKey().isDead()) continue;
-				if (e.getKey() instanceof PlShooter || bots) {
-					n++;
-				} 
+				if (e.getKey() instanceof PlShooter || bots) n++;
 			}
 		}
 		return n;
 	}
+
+	public int getPlaying(final boolean bots, final boolean alv) {
+		int n = 0;
+		for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
+			if (e.getValue() == Team.SPEC) switch (gst) {
+					case WAITING, BEGINING: n++;
+					default: continue;
+                }
+			if (alv && e.getKey().isDead()) continue;
+			if (e.getKey() instanceof PlShooter || bots) n++;
+		}
+		return n;
+	}
 	
-	@Slow(priority = 3)
+	@Slow(priority = 2)
 	public boolean canOpnShp(final Location loc, final Team tm) {
 		switch (tm) {
 		case Ts:
 			for (final XYZ b : TSpawns) {
-				if (Math.abs(loc.getBlockX() - b.x) < 3 && Math.abs(loc.getBlockZ() - b.z) < 3) {
-					return true;
-				}
+				if (b.distAbs(loc) < 5) return true;
 			}
 			break;
 		case CTs:
 			for (final XYZ b : CTSawns) {
-				if (Math.abs(loc.getBlockX() - b.x) < 3 && Math.abs(loc.getBlockZ() - b.z) < 3) {
-					return true;
-				}
+				if (b.distAbs(loc) < 5) return true;
 			}
 			break;
-		case NA:
+		case SPEC:
 			break;
 		}
 		return false;
 	}
 
-	public void chngTm(final Shooter sh, final Team nv) {
-    }
+	public boolean chngTm(final Shooter sh, final Team nv) {
+		final int nta = getTmAmt(nv, true, true), ota = getTmAmt(nv.getOpst(), true, true);
+		final Team ptm = shtrs.get(sh);
+		if (ptm != null && ptm == nv) {
+			final Player p = sh.getPlayer();
+			if (p != null) {
+				p.sendMessage(Main.prf() + "§cТы уже в этой комманде!");
+			}
+			return false;
+		}
+
+		if ((nv != Team.SPEC && nv.getOpst() == ptm && nta >= ota) || nta > ota) {
+			final Player p = sh.getPlayer();
+			if (p != null) {
+				p.sendMessage(Main.prf() + "§cВ этой комманде слишком много игроков!");
+			}
+			return false;
+		}
+
+		shtrs.put(sh, nv);
+		for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
+			final Player p = e.getKey().getPlayer();
+			if (p != null) {
+				PM.getOplayer(p).score.getSideBar()
+					.update(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
+						+ (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."))
+					.update(CT_AMT, Team.CTs.icn + " §7: " + getTmAmt(Team.CTs, true, true)
+						+ (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
+			}
+		}
+		switch (gst) {
+			case WAITING, BEGINING, FINISH:
+				sh.setTabTag("§7<§d" + name + "§7> ", " §7[-.-]", nv.clr);
+				break;
+			case BUYTIME, ROUND, ENDRND:
+				sh.setTabTag(shtrs.get(sh).icn + " ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", nv.clr);
+				break;
+		}
+		return true;
+	}
+
+	public Team getMinTm() {
+		final int tn = getTmAmt(Team.Ts, true, false);
+		final int ctn = getTmAmt(Team.CTs, true, false);
+		return tn < ctn ? Team.Ts : (tn == ctn ? (Main.srnd.nextBoolean() ? Team.Ts : Team.CTs) : Team.CTs);
+	}
+
+	public void blncTms() {
+		for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
+			if (e.getValue() == Team.SPEC) {
+				e.setValue(getMinTm());
+			}
+		}
+
+		if (botInv != null && bots) {
+			int tmMx = max >> 1;
+
+			int tPls = 0, ctPls = 0;
+			final Iterator<Entry<Shooter, Team>> it = shtrs.entrySet().iterator();
+			while (it.hasNext()) {
+				final Entry<Shooter, Team> en = it.next();
+				switch (en.getValue()) {
+					case Ts:
+						if (++tPls > tmMx) {
+							if (en.getKey() instanceof BtShooter) {
+								it.remove();
+								((BtShooter) en.getKey()).remove();
+							} else {
+								tmMx = tPls;
+							}
+						}
+						break;
+					case CTs:
+						if (++ctPls > tmMx) {
+							if (en.getKey() instanceof BtShooter) {
+								it.remove();
+								((BtShooter) en.getKey()).remove();
+							} else {
+								tmMx = ctPls;
+							}
+						}
+						break;
+					case SPEC:
+						break;
+				}
+			}
+
+			for (int i = tPls; i < tmMx; i++) {
+				shtrs.put(BotManager.createBot("Bot-v" + botID++, BtShooter.class, nm -> new BtShooter(nm, this)), Team.Ts);
+			}
+
+			for (int i = ctPls; i < tmMx; i++) {
+				shtrs.put(BotManager.createBot("Bot-v" + botID++, BtShooter.class, nm -> new BtShooter(nm, this)), Team.CTs);
+			}
+		}
+
+		for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
+			final Player p = e.getKey().getPlayer();
+			if (p != null) {
+				PM.getOplayer(p).score.getSideBar()
+					.update(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
+						+ (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."))
+					.update(CT_AMT, Team.CTs.icn + " §7: " + getTmAmt(Team.CTs, true, true)
+						+ (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
+			}
+		}
+	}
 	
 	public GameType getType() {
-		return GameType.DEFUSAL;
+		return null;
 	}
 	
 	@Slow(priority = 2)
 	public XYZ getClosestPos(final XYZ loc, final int dst) {
 		final XYZ lc = loc.clone().add(Main.srnd.nextBoolean() ? dst : -dst, 
-			Main.srnd.nextBoolean() ? dst : -dst, Main.srnd.nextBoolean() ? dst : -dst);
+			0, Main.srnd.nextBoolean() ? dst : -dst);
 		int bbi = 0;
 		int dd = Integer.MAX_VALUE;
 		for (int i = spots.length - 1; i >= 0; i--) {
@@ -264,12 +383,11 @@ public class Arena {
 
 	public static String getTime(final short t, final String cc) {
 		return cc + (t / 60 > 9 ? t / 60 : "0" + (t / 60))
-			+ "§7:"
-			+ cc + (t % 60 > 9 ? t % 60 : "0" + (t % 60));
+			+ "§7:" + cc + (t % 60 > 9 ? t % 60 : "0" + (t % 60));
 	}
 
 	public short getTime() {
-		return tm;
+		return time;
 	}
 	
 	@Slow(priority = 1)

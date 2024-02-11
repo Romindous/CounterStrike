@@ -1,9 +1,8 @@
 package me.Romindous.CounterStrike.Enums;
 
-import java.util.EnumSet;
-import java.util.Iterator;
-
 import org.bukkit.Material;
+
+import java.util.EnumSet;
 
 public enum TileType {
 	
@@ -24,7 +23,7 @@ public enum TileType {
 	
 	public static final EnumSet<TileType> gns = getGens(EnumSet.allOf(TileType.class));
 	
-	private TileType(final boolean generate, final Material floor, final int... noise) {
+	TileType(final boolean generate, final Material floor, final int... noise) {
 		this.noise = noise;
 		this.floorMat = floor;
 		this.generate = generate;
@@ -37,20 +36,15 @@ public enum TileType {
 		if (len != scd.length) {
 			return false;
 		}
-		//Bukkit.getConsoleSender().sendMessage("comparing t-" + Arrays.toString(ns) + " to t-" + Arrays.toString(tt.ns) + " ");
 		int difference = 0;
 		for (int i = 0; i < len; i++) {
 			difference += Math.abs(fst[i] - scd[i]);
 		}
-		//Bukkit.getConsoleSender().sendMessage("df-" + df + " dst-" + dst);
 		return difference <= dst;
 	}
 	
 	private static EnumSet<TileType> getGens(final EnumSet<TileType> all) {
-		final Iterator<TileType> it = all.iterator();
-		while (it.hasNext()) {
-			if (!it.next().generate) it.remove();
-		}
+        all.removeIf(tileType -> !tileType.generate);
 		return all;
 	}
 

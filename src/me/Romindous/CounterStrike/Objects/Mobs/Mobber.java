@@ -1,7 +1,8 @@
 package me.Romindous.CounterStrike.Objects.Mobs;
 
-import java.lang.ref.WeakReference;
-
+import me.Romindous.CounterStrike.Game.Invasion;
+import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.Shooter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -15,15 +16,13 @@ import org.bukkit.entity.Display.Billboard;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.PiglinBrute;
-import org.bukkit.scheduler.BukkitRunnable;
-
-import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Game.Invasion;
-import me.Romindous.CounterStrike.Objects.Game.GameState;
+import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.modules.world.XYZ;
-import ru.komiss77.version.VM;
+import ru.komiss77.version.Nms;
 
-public class Mobber extends BukkitRunnable {
+import java.lang.ref.WeakReference;
+
+public class Mobber extends WXYZ {
 	
 	public static final BlockData spn = Material
 		.SPAWNER.createBlockData();
@@ -33,12 +32,13 @@ public class Mobber extends BukkitRunnable {
 	
 	public final BlockDisplay ind;
 	private final Invasion ar;
+	public Shooter defusing;
 	public EntityType et;
   
 	public Mobber(final XYZ loc, final Invasion ar) {
-		this.ar = ar;
-		final Location lc = new Location(ar.w, loc.x, loc.y, loc.z);
-		ind = ar.w.spawn(lc, BlockDisplay.class);
+        super(ar.w, loc);
+        this.ar = ar;
+		ind = ar.w.spawn(new Location(ar.w, loc.x, loc.y, loc.z), BlockDisplay.class);
 		ind.setGravity(false);
 		ind.setViewRange(100f);
 //		ind.setDisplayWidth(1.2f);
@@ -47,26 +47,15 @@ public class Mobber extends BukkitRunnable {
 		setSpwn();
 		et = EntityType.ZOMBIE_VILLAGER;
 		
-		final Block b = lc.getBlock();
+		final Block b = getBlock();
 		b.setType(Material.SPAWNER, false);
 		
 		final CreatureSpawner cs = (CreatureSpawner) b.getState();
 		cs.setSpawnedType(et);
 		cs.setSpawnCount(0);
 		cs.update();
-		
-//		for (final Player p : ar.w.getPlayers()) {
-//			p.sendBlockChange(lc, stnd);
-//		}
-		ar.mbbrs.put(loc, this);
-	}
 
-	@Override
-	public void run() {
-		if (ind.isGlowing() && ind.getBlock().getMaterial() == Material.SPAWNER && 
-			Main.srnd.nextInt(ar.cnt) == 0 && ar != null && ar.gst == GameState.ROUND) {
-			spwnMb();
-		}
+		ar.mbbrs.put(this.getSLoc(), this);
 	}
 
 	public void spwnMb() {
@@ -77,7 +66,7 @@ public class Mobber extends BukkitRunnable {
             default -> 8f;
         };
 
-        final Location loc = ind.getLocation();
+        final Location loc = getCenterLoc();
 		final Mob mb = (Mob) ar.w.spawnEntity(Main.getNrLoc(loc), et, false);
 		mb.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(getMbSpd(et));
 		mb.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(hlth);
@@ -85,7 +74,7 @@ public class Mobber extends BukkitRunnable {
         //Bukkit.getMobGoals().removeAllGoals(mb);
         Bukkit.getMobGoals().removeAllGoals(mb);
         Bukkit.getMobGoals().addGoal(mb, 0, new GoalGoToSite(mb, ar));
-		ar.TMbs.put(mb.getEntityId(), new WeakReference<Mob>(mb));
+		ar.TMbs.put(mb.getEntityId(), new WeakReference<>(mb));
 		ar.w.spawnParticle(Particle.SOUL, loc, 40, 0.6D, 0.6D, 0.6D, 0.0D, null, false);
 		
 		if (mb instanceof PiglinBrute) {
@@ -115,13 +104,18 @@ public class Mobber extends BukkitRunnable {
 		return ind.getBlock().getMaterial();
 	}
 
+	public boolean isAlive() {
+		return ind.isGlowing();
+	}
+
 	public void setSpwn() {
 		ind.setBlock(spn);
-		VM.getNmsEntitygroup().colorGlow(ind, '4', false);
+		Nms.colorGlow(ind, '4', false);
 	}
 
 	public void setDef() {
 		ind.setBlock(dfs);
 		ind.setGlowing(false);
+		defusing = null;
 	}
 }

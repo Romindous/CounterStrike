@@ -1,35 +1,19 @@
 package me.Romindous.CounterStrike.Objects.Game;
 
-import org.bukkit.Color;
-import org.bukkit.FireworkEffect;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Particle;
-import org.bukkit.Sound;
-import org.bukkit.World;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Firework;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Mob;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Snowball;
-import org.bukkit.entity.ThrowableProjectile;
+import me.Romindous.CounterStrike.Enums.GunType;
+import me.Romindous.CounterStrike.Enums.NadeType;
+import me.Romindous.CounterStrike.Listeners.DmgLis;
+import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.Shooter;
+import org.bukkit.*;
+import org.bukkit.entity.*;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
-
-import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Enums.GunType;
-import me.Romindous.CounterStrike.Enums.NadeType;
-import me.Romindous.CounterStrike.Listeners.DmgLis;
-import me.Romindous.CounterStrike.Objects.Shooter;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.utils.LocationUtil;
-import ru.komiss77.version.IServer;
-import ru.komiss77.version.VM;
+import ru.komiss77.version.Nms;
 
 public class Nade {
 	
@@ -48,7 +32,6 @@ public class Nade {
 		final int X;
 		final int Y;
 		final int Z;
-		final IServer sv;
 		switch (nt) {
 			case FRAG:
 				w.spawnParticle(Particle.EXPLOSION_HUGE, loc, 1, 0d, 0d, 0d);
@@ -75,7 +58,6 @@ public class Nade {
 				X = loc.getBlockX();
 				Y = loc.getBlockY();
 				Z = loc.getBlockZ();
-				sv = VM.getNmsServer();
 				w.playSound(loc, Sound.BLOCK_GLASS_BREAK, 2f, 0.8f);
 				w.playSound(loc, Sound.ENTITY_BLAZE_SHOOT, 0.5F, 0.6F);
 				new BukkitRunnable() {int r = 0;
@@ -87,7 +69,7 @@ public class Nade {
 								for (int z = Z - r; z <= Z + r; z++) {
 									int n = (X - x) * (X - x) + (Y - y) * (Y - y) + (Z - z) * (Z - z);
 									if ((r - 1) * (r - 1) <= n && n <= r * r) {
-										if (sv.getFastMat(w, x, y, z).isAir() && sv.getFastMat(w, x, y - 1, z).isCollidable()) {
+										if (Nms.getFastMat(w, x, y, z).isAir() && Nms.getFastMat(w, x, y - 1, z).isCollidable()) {
 											final WXYZ bl = new WXYZ(w, x, y, z, nt.time << 1);
 											bl.getBlock().setType(Material.FIRE, false);
 											Main.ndBlks.remove(bl);
@@ -104,7 +86,6 @@ public class Nade {
 				X = loc.getBlockX();
 				Y = loc.getBlockY();
 				Z = loc.getBlockZ();
-				sv = VM.getNmsServer();
 				w.playSound(loc, Sound.ENTITY_GENERIC_EXTINGUISH_FIRE, 0.5F, 0.4F);
 				new BukkitRunnable() {int r = 0;
 					public void run() {
@@ -114,7 +95,7 @@ public class Nade {
 								for (int z = Z - r; z <= Z + r; z++) {
 									int n = (X - x) * (X - x) + (Y - y) * (Y - y) + (Z - z) * (Z - z);
 									if ((r - 1) * (r - 1) <= n && n <= r * r) {
-										switch (sv.getFastMat(w, x, y, z)) {
+										switch (Nms.getFastMat(w, x, y, z)) {
 										case FIRE, AIR, CAVE_AIR:
 											final WXYZ bl = new WXYZ(w, x, y, z, nt.time << 2);
 											bl.getBlock().setType(Material.POWDER_SNOW, false);

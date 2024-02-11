@@ -1,71 +1,25 @@
 package me.Romindous.CounterStrike.Utils;
 
-import static me.Romindous.CounterStrike.Enums.GunType.AK47;
-import static me.Romindous.CounterStrike.Enums.GunType.AWP;
-import static me.Romindous.CounterStrike.Enums.GunType.DGL;
-import static me.Romindous.CounterStrike.Enums.GunType.M4;
-import static me.Romindous.CounterStrike.Enums.GunType.MP5;
-import static me.Romindous.CounterStrike.Enums.GunType.NGV;
-import static me.Romindous.CounterStrike.Enums.GunType.NOVA;
-import static me.Romindous.CounterStrike.Enums.GunType.P90;
-import static me.Romindous.CounterStrike.Enums.GunType.SCAR;
-import static me.Romindous.CounterStrike.Enums.GunType.SG13;
-import static me.Romindous.CounterStrike.Enums.GunType.TP7;
-import static me.Romindous.CounterStrike.Enums.GunType.USP;
-import static me.Romindous.CounterStrike.Enums.NadeType.DECOY;
-import static me.Romindous.CounterStrike.Enums.NadeType.FLAME;
-import static me.Romindous.CounterStrike.Enums.NadeType.FLASH;
-import static me.Romindous.CounterStrike.Enums.NadeType.FRAG;
-import static me.Romindous.CounterStrike.Enums.NadeType.SMOKE;
-import static org.bukkit.Material.ACACIA_SAPLING;
-import static org.bukkit.Material.BIRCH_SAPLING;
-import static org.bukkit.Material.BOWL;
-import static org.bukkit.Material.CRIMSON_NYLIUM;
-import static org.bukkit.Material.DARK_OAK_SAPLING;
-import static org.bukkit.Material.ENDER_EYE;
-import static org.bukkit.Material.GOLDEN_AXE;
-import static org.bukkit.Material.GOLDEN_HOE;
-import static org.bukkit.Material.GREEN_CONCRETE_POWDER;
-import static org.bukkit.Material.IRON_AXE;
-import static org.bukkit.Material.IRON_HOE;
-import static org.bukkit.Material.IRON_PICKAXE;
-import static org.bukkit.Material.JUNGLE_SAPLING;
-import static org.bukkit.Material.LEATHER_CHESTPLATE;
-import static org.bukkit.Material.LIGHT_GRAY_STAINED_GLASS_PANE;
-import static org.bukkit.Material.NETHERITE_AXE;
-import static org.bukkit.Material.NETHERITE_HOE;
-import static org.bukkit.Material.OAK_SAPLING;
-import static org.bukkit.Material.ORANGE_CONCRETE_POWDER;
-import static org.bukkit.Material.PURPLE_CONCRETE_POWDER;
-import static org.bukkit.Material.SHEARS;
-import static org.bukkit.Material.STONE_AXE;
-import static org.bukkit.Material.STONE_HOE;
-import static org.bukkit.Material.STONE_PICKAXE;
-import static org.bukkit.Material.STRING;
-import static org.bukkit.Material.SUGAR;
-import static org.bukkit.Material.WARPED_NYLIUM;
-import static org.bukkit.Material.WOODEN_AXE;
-import static org.bukkit.Material.WOODEN_HOE;
-import static org.bukkit.Material.YELLOW_CONCRETE_POWDER;
-
-import java.util.Arrays;
-import java.util.LinkedList;
-
+import me.Romindous.CounterStrike.Enums.GunType;
+import me.Romindous.CounterStrike.Game.Arena;
+import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.Map.Setup;
+import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
-import org.bukkit.block.Block;
 import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
-
-import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Enums.GunType;
-import me.Romindous.CounterStrike.Game.Arena;
-import me.Romindous.CounterStrike.Objects.Map.Setup;
-import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
-import net.kyori.adventure.text.Component;
 import ru.komiss77.utils.TCUtils;
+
+import java.util.Arrays;
+import java.util.LinkedList;
+
+import static me.Romindous.CounterStrike.Enums.GunType.*;
+import static me.Romindous.CounterStrike.Enums.NadeType.*;
+import static org.bukkit.Material.*;
 
 public class Inventories {
 	
@@ -172,58 +126,47 @@ public class Inventories {
 
                 switch (ar.gst) {
 				case WAITING:
-					GmInv.setItem(n, Main.mkItm(GREEN_CONCRETE_POWDER, "§d" + ar.name, 1, "§2Ожидание", "§7Игроков: §2" + ar.shtrs.size() + "§7/§2" + ar.min, " ", "§7Режим: §d" + md));
+					GmInv.setItem(n, Main.mkItm(GREEN_CONCRETE_POWDER, "§d" + ar.name, 1, "§2Ожидание", "§7Игроков: §2" + ar.getPlaying(true, false) + "§7/§2" + ar.min, " ", "§7Режим: §d" + md));
 					break;
 				case BEGINING:
-					GmInv.setItem(n, Main.mkItm(YELLOW_CONCRETE_POWDER, "§d" + ar.name, 1, "§eНачало", "§7Игроков: §e" + ar.shtrs.size() + "§7/§e" + ar.max, " ", "§7Режим: §d" + md));
+					GmInv.setItem(n, Main.mkItm(YELLOW_CONCRETE_POWDER, "§d" + ar.name, 1, "§eНачало", "§7Игроков: §e" + ar.getPlaying(true, false) + "§7/§e" + ar.max, " ", "§7Режим: §d" + md));
 					break;
 				case BUYTIME:
-					GmInv.setItem(n, Main.mkItm(ORANGE_CONCRETE_POWDER, "§d" + ar.name, 1, "§6Закупка", "§7Игроков: §6" + ar.shtrs.size() + "§7/§6" + ar.max, " ", "§7Режим: §d" + md));
+					GmInv.setItem(n, Main.mkItm(ORANGE_CONCRETE_POWDER, "§d" + ar.name, 1, "§6Закупка", "§7Игроков: §6" + ar.getPlaying(true, false) + "§7/§6" + ar.max, " ", "§7Режим: §d" + md));
 					break;
 				case ROUND:
 				case ENDRND:
-					GmInv.setItem(n, Main.mkItm(ORANGE_CONCRETE_POWDER, "§d" + ar.name, 1, "§6Бой", "§7Игроков: §6" + ar.shtrs.size() + "§7/§6" + ar.max, " ", "§7Режим: §d" + md));
+					GmInv.setItem(n, Main.mkItm(ORANGE_CONCRETE_POWDER, "§d" + ar.name, 1, "§6Бой", "§7Игроков: §6" + ar.getPlaying(true, false) + "§7/§6" + ar.max, " ", "§7Режим: §d" + md));
 					break;
 				case FINISH:
-					GmInv.setItem(n, Main.mkItm(PURPLE_CONCRETE_POWDER, "§d" + ar.name, 1, "§5Финиш", "§7Игроков: §5" + ar.shtrs.size() + "§7/§5" + ar.max, " ", "§7Режим: §d" + md));
+					GmInv.setItem(n, Main.mkItm(PURPLE_CONCRETE_POWDER, "§d" + ar.name, 1, "§5Финиш", "§7Игроков: §5" + ar.getPlaying(true, false) + "§7/§5" + ar.max, " ", "§7Режим: §d" + md));
 					break;
 				}
 			}
 			n++;
 		}
 	}
-
-	public static ItemStack[] fillTmInv() {
-		final ItemStack[] its = new ItemStack[9];
-		for (byte i = 0; i < 9; i++) {
-			its[i] = Main.mkItm(LIGHT_GRAY_STAINED_GLASS_PANE, "§8-=-=-=-", 10);
-		}
-		its[1] = Main.mkItm(CRIMSON_NYLIUM, "§4§lТеррористы", 1, " ");
-		its[4] = Main.mkItm(ENDER_EYE, "§5§lСлучайная", 1, " ");
-		its[7] = Main.mkItm(WARPED_NYLIUM, "§3§lСпецназ", 1, " ");
-		return its;
-	}
 	
-	public static ItemStack[] fillDfsInv(final Block b, final byte sz) {
-		final ItemStack[] its = new ItemStack[sz];
+	public static ItemStack[] fillDfsInv(final byte size) {
+		final ItemStack[] its = new ItemStack[size];
 
-		final Byte[] slts = new Byte[sz - 3];
-		for (byte i = (byte) (slts.length - 1); i >= 0; i--) {
+		final Integer[] slts = new Integer[size - 3];
+		for (int i = 0; i != slts.length ; i++) {
 			slts[i] = i;
 		}
-		slts[0] = (byte) (sz - 3);
-		slts[1] = (byte) (sz - 2);
-		slts[9] = (byte) (sz - 1);
+		slts[0] = size - 3;
+		slts[1] = size - 2;
+		slts[9] = size - 1;
 		
 		final int clr = 11 + Main.srnd.nextInt(4);
 		final int[] chs = new int[] {clr == 11 ? 12 : 11, clr <= 12 ? 13 : 12, clr <= 13 ? 14 : 13};
 		
-		final LinkedList<Byte> ls = new LinkedList<Byte>(Arrays.asList(slts));
-		for (byte i = 0; i < sz / 3; i++) {
+		final LinkedList<Integer> ls = new LinkedList<>(Arrays.asList(slts));
+		for (int i = 0; i < size / 3; i++) {
 			its[ls.remove(Main.srnd.nextInt(ls.size()))] = Main.mkItm(STRING, "§8~-~-~", clr);
 		}
 		
-		for (byte i = (byte) (its.length - 1); i >= 0; i--) {
+		for (int i = 0; i != its.length; i++) {
 			switch (i) {
 			case 1:
 			case 9:

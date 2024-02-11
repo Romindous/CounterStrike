@@ -1,6 +1,7 @@
 package me.Romindous.CounterStrike.Commands;
 
 import me.Romindous.CounterStrike.Game.Arena;
+import me.Romindous.CounterStrike.Game.Arena.Team;
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Objects.Map.MapManager;
 import me.Romindous.CounterStrike.Objects.Map.Setup;
@@ -38,9 +39,12 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 					sugg.add("edit");
 					sugg.add("setlobby");
 					sugg.add("reload");
-				} else if (args[0].equalsIgnoreCase("edit")) {
-                    sugg.addAll(Main.nnactvarns.keySet());
-				} 
+				} else if (args.length == 2) {
+					if (args[0].equalsIgnoreCase("join")
+						|| args[0].equalsIgnoreCase("edit")) {
+						sugg.addAll(Main.nnactvarns.keySet());
+					}
+				}
 			} else {
 				if (args.length == 1) {
 					sugg.add("join");
@@ -147,14 +151,15 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 				} else if (args.length == 1) {
 					if (args[0].equalsIgnoreCase("join")) {
 						final Shooter sh = Shooter.getPlShooter(p.getName(), true);
+						final Arena ar;
 						if (sh.arena() == null) {
-							final Arena ar = biggestArena();
+							ar = biggestArena();
 							if (ar == null) {
 								if (Main.nnactvarns.size() > 0) {
 									SmartInventory.builder()
 									.type(InventoryType.HOPPER)
 			                        .id("Game "+p.getName())
-			                        .provider(new TypeChoose(Main.rndElmt(Main.nnactvarns.values().toArray(new Setup[0]))))
+			                        .provider(new TypeChoose(ApiOstrov.rndElmt(Main.nnactvarns.values().toArray(new Setup[0]))))
 			                        .title("§d§l      Выбор Типа Игры")
 			                        .build().open(p);
 									return true;
@@ -167,6 +172,11 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 								return true;
 							}
 						} else {
+							ar = sh.arena();
+							if (ar != null && ar.shtrs.get(sh) == Team.SPEC) {
+								ar.addPl(sh);
+								return true;
+							}
 							p.sendMessage(Main.prf() + "§cВы уже на карте, используйте §d/cs leave§c для выхода!");
 							return false;
 						}
@@ -223,6 +233,7 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 				}
 			}
 		}
+
 		ar.addPl(sh);
 	}
 

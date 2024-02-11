@@ -1,17 +1,24 @@
 package me.Romindous.CounterStrike.Listeners;
 
-import org.bukkit.EntityEffect;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Particle;
-import org.bukkit.Sound;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.HumanEntity;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Mob;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Snowball;
+import me.Romindous.CounterStrike.Enums.GameState;
+import me.Romindous.CounterStrike.Enums.GunType;
+import me.Romindous.CounterStrike.Enums.NadeType;
+import me.Romindous.CounterStrike.Game.Arena;
+import me.Romindous.CounterStrike.Game.Arena.Team;
+import me.Romindous.CounterStrike.Game.Defusal;
+import me.Romindous.CounterStrike.Game.Gungame;
+import me.Romindous.CounterStrike.Game.Invasion;
+import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.EntityShootAtEntityEvent;
+import me.Romindous.CounterStrike.Objects.Game.BtShooter;
+import me.Romindous.CounterStrike.Objects.Game.Nade;
+import me.Romindous.CounterStrike.Objects.Game.PlShooter;
+import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
+import me.Romindous.CounterStrike.Objects.Shooter;
+import me.Romindous.CounterStrike.Objects.Skins.Quest;
+import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
+import org.bukkit.*;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -21,29 +28,9 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
-
-import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Enums.GunType;
-import me.Romindous.CounterStrike.Enums.NadeType;
-import me.Romindous.CounterStrike.Game.Arena;
-import me.Romindous.CounterStrike.Game.Arena.Team;
-import me.Romindous.CounterStrike.Game.Defusal;
-import me.Romindous.CounterStrike.Game.Gungame;
-import me.Romindous.CounterStrike.Game.Invasion;
-import me.Romindous.CounterStrike.Objects.EntityShootAtEntityEvent;
-import me.Romindous.CounterStrike.Objects.Shooter;
-import me.Romindous.CounterStrike.Objects.Game.BtShooter;
-import me.Romindous.CounterStrike.Objects.Game.GameState;
-import me.Romindous.CounterStrike.Objects.Game.Nade;
-import me.Romindous.CounterStrike.Objects.Game.PlShooter;
-import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
-import me.Romindous.CounterStrike.Objects.Skins.Quest;
-import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
-import net.minecraft.network.protocol.game.ClientboundHurtAnimationPacket;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
-import ru.komiss77.modules.bots.BotManager;
-import ru.komiss77.version.VM;
+import ru.komiss77.version.Nms;
 
 public class DmgLis implements Listener {
 	
@@ -73,7 +60,7 @@ public class DmgLis implements Listener {
 								final Location loc = ent.getLocation();
 								eee.setDamage(prcDmg(ent, Shooter.getShooter(ent, false), 
 								sh, e.getDamage(), gt.icn, 0, gt.rwd, dmgr.hasPotionEffect(PotionEffectType.BLINDNESS), 
-								VM.getNmsServer().getFastMat(loc.getWorld(), loc.getBlockX(), loc.getBlockY() + 1, loc.getBlockZ()) == Material.POWDER_SNOW, 
+								Nms.getFastMat(loc.getWorld(), loc.getBlockX(), loc.getBlockY() + 1, loc.getBlockZ()) == Material.POWDER_SNOW,
 								eee.nscp, eee.isCritical(), eee.wb));
 							} else {
 								e.setCancelled(true);
@@ -102,7 +89,7 @@ public class DmgLis implements Listener {
 							e.setCancelled(true);
 							e.setDamage(ent.getEquipment().getChestplate() == null ? e.getDamage() : e.getDamage() * 0.6);
 							e.setDamage(ent.getEquipment().getHelmet() == null ? e.getDamage() : e.getDamage() * 0.8);
-							prcDmg(ent, Shooter.getShooter(ent, false), null, e.getDamage(), Team.NA.clr + ee.getDamager().getName() + "§f\u929a", 5);
+							prcDmg(ent, Shooter.getShooter(ent, false), null, e.getDamage(), Team.SPEC.clr + ee.getDamager().getName() + "§f\u929a", 5);
 						}
 					}
 				}
@@ -163,8 +150,7 @@ public class DmgLis implements Listener {
 				target.setHealth(health);
 				target.playEffect(EntityEffect.THORNS_HURT);
 				target.setNoDamageTicks(ndts);
-				BotManager.sendWrldPckts(VM.getNmsServer().toNMS(target.getWorld()), 
-					new ClientboundHurtAnimationPacket(VM.getNmsServer().toNMS(target)));
+				target.playHurtAnimation(target.getYaw());
 				if (target instanceof Mob && damager != null) {
 					((Mob) target).setTarget(damager.getEntity());
 				}
@@ -176,9 +162,8 @@ public class DmgLis implements Listener {
 						if (tgtsh instanceof BtShooter) {
 							((BtShooter) tgtsh).hurt(target);
 						} else {
+							target.playHurtAnimation(target.getYaw());
 							((Player) target).playSound(target, Sound.BLOCK_MUDDY_MANGROVE_ROOTS_FALL, 2f, 2f);
-							BotManager.sendWrldPckts(VM.getNmsServer().toNMS(target.getWorld()), 
-								new ClientboundHurtAnimationPacket(VM.getNmsServer().toNMS(target)));
 							target.getWorld().playSound(target.getLocation(), Sound.ENTITY_GENERIC_HURT, 1f, 1.2f);
 						}
 					} else {//damager is player
@@ -193,9 +178,8 @@ public class DmgLis implements Listener {
 							if (tgtsh instanceof BtShooter) {
 								((BtShooter) tgtsh).hurt(target);
 							} else {
+								target.playHurtAnimation(target.getYaw());
 								((Player) target).playSound(target, Sound.BLOCK_MUDDY_MANGROVE_ROOTS_FALL, 2f, 2f);
-								BotManager.sendWrldPckts(VM.getNmsServer().toNMS(target.getWorld()), 
-									new ClientboundHurtAnimationPacket(VM.getNmsServer().toNMS(target)));
 								target.getWorld().playSound(target.getLocation(), Sound.ENTITY_GENERIC_HURT, 1f, 1.2f);
 							}
 							break;

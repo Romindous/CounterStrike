@@ -5,18 +5,18 @@ import org.bukkit.inventory.ItemStack;
 
 public enum GunType {
 	
-	AWP((byte)6, (byte)24, 50.0F, 	1.0F, 0.5F, 	(byte)1, 0.08F, 	true, (short)60, true, (short)50, (short)1650, "§f鉰鉱", (byte)4, "cs.guns.awp"),
-	AK47((byte)30, (byte)3, 6.0F, 	0.15F, 0.08F, 	(byte)0, 0.04F, 	false, (short)50, true, (short)40, (short)1250, "§f鉲鉳", (byte)1, "cs.guns.ak47"),
-	SCAR((byte)14, (byte)10, 7.0F, 	0.5F, 0.14F, 	(byte)3, 0.05F, 	true, (short)40, true, (short)60, (short)1500, "§f鉺鉻", (byte)12, "cs.guns.scar"),
-	M4((byte)30, (byte)2, 5.0F, 	0.1F, 0.06F, 	(byte)0, 0.03F, 	false, (short)40, true, (short)30, (short)1300, "§f鉴鉵", (byte)9, "cs.guns.m4a1"),
-	NGV((byte)60, (byte)3, 2.5F, 	0.25F, 0.15F, 	(byte)2, 0.04F, 	false, (short)80, true, (short)60, (short)1350, "§f鉾鉿", (byte)14, "cs.guns.negev"),
-	P90((byte)20, (byte)2, 4.0F, 	0.05F, 0.05F, 	(byte)0, 0.02F, 	false, (short)30, true, (short)40, (short)1050, "§f鉸鉹", (byte)3, "cs.guns.p90"),
-	MP5((byte)40, (byte)1, 1.5F, 	0.15F, 0.12F, 	(byte)0, 0.01F, 	false, (short)40, true, (short)50, (short)900, "§f銃銄", (byte)5, "cs.guns.mp5"),
-	SG13((byte)8, (byte)16, 2.5F, 	0.0F, 0.16F, 	(byte)8, 0.08F, 	false, (short)40, true, (short)80, (short)750, "§f鉶鉷", (byte)17, "cs.guns.pump"),
-	NOVA((byte)10, (byte)12, 3.0F, 	0.2F, 0.25F, 	(byte)6, 0.08F, 	false, (short)50, true, (short)70, (short)600, "§f鉼鉽", (byte)7, "cs.guns.nova"),
-	TP7((byte)6, (byte)8, 5.5F, 	0.15F, 0.025F, 	(byte)2, 0.03F, 	false, (short)30, false, (short)80, (short)350, "§f銀", (byte)44, "cs.guns.tp7"),
-	USP((byte)12, (byte)4, 4.5F, 	0.1F, 0.04F, 	(byte)0, 0.02F, 	false, (short)20, false, (short)120, (short)150, "§f銁", (byte)35, "cs.guns.usp"),
-	DGL((byte)8, (byte)12, 13.0F, 	0.1F, 0F, 		(byte)0, 0.04F, 	false, (short)40, false, (short)100, (short)400, "§f銂", (byte)52, "cs.guns.deagle");
+	AWP(	6, 	24, 	50.0F, 	1.0F, 	0.5F, 	1, 0.08F, 	true, 60, true, 50, 1650, "§f鉰鉱", 4, "cs.guns.awp"),
+	AK47(	30, 	3, 	6.0F, 	0.15F, 0.08F, 	0, 0.04F, 	false, 50, true, 40, 1250, "§f鉲鉳", 1, "cs.guns.ak47"),
+	SCAR(	14, 	10, 	7.0F, 	0.5F, 	0.14F, 	3, 0.05F, 	true, 40, true, 60, 1500, "§f鉺鉻", 12, "cs.guns.scar"),
+	M4(		30, 	2, 	5.0F, 	0.1F, 	0.06F, 	0, 0.03F, 	false, 40, true, 30, 1300, "§f鉴鉵", 9, "cs.guns.m4a1"),
+	NGV(	60, 	3, 	2.5F, 	0.25F, 0.15F, 	2, 0.04F, 	false, 80, true, 60, 1350, "§f鉾鉿", 14, "cs.guns.negev"),
+	P90(	20, 	2, 	4.0F, 	0.05F, 0.05F, 	0, 0.02F, 	false, 30, true, 40, 1050, "§f鉸鉹", 3, "cs.guns.p90"),
+	MP5(	40, 	1, 	1.5F, 	0.15F, 0.12F, 	0, 0.01F, 	false, 40, true, 50, 900, "§f銃銄", 5, "cs.guns.mp5"),
+	SG13(	8, 	16, 	2.5F, 	0.0F, 	0.16F, 	8, 0.08F, 	false, 40, true, 80, 750, "§f鉶鉷", 17, "cs.guns.pump"),
+	NOVA(	10, 	12, 	3.0F, 	0.2F, 	0.25F, 	6, 0.08F, 	false, 50, true, 70, 600, "§f鉼鉽", 7, "cs.guns.nova"),
+	TP7(	6, 	8, 	5.5F, 	0.15F, 0.025F, 	2, 0.03F, 	false, 30, false, 80, 350, "§f銀", 44, "cs.guns.tp7"),
+	USP(	12, 	4, 	4.5F, 	0.1F, 	0.04F, 	0, 0.02F, 	false, 20, false, 120, 150, "§f銁", 35, "cs.guns.usp"),
+	DGL(	8, 	12, 	13.0F, 	0.1F, 	0F, 		0, 0.04F, 	false, 40, false, 100, 400, "§f銂", 52, "cs.guns.deagle");
 	
 	public final byte amo;
 	public final byte cld;
@@ -52,23 +52,23 @@ public enum GunType {
 	
 	public static final byte defCMD = 10;
 	
-	GunType(final byte amo, final byte cld, final float dmg, final float yrcl, final float xsprd, 
-		final byte brst, final float kb, final boolean snp, final short rtm, final boolean prm, 
-		final short rwd, final short prc, final String icn, final byte slt, final String snd) {
-		this.amo = amo;
-		this.cld = cld;
+	GunType(final int amo, final int cld, final float dmg, final float yrcl, final float xsprd, 
+		final int brst, final float kb, final boolean snp, final int rtm, final boolean prm, 
+		final int rwd, final int prc, final String icn, final int slt, final String snd) {
+		this.amo = (byte) amo;
+		this.cld = (byte) cld;
 		this.dmg = dmg;
 		this.yrcl = yrcl;
 		this.xsprd = xsprd;
-		this.brst = brst;
+		this.brst = (byte) brst;
 		this.kb = kb;
 		this.snp = snp;
-		this.rtm = rtm;
+		this.rtm = (short) rtm;
 		this.prm = prm;
-		this.rwd = rwd;
-		this.prc = prc;
+		this.rwd = (short) rwd;
+		this.prc = (short) prc;
 		this.icn = icn;
-		this.slt = slt;
+		this.slt = (byte) slt;
 		this.snd = snd;
 	}
        

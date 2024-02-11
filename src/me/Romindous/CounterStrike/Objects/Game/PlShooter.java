@@ -1,18 +1,18 @@
 package me.Romindous.CounterStrike.Objects.Game;
 
-import java.util.EnumMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.TreeMap;
-
-import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Particle;
-import org.bukkit.Sound;
-import org.bukkit.World;
+import me.Romindous.CounterStrike.Enums.GameState;
+import me.Romindous.CounterStrike.Enums.GunType;
+import me.Romindous.CounterStrike.Game.Arena;
+import me.Romindous.CounterStrike.Game.Arena.Team;
+import me.Romindous.CounterStrike.Game.Defusal;
+import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.EntityShootAtEntityEvent;
+import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
+import me.Romindous.CounterStrike.Objects.Shooter;
+import me.Romindous.CounterStrike.Objects.Skins.GunSkin;
+import me.Romindous.CounterStrike.Utils.PacketUtils;
+import net.minecraft.core.BaseBlockPosition;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.LivingEntity;
@@ -24,18 +24,6 @@ import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
-
-import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Enums.GunType;
-import me.Romindous.CounterStrike.Game.Arena;
-import me.Romindous.CounterStrike.Game.Arena.Team;
-import me.Romindous.CounterStrike.Game.Defusal;
-import me.Romindous.CounterStrike.Objects.EntityShootAtEntityEvent;
-import me.Romindous.CounterStrike.Objects.Shooter;
-import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
-import me.Romindous.CounterStrike.Objects.Skins.GunSkin;
-import me.Romindous.CounterStrike.Utils.PacketUtils;
-import net.minecraft.core.BaseBlockPosition;
 import ru.komiss77.Ostrov;
 import ru.komiss77.modules.player.Oplayer;
 import ru.komiss77.modules.player.PM;
@@ -43,12 +31,11 @@ import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.notes.Slow;
 import ru.komiss77.utils.FastMath;
 import ru.komiss77.utils.ItemUtils;
-import ru.komiss77.version.IServer;
-import ru.komiss77.version.VM;
+import ru.komiss77.version.Nms;
+
+import java.util.*;
 
 public class PlShooter implements Shooter {
-	
-	public static final float walkSpd = 0.2f;
 	
 	public PlShooter(final Player p) {
 		name = p.getName();
@@ -58,7 +45,7 @@ public class PlShooter implements Shooter {
 		
 		final Vector vc = p.getLocation().toVector();
 		pss = new LinkedList<>();
-		pss.add(vc); pss.add(vc); pss.add(vc); pss.add(vc); pss.add(vc);
+		for (int i = 0; i != MAX_DST; i++) pss.add(vc);
 
 		skins = new EnumMap<>(GunType.class);
 		inv = p.getInventory();
@@ -79,7 +66,7 @@ public class PlShooter implements Shooter {
 					? gs : new GunSkin(GunType.defCMD, gs.unlocked));
 			}
 		});
-		
+
 		new BukkitRunnable() {
 			public void run() {
 				rotPss();
@@ -91,8 +78,9 @@ public class PlShooter implements Shooter {
 				if (gt == null || p == null) {
 					return;
 				}
-				
-				final boolean ps = ((Damageable)it.getItemMeta()).hasDamage();
+
+//				p.sendMessage("2");
+				final boolean ps = ((Damageable) it.getItemMeta()).hasDamage();
 				if (ps) {
 					count++;
 					if ((count & 0x3) == 0) {
@@ -144,12 +132,12 @@ public class PlShooter implements Shooter {
 							}
 						} 
 						cldwn = gt.cld;
-						for (byte i = gt.brst == 0 ? 1 : gt.brst; i > 0; i--) {
+//						p.sendMessage("3");
+						for (int i = gt.brst == 0 ? 1 : gt.brst; i > 0; i--) {
 							shoot(gt, true, tr);
 						}
 						p.setCooldown(gt.getMat(), gt.cld);
 						Main.plyWrldSnd(p.getLocation(), gt.snd);
-						//p.setVelocity(p.getVelocity().subtract(p.getEyeLocation().getDirection().multiply(gt.kb)));
 					}
 				}
 			}
@@ -168,14 +156,18 @@ public class PlShooter implements Shooter {
 	}
 	
 	private final String name;
-	public String name() {return name;}
-	
-	public Oplayer oplayer() {return PM.getOplayer(name);}
+	@Override
+    public String name() {return name;}
 
 	public final LinkedList<Vector> pss;
-	public void rotPss() {pss.poll();pss.add(getEntity().getLocation().toVector());}
-	public Vector getLoc(final boolean dir) 
-	{return dir ? pss.getLast().clone() : pss.getFirst().clone();}
+	public void rotPss() {
+		if (isDead()) return;
+		pss.poll(); pss.add(getEntity().getLocation().toVector());
+	}
+	public Vector getLoc() {return pss.getLast().clone();}
+	public Vector getLoc(final int dst) {
+		return pss.get(Math.max(pss.size() - dst, 0)).clone();
+	}
 	
 	public WXYZ getPos() {return new WXYZ(getEntity().getLocation());}
 	
@@ -320,6 +312,16 @@ public class PlShooter implements Shooter {
 		//Bukkit.getPlayer(nm).sendMessage("hs-" + Arrays.toString(ns.unlocked) + ", sel-" + gs.chosen);
 		PM.getOplayer(name).mysqlData.put(gt.toString(), ns.toString());
 	}
+
+	@Override
+	public void setTabTag(final String pfx, final String sfx, final String afx) {
+		final Player pl = getPlayer();
+		final Oplayer op = PM.getOplayer(pl);
+		op.tabPrefix(pfx, pl);
+		op.tabSuffix(sfx, pl);
+		op.beforeName(afx, pl);
+		op.tag(pfx, sfx);
+	}
 	
 	@Override
 	public void teleport(final LivingEntity le, final Location to) {
@@ -342,32 +344,30 @@ public class PlShooter implements Shooter {
 		}
 		final double lkx = -Math.sin(Math.toRadians((180f - loc.getYaw())));
 		final double lkz = -Math.cos(Math.toRadians((180f - loc.getYaw())));
-		final TreeMap<Integer, LivingEntity> shot = new TreeMap<Integer, LivingEntity>();
+		final TreeMap<Integer, LivingEntity> shot = new TreeMap<>();
 		for (final LivingEntity e : Main.getWLnts(loc.getWorld().getUID())) {
 			final BoundingBox ebx;
 			final double dx;
 			final double dz;
 			switch (e.getType()) {
-			case PLAYER:
-			case HUSK:
-				if (e.getEntityId() == ent.getEntityId()) continue;
-				final Shooter sh = Shooter.getShooter(e, false);
-				if (sh == null || sh.isDead()) {
-					continue;
-				}
-				final Vector lc = sh.getLoc(false);
-				ebx = new BoundingBox(lc.getX(), lc.getY(), lc.getZ(), lc.getX(), lc.getY() + 
-				(sh instanceof PlShooter && e.isSneaking() ? 1.5d : 1.9d), lc.getZ());
-				dx = lc.getX() - loc.getX();
-				dz = lc.getZ() - loc.getZ();
-				break;
 			case ARMOR_STAND:
 			case TURTLE:
 				continue;
 			default:
-				ebx = e.getBoundingBox();
-				dx = ebx.getCenterX() - loc.getX();
-				dz = ebx.getCenterZ() - loc.getZ();
+				if (e.getEntityId() == ent.getEntityId()) continue;
+				final Shooter sh = Shooter.getShooter(e, false);
+				if (sh == null) {
+					ebx = e.getBoundingBox();
+					dx = ebx.getCenterX() - loc.getX();
+					dz = ebx.getCenterZ() - loc.getZ();
+					break;
+				}
+				if (sh.isDead()) continue;
+				final Vector lc = sh.getLoc(sh instanceof PlShooter || gt.snp ? 4 : 2);
+				ebx = new BoundingBox(lc.getX(), lc.getY(), lc.getZ(), lc.getX(), lc.getY() +
+					(sh instanceof PlShooter && e.isSneaking() ? 1.5d : 1.9d), lc.getZ());
+				dx = lc.getX() - loc.getX();
+				dz = lc.getZ() - loc.getZ();
 				break;
 			}
 			final double ln = Math.sqrt(dx * dx + dz * dz);
@@ -390,7 +390,6 @@ public class PlShooter implements Shooter {
 		double x = 20d * vec.getX() + loc.getX();
 		double y = 20d * vec.getY() + loc.getY();
 		double z = 20d * vec.getZ() + loc.getZ();
-		final IServer is = VM.getNmsServer();
 		LivingEntity tgt;
 		BoundingBox ebx;
 		
@@ -403,7 +402,7 @@ public class PlShooter implements Shooter {
 				w.spawnParticle(Particle.ASH, x, y, z, 1);
 			}
 			
-			final Material mat = is.getFastMat(w, (int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
+			final Material mat = Nms.getFastMat(w, (int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
 			final Block b;
 			switch(mat) {
 			case OAK_LEAVES, ACACIA_LEAVES, BIRCH_LEAVES, JUNGLE_LEAVES, 
@@ -499,7 +498,7 @@ public class PlShooter implements Shooter {
 				if (sh == null) {
 					nr = Math.pow(x - ebx.getCenterX(), 2d) + Math.pow(z - ebx.getCenterZ(), 2d) < 0.2d;
 				} else {
-					final Vector vc = sh.getLoc(false);
+					final Vector vc = sh.getLoc(sh instanceof PlShooter || gt.snp ? 4 : 2);
 					nr = Math.pow(x - vc.getX(), 2d) + Math.pow(z - vc.getZ(), 2d) < 0.2d;
 				}
 				

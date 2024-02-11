@@ -25,7 +25,6 @@ public class ChatLis implements Listener {
 	
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onChat(final ChatPrepareEvent e) {
-
         final Player p = e.getPlayer();
         final PlShooter sh = Shooter.getPlShooter(p.getName(), true);
 		e.showLocal(false);

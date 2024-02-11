@@ -1,15 +1,11 @@
 package me.Romindous.CounterStrike.Objects.Game;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-
-import org.bukkit.EntityEffect;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Particle;
-import org.bukkit.Sound;
+import io.papermc.paper.math.Position;
+import me.Romindous.CounterStrike.Game.Defusal;
+import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.Shooter;
+import net.kyori.adventure.text.Component;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Display.Billboard;
@@ -19,23 +15,21 @@ import org.bukkit.entity.TextDisplay;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.util.Transformation;
 import org.joml.Vector3f;
-
-import io.papermc.paper.math.Position;
-import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Game.Defusal;
-import me.Romindous.CounterStrike.Objects.Shooter;
-import net.kyori.adventure.text.Component;
 import ru.komiss77.Ostrov;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.utils.ItemUtils;
 import ru.komiss77.utils.TCUtils;
-import ru.komiss77.version.IServer;
-import ru.komiss77.version.VM;
+import ru.komiss77.version.Nms;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 
 public class Bomb extends WXYZ {
 	
 	public final TextDisplay title;
+	public Shooter defusing;
 	
 	private static final Component bnm = TCUtils.format("§l§кБiмба Поставлена!")
 		.appendNewline().append(TCUtils.format("§7Обезвредьте §eкусачками §7или §3спец. набором§7!"));
@@ -52,30 +46,30 @@ public class Bomb extends WXYZ {
 		final Transformation atr = title.getTransformation();
 		title.setTransformation(new Transformation(atr.getTranslation(), 
 			atr.getLeftRotation(), new Vector3f(1.6f, 1.6f, 1.6f), atr.getRightRotation()));
+		defusing = null;
 	}
 	   
 	public void expld(final Defusal ar) {
 		title.remove();
 		final Block b = w.getBlockAt(x, y, z);
-		b.setType(Material.AIR);
+		b.setType(Material.AIR,false);
 		final int X = b.getX();
 		final int Y = b.getY();
 		final int Z = b.getZ();
 		final HashSet<XYZ> cls = new HashSet<>();
 		b.getWorld().spawnParticle(Particle.EXPLOSION_HUGE, b.getLocation(), 20, 5d, 5d, 5d);
 		b.getWorld().playSound(b.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 5f, 0.8f);
-		
-		final IServer is = VM.getNmsServer();
+
 		for (int x = -5; x < 6; x++) {
 			for (int y = -5; y < 6; y++) {
 				for (int z = -5; z < 6; z++) {
 					final int bnd = x*x + y*y + z*z;
-					if (bnd > 0 && is.getFastMat(w, X + x, Y + y, Z + z).isAir() && is.getFastMat(w, X + x, Y + y - 1, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 6) {
+					if (bnd > 0 && Nms.getFastMat(w, X + x, Y + y, Z + z).isAir() && Nms.getFastMat(w, X + x, Y + y - 1, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 6) {
 						for (final Player p : b.getWorld().getPlayers()) {
 							p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Material.FIRE.createBlockData());
 							cls.add(new XYZ("", X + x, Y + y, Z + z));
 						} 
-					} else if (is.getFastMat(w, X + x, Y + y, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 10) {
+					} else if (Nms.getFastMat(w, X + x, Y + y, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 10) {
 						for (final Player p : b.getWorld().getPlayers()) {
 							p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Material.COAL_BLOCK.createBlockData());
 							cls.add(new XYZ("", X + x, Y + y, Z + z));

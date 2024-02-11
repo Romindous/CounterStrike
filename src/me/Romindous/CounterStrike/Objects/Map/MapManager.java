@@ -1,22 +1,19 @@
 package me.Romindous.CounterStrike.Objects.Map;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import java.io.File;
+import java.util.*;
 
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Sound;
-import org.bukkit.World;
+import me.Romindous.CounterStrike.Enums.GameType;
+import me.Romindous.CounterStrike.Enums.TileSet;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
 
 import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Objects.Game.GameType;
 import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.utils.ItemBuilder;
+import ru.komiss77.utils.TCUtils;
 import ru.komiss77.utils.inventory.ClickableItem;
 import ru.komiss77.utils.inventory.InputButton;
 import ru.komiss77.utils.inventory.InputButton.InputType;
@@ -32,8 +29,8 @@ public class MapManager implements InventoryProvider {
 	public MapManager(final String name) {
 		final Setup ar = Main.nnactvarns.get(name);
 		stp = ar == null ? new Setup(name) : 
-		new Setup(ar.nm, ar.min, ar.max, ar.rndM, ar.fin, ar.bots, 
-		ar.tSpawns, ar.ctSpawns, ar.spots, ar.A, ar.B, ar.worlds);
+		new Setup(ar.nm, ar.min, ar.max, ar.rnd, ar.fin, ar.bots, ar.dims,
+			ar.ceil, ar.tSpawns, ar.ctSpawns, ar.spots, ar.A, ar.B, ar.worlds);
 	}
 	
 	@Override
@@ -42,8 +39,8 @@ public class MapManager implements InventoryProvider {
 		
 		its.set(4, new InputButton(InputType.ANVILL, //имя
 			new ItemBuilder(Material.GLOBE_BANNER_PATTERN).name("§5" + stp.nm).addLore(Arrays.asList("§dКлик §7- изменить имя")).build(), "Карта", nm -> {
-			stp = new Setup(nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, 
-				stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
+			stp = new Setup(nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, stp.dims,
+				stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 			reopen(pl, its);
 		}));
 		
@@ -52,13 +49,13 @@ public class MapManager implements InventoryProvider {
 			switch (e.getClick()) {
 			case RIGHT, SHIFT_RIGHT:
 				if (stp.min == 1) return;
-				stp = new Setup(stp.nm, (byte) (stp.min - 1), stp.max, stp.rndM, stp.fin, stp.bots, 
-					stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
+				stp = new Setup(stp.nm, (byte) (stp.min - 1), stp.max, stp.rnd, stp.fin, stp.bots,
+					stp.dims, stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 0.6f);
 				break;
 			default:
-				stp = new Setup(stp.nm, (byte) (stp.min + 1), stp.min == stp.max ? (byte) (stp.max + 1) : stp.max, 
-					stp.rndM, stp.fin, stp.bots, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
+				stp = new Setup(stp.nm, (byte) (stp.min + 1), stp.min == stp.max ? (byte) (stp.max + 1) : stp.max, stp.rnd,
+					stp.fin, stp.bots, stp.dims, stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 				break;
 			}
@@ -70,38 +67,57 @@ public class MapManager implements InventoryProvider {
 			switch (e.getClick()) {
 			case RIGHT, SHIFT_RIGHT:
 				if (stp.max == 1) return;
-				stp = new Setup(stp.nm, stp.min == stp.max ? (byte) (stp.min - 1) : stp.min, (byte) (stp.max - 1), 
-						stp.rndM, stp.fin, stp.bots, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
+				stp = new Setup(stp.nm, stp.min == stp.max ? (byte) (stp.min - 1) : stp.min, (byte) (stp.max - 1), stp.rnd,
+					stp.fin, stp.bots, stp.dims, stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 0.6f);
 				break;
 			default:
-				stp = new Setup(stp.nm, stp.min, (byte) (stp.max + 1), stp.rndM, stp.fin, 
-					stp.bots, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
+				stp = new Setup(stp.nm, stp.min, (byte) (stp.max + 1), stp.rnd, stp.fin, stp.bots,
+					stp.dims, stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 				break;
 			}
 			reopen(pl, its);
 		}));
 		
-		if (stp.rndM) {
+		if (stp.rnd) {
 			its.set(5, ClickableItem.of(new ItemBuilder(Material.POTION).name("§7Рандом: §aВкл").addLore(Arrays.asList("§dКлик §7- Выкл")).build(), e -> {
-				stp = new Setup(stp.nm, stp.min, stp.max, false, stp.fin, stp.bots, 
-					stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
+				stp = new Setup(stp.nm, stp.min, stp.max, false, stp.fin, stp.bots, stp.dims, 
+					stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
+				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
+				reopen(pl, its);
+			}));
+
+			its.set(17, new InputButton(InputType.ANVILL, new ItemBuilder(Material.TARGET)
+				.name("§7Размер карты: " + stp.dims).addLore(Arrays.asList("§dКлик §7- изменить")).build(),
+				(stp.dims == null ? MapBuilder.dftMapDims : stp.dims).toString(), nm -> {
+				final XYZ ndm = XYZ.fromString(nm);
+				stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, ndm == null ? MapBuilder.dftMapDims
+						: ndm, stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
+				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
+				reopen(pl, its);
+			}));
+
+			its.set(16, ClickableItem.of(new ItemBuilder(stp.ceil).name("§7Потолок: " + stp.ceil.name())
+				.addLore(Arrays.asList("§dКлик блоком §7- изменить")).build(), e -> {
+				final Material crs = e.getCursor().getType();
+				stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, stp.dims, crs.isAir() || !crs.isBlock()
+					? Material.STONE : crs, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 				reopen(pl, its);
 			}));
 			
 			if (stp.bots) {
 				its.set(10, ClickableItem.of(new ItemBuilder(Material.FERMENTED_SPIDER_EYE).name("§7Боты: §aВкл").addLore(Arrays.asList("§dКлик §7- Выкл")).build(), e -> {
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, false, 
-						stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, false, stp.dims,
+						stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 					reopen(pl, its);
 				}));
 			} else {
 				its.set(10, ClickableItem.of(new ItemBuilder(Material.SPIDER_EYE).name("§7Боты: §cВыкл").addLore(Arrays.asList("§dКлик §7- Вкл")).build(), e -> {
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, true, 
-						stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, true, stp.dims,
+						stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 					reopen(pl, its);
 				}));
@@ -113,8 +129,8 @@ public class MapManager implements InventoryProvider {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(GameType.class);
 				worlds.putAll(stp.worlds);
 				worlds.put(GameType.DEFUSAL, nm);
-				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, 
-					stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, worlds);
+				stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, stp.dims,
+					stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 				reopen(pl, its);
 			}));
@@ -125,8 +141,8 @@ public class MapManager implements InventoryProvider {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(GameType.class);
 				worlds.putAll(stp.worlds);
 				worlds.put(GameType.GUNGAME, nm);
-				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, 
-					stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, worlds);
+				stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, stp.dims,
+					stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 				reopen(pl, its);
 			}));
@@ -137,16 +153,16 @@ public class MapManager implements InventoryProvider {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(GameType.class);
 				worlds.putAll(stp.worlds);
 				worlds.put(GameType.INVASION, nm);
-				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, 
-					stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, worlds);
+				stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, stp.dims,
+					stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 				reopen(pl, its);
 			}));
 
         } else {
 			its.set(5, ClickableItem.of(new ItemBuilder(Material.GLASS_BOTTLE).name("§7Рандом: §cВыкл").addLore(Arrays.asList("§dКлик §7- Вкл")).build(), e -> {
-				stp = new Setup(stp.nm, stp.min, stp.max, true, stp.fin, stp.bots, 
-					stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
+				stp = new Setup(stp.nm, stp.min, stp.max, true, stp.fin, stp.bots, stp.dims, 
+					stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 				reopen(pl, its);
 			}));
@@ -189,14 +205,14 @@ public class MapManager implements InventoryProvider {
 					if (stp.spots == null) return;
 					pl.sendMessage(Main.prf() + "Убрана предыдущая точка (" + (stp.spots.length-1) + ")");
 					stp.spots[stp.spots.length - 1].getCenterLoc(pl.getWorld()).getBlock().setType(Material.AIR, false);
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, 
-						stp.tSpawns, stp.ctSpawns, rmv(stp.spots), stp.A, stp.B, stp.worlds);
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, stp.dims,
+						stp.ceil, stp.tSpawns, stp.ctSpawns, rmv(stp.spots), stp.A, stp.B, stp.worlds);
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 0.6f);
 					reopen(pl, its);
 					return;
 				default:
 					final Location loc = pl.getLocation();
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.tSpawns, stp.ctSpawns, 
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, stp.dims, stp.ceil, stp.tSpawns, stp.ctSpawns,
 						add(stp.spots, new XYZ("", loc.getBlockX(), loc.getBlockY(), loc.getBlockZ())), stp.A, stp.B, stp.worlds);
 					loc.getBlock().setType(Material.PURPLE_STAINED_GLASS, false);
 					pl.sendMessage(Main.prf() + "Точка поставлена на " + 
@@ -245,16 +261,16 @@ public class MapManager implements InventoryProvider {
 					pl.sendMessage(Main.prf() + "Убран предыдущий спавн (" + (stp.tSpawns.length-1) + ")");
 					final XYZ lst = stp.tSpawns[stp.tSpawns.length - 1];
 					pl.getWorld().getBlockAt(lst.x, lst.y, lst.z).setType(Material.AIR, false);
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, 
-						rmv(stp.tSpawns), stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, stp.dims,
+						stp.ceil, rmv(stp.tSpawns), stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 0.6f);
 					reopen(pl, its);
 					return;
 				default:
 					final Location loc = pl.getLocation();
 					loc.getBlock().setType(Material.RED_CONCRETE, false);
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, 
-						add(stp.tSpawns, new XYZ("", loc.getBlockX(), loc.getBlockY(), loc.getBlockZ())), 
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, stp.dims, stp.ceil,
+						add(stp.tSpawns, new XYZ("", loc.getBlockX(), loc.getBlockY(), loc.getBlockZ())),
 						stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 					pl.sendMessage(Main.prf() + "Спавн поставлен на " + 
 					new XYZ("", loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()).toString().substring(1) + " (" + stp.tSpawns.length + ")");
@@ -302,15 +318,15 @@ public class MapManager implements InventoryProvider {
 					pl.sendMessage(Main.prf() + "Убран предыдущий спавн (" + (stp.ctSpawns.length-1) + ")");
 					final XYZ lst = stp.ctSpawns[stp.ctSpawns.length - 1];
 					pl.getWorld().getBlockAt(lst.x, lst.y, lst.z).setType(Material.AIR, false);
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, 
-						stp.tSpawns, rmv(stp.ctSpawns), stp.spots, stp.A, stp.B, stp.worlds);
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, stp.dims,
+						stp.ceil, stp.tSpawns, rmv(stp.ctSpawns), stp.spots, stp.A, stp.B, stp.worlds);
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 0.6f);
 					reopen(pl, its);
 					return;
 				default:
 					final Location loc = pl.getLocation();
 					loc.getBlock().setType(Material.BLUE_CONCRETE, false);
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.tSpawns, 
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, stp.dims, stp.ceil, stp.tSpawns,
 						add(stp.ctSpawns, new XYZ("", loc.getBlockX(), loc.getBlockY(), loc.getBlockZ())), 
 						stp.spots, stp.A, stp.B, stp.worlds);
 					pl.sendMessage(Main.prf() + "Спавн поставлен на " + 
@@ -333,9 +349,8 @@ public class MapManager implements InventoryProvider {
 					break;
 				default:
 					final Location loc = pl.getLocation();
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.tSpawns, stp.ctSpawns, 
-						stp.spots, new XYZ("", loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()), 
-						stp.B, stp.worlds);
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, stp.dims, stp.ceil, stp.tSpawns, stp.ctSpawns,
+						stp.spots, new XYZ("", loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()), stp.B, stp.worlds);
 					pl.sendMessage(Main.prf() + "Точка §bA §7теперь на " + stp.A.toString().substring(1));
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 					break;
@@ -355,9 +370,8 @@ public class MapManager implements InventoryProvider {
 					break;
 				default:
 					final Location loc = pl.getLocation();
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.tSpawns, stp.ctSpawns, 
-						stp.spots, stp.A, new XYZ("", loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()), 
-						stp.worlds);
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, stp.dims, stp.ceil, stp.tSpawns, stp.ctSpawns,
+						stp.spots, stp.A, new XYZ("", loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()), stp.worlds);
 					pl.sendMessage(Main.prf() + "Точка §6B §7теперь на " + stp.B.toString().substring(1));
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 					break;
@@ -377,7 +391,7 @@ public class MapManager implements InventoryProvider {
 					break;
 				default:
 					final Location loc = pl.getLocation();
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.tSpawns, stp.ctSpawns, 
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.dims, stp.tSpawns, stp.ctSpawns, 
 						stp.spots, stp.A, stp.B, new XYZ("", loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()), stp.top, stp.worlds);
 					pl.sendMessage(Main.prf() + "Нижняя точка теперь на " + stp.bot.toString().substring(1));
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
@@ -398,7 +412,7 @@ public class MapManager implements InventoryProvider {
 					break;
 				default:
 					final Location loc = pl.getLocation();
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.tSpawns, stp.ctSpawns, 
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, stp.dims, stp.tSpawns, stp.ctSpawns, 
 						stp.spots, stp.A, stp.B, stp.bot, new XYZ("", loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()), stp.worlds);
 					pl.sendMessage(Main.prf() + "Верхняя точка теперь на " + stp.top.toString().substring(1));
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
@@ -409,15 +423,15 @@ public class MapManager implements InventoryProvider {
 			
 			if (stp.bots) {
 				its.set(10, ClickableItem.of(new ItemBuilder(Material.FERMENTED_SPIDER_EYE).name("§7Боты: §aВкл").addLore(Arrays.asList("§dКлик §7- Выкл")).build(), e -> {
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, false, 
-						stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, false, stp.dims,
+						stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 					reopen(pl, its);
 				}));
 			} else {
 				its.set(10, ClickableItem.of(new ItemBuilder(Material.SPIDER_EYE).name("§7Боты: §cВыкл").addLore(Arrays.asList("§dКлик §7- Вкл")).build(), e -> {
-					stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, true, 
-						stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
+					stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, true, stp.dims,
+						stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 					reopen(pl, its);
 				}));
@@ -429,8 +443,8 @@ public class MapManager implements InventoryProvider {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(GameType.class);
 				worlds.putAll(stp.worlds);
 				worlds.put(GameType.DEFUSAL, nm);
-				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, 
-					stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, worlds);
+				stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, stp.dims,
+					stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 				reopen(pl, its);
 			}));
@@ -441,8 +455,8 @@ public class MapManager implements InventoryProvider {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(GameType.class);
 				worlds.putAll(stp.worlds);
 				worlds.put(GameType.GUNGAME, nm);
-				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, 
-					stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, worlds);
+				stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, stp.dims,
+					stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 				reopen(pl, its);
 			}));
@@ -453,8 +467,8 @@ public class MapManager implements InventoryProvider {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(GameType.class);
 				worlds.putAll(stp.worlds);
 				worlds.put(GameType.INVASION, nm);
-				stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, stp.fin, stp.bots, 
-					stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, worlds);
+				stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, stp.dims,
+					stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 				reopen(pl, its);
 			}));
@@ -462,8 +476,8 @@ public class MapManager implements InventoryProvider {
         }
 
         if (stp.isReady()) {
-            stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, true, stp.bots,
-                stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
+            stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, true, stp.bots, stp.dims,
+				stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
             its.set(22, ClickableItem.of(new ItemBuilder(Material.KNOWLEDGE_BOOK).name("§aГотово").addLore(Arrays.asList("§7Закрыть редактор!")).build(), e -> {
                 pl.playSound(pl.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
                 pl.sendMessage(Main.prf() + "Карта §d" + stp.nm + " §7сохранена!");
@@ -471,20 +485,21 @@ public class MapManager implements InventoryProvider {
                 edits.remove(pl.getUniqueId());
                 stp.save(Main.ars);
                 pl.closeInventory();
+				countSchems(pl);
             }));
         } else {
-            stp = new Setup(stp.nm, stp.min, stp.max, stp.rndM, false, stp.bots,
-                stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
+            stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, false, stp.bots, stp.dims,
+				stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
             its.set(22, ClickableItem.empty(new ItemBuilder(Material.GRAY_DYE).name("§cНе Готово").addLore(Arrays.asList("§7Какие-то поля пустые!")).build()));
         }
 
         its.set(18, new InputButton(InputType.ANVILL, new ItemBuilder(Material.BARRIER)
         .name("§4Удалить").addLore(Arrays.asList("§7Невозвратимо!")).build(), stp.nm, e -> {
-            pl.playSound(pl.getLocation(), Sound.BLOCK_BEACON_DEACTIVATE, 1f, 1f);
-            pl.sendMessage(Main.prf() + "Карта §5" + stp.nm + " §7удалена!");
-            edits.remove(pl.getUniqueId());
-            stp.delete(true);
-            pl.closeInventory();
+			pl.playSound(pl.getLocation(), Sound.BLOCK_BEACON_DEACTIVATE, 1f, 1f);
+			pl.sendMessage(Main.prf() + "Карта §5" + stp.nm + " §7удалена!");
+			edits.remove(pl.getUniqueId());
+			stp.delete(true);
+			pl.closeInventory();
         }));
     }
 
@@ -517,6 +532,24 @@ public class MapManager implements InventoryProvider {
 		final XYZ[] na = new XYZ[ar.length - 1];
         System.arraycopy(ar, 0, na, 0, na.length);
 		return na;
+	}
+
+	private void countSchems(final Player p) {
+		final EnumSet<TileSet> tss = EnumSet.allOf(TileSet.class);
+		final File fl = new File(Bukkit.getPluginsFolder().getAbsolutePath() + "/Ostrov/schematics/");
+		if (fl.exists() && fl.isDirectory()) {
+			for (final File sc : fl.listFiles()) {
+				final String nm = sc.getName(); if (!nm.endsWith(".schem")) continue;
+				try {tss.remove(TileSet.valueOf(nm.substring(
+					Math.max(0, nm.indexOf(Setup.sep) + 1), nm.indexOf('.'))));
+				} catch (IllegalArgumentException e) {}
+			}
+		}
+		for (final TileSet ts : tss) {
+			p.sendMessage(TCUtils.format("No schem ").append(TCUtils.format(stp.ceil.name().charAt(0) + Setup.sep + ts.name())
+				.clickEvent(ClickEvent.copyToClipboard(stp.ceil.name().charAt(0) + Setup.sep + ts.name()))
+				.hoverEvent(HoverEvent.showText(TCUtils.format("Клик - копировать")))));
+		}
 	}
 	
 	/*private static BaseBlockPosition[] add(final BaseBlockPosition[] ar, final BaseBlockPosition el) {

@@ -1,15 +1,29 @@
 package me.Romindous.CounterStrike.Listeners;
 
-import java.util.Iterator;
-
-import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Sound;
+import io.papermc.paper.event.player.PlayerStopUsingItemEvent;
+import me.Romindous.CounterStrike.Enums.GameState;
+import me.Romindous.CounterStrike.Enums.GunType;
+import me.Romindous.CounterStrike.Enums.NadeType;
+import me.Romindous.CounterStrike.Game.Arena;
+import me.Romindous.CounterStrike.Game.Arena.Team;
+import me.Romindous.CounterStrike.Game.Defusal;
+import me.Romindous.CounterStrike.Game.Invasion;
+import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.Game.Bomb;
+import me.Romindous.CounterStrike.Objects.Game.Nade;
+import me.Romindous.CounterStrike.Objects.Game.PlShooter;
+import me.Romindous.CounterStrike.Objects.Game.TripWire;
+import me.Romindous.CounterStrike.Objects.Map.MapManager;
+import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
+import me.Romindous.CounterStrike.Objects.Shooter;
+import me.Romindous.CounterStrike.Objects.Skins.Quest;
+import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
+import me.Romindous.CounterStrike.Utils.Inventories;
+import me.Romindous.CounterStrike.Utils.PacketUtils;
+import net.minecraft.core.BaseBlockPosition;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Snowball;
@@ -24,30 +38,6 @@ import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
-
-import io.papermc.paper.event.player.PlayerStopUsingItemEvent;
-import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Enums.GunType;
-import me.Romindous.CounterStrike.Enums.NadeType;
-import me.Romindous.CounterStrike.Game.Arena;
-import me.Romindous.CounterStrike.Game.Arena.Team;
-import me.Romindous.CounterStrike.Menus.BotMenu;
-import me.Romindous.CounterStrike.Game.Defusal;
-import me.Romindous.CounterStrike.Game.Gungame;
-import me.Romindous.CounterStrike.Game.Invasion;
-import me.Romindous.CounterStrike.Objects.Shooter;
-import me.Romindous.CounterStrike.Objects.Game.GameState;
-import me.Romindous.CounterStrike.Objects.Game.Nade;
-import me.Romindous.CounterStrike.Objects.Game.PlShooter;
-import me.Romindous.CounterStrike.Objects.Game.TripWire;
-import me.Romindous.CounterStrike.Objects.Map.MapManager;
-import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
-import me.Romindous.CounterStrike.Objects.Skins.Quest;
-import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
-import me.Romindous.CounterStrike.Utils.Inventories;
-import me.Romindous.CounterStrike.Utils.PacketUtils;
-import net.kyori.adventure.text.Component;
-import net.minecraft.core.BaseBlockPosition;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.modules.world.WXYZ;
@@ -61,35 +51,27 @@ public class InterrLis implements Listener {
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onEntIntr(final EntityInteractEvent e) {
 		final Block b = e.getBlock();
-		if (e.getEntity() instanceof Mob && b != null) {
+		if (e.getEntity() instanceof Mob) {
 			e.setCancelled(true);
 			final Invasion ar = Invasion.getMobInvasion(e.getEntity().getEntityId());
 			if (ar != null && ar.gst == GameState.ROUND) {
 				switch (b.getType()) {
 				case WARPED_PRESSURE_PLATE:
-					if (new WXYZ(ar.ads.getLocation()).equals(new WXYZ(b))) {
+					if (new WXYZ(ar.ads.getLocation()).distAbs(new WXYZ(b)) == 0) {
 						ar.hrtSt(true, (byte) (2 + Mobber.getMbPow(e.getEntityType()) << 1));
 						e.getEntity().remove();
-					} else if (new WXYZ(ar.bds.getLocation()).equals(new WXYZ(b))) {
+					} else if (new WXYZ(ar.bds.getLocation()).distAbs(new WXYZ(b)) == 0) {
 						ar.hrtSt(false, (byte) (2 + Mobber.getMbPow(e.getEntityType()) << 1));
 						e.getEntity().remove();
 					}
 					break;
 				case TRIPWIRE:
-					final Iterator<TripWire> i = ar.tws.iterator();
-					while (i.hasNext()) {
-						final TripWire tn = i.next();
-						for (final Block bl : tn.bs) {
-							if (b.getX() == bl.getX() && b.getY() == bl.getY() && b.getZ() == bl.getZ()) {
-								e.setCancelled(true);
-								for (final Block r : tn.bs) {
-									r.setType(Material.AIR, false);
-								}
-								tn.hdNdAll(ar);
-								tn.trgr(bl.getLocation().add(0.5d, 0d, 0.5d));
-								i.remove();
-								return;
-							}
+					final TripWire tw = Arena.tblks.get(new XYZ(b.getLocation()));
+					if (tw != null) {
+						e.setCancelled(true);
+						if (tw.tm == Team.CTs) {
+							tw.remove(); ar.tws.remove(tw);
+							tw.trigger(b.getLocation().add(0.5d, 0d, 0.5d));
 						}
 					}
 					break;
@@ -98,53 +80,48 @@ public class InterrLis implements Listener {
 				}
 			}
 		}
-		if (e.getEntityType() != EntityType.PLAYER && e.getBlock() != null && e.getBlock().getType() == Material.WARPED_PRESSURE_PLATE) {
-			e.setCancelled(true);
-		}
 	}
 	
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onStop(final PlayerStopUsingItemEvent e) {
 		final ItemStack it = e.getItem();
-		if (it != null) {
-			final Player p = e.getPlayer();
-			switch (it.getType()) {
-			case SPYGLASS:
-				final PlShooter sh = Shooter.getPlShooter(p.getName(), true);
-				final ItemStack mh = p.getInventory().getItemInMainHand();
-				final GunType gt = GunType.getGnTp(mh);
-				if (p.isSneaking() && sh.scope() && sh.shtTm() == 0) {
+        final Player p = e.getPlayer();
+        switch (it.getType()) {
+        case SPYGLASS:
+            final PlShooter sh = Shooter.getPlShooter(p.getName(), true);
+            final ItemStack mh = p.getInventory().getItemInMainHand();
+            final GunType gt = GunType.getGnTp(mh);
+            if (p.isSneaking() && sh.scope() && sh.shtTm() == 0) {
 //					p.sendMessage("f");
-					sh.scope(false);
-					final boolean hd = ((Damageable) mh.getItemMeta()).hasDamage();
-					if ((sh.count() == 0 || hd) && sh.cldwn() == 0) {
-						if (mh.getAmount() == 1) {
-							if (hd) return;
-							sh.count(0);
-							Main.setDmg(mh, 0);
-						} else {
-							if (hd) {
-								Main.setDmg(mh, mh.getType().getMaxDurability());
-								sh.count(0);
-							}
-							
-							mh.setAmount(mh.getAmount() - 1);
-						}
-						final int tr = sh.count() < sh.rclTm() ? sh.count() : sh.rclTm();
-						sh.cldwn(gt.cld);
-						for (byte i = gt.brst == 0 ? 1 : gt.brst; i > 0; i--) {
-							sh.shoot(gt, false, tr);
-						}
-						p.setCooldown(gt.getMat(), gt.cld);
-						Main.plyWrldSnd(p.getLocation(), gt.snd);
-					}
-				}
-				break;
-			default:
-				break;
-			}
-		}
-	}
+                sh.scope(false);
+                final boolean hd = ((Damageable) mh.getItemMeta()).hasDamage();
+                if ((sh.count() == 0 || hd) && sh.cldwn() == 0) {
+                    if (mh.getAmount() == 1) {
+                        if (hd) return;
+                        sh.count(0);
+                        Main.setDmg(mh, 0);
+                    } else {
+                        if (hd) {
+                            Main.setDmg(mh, mh.getType().getMaxDurability());
+                            sh.count(0);
+                        }
+
+                        mh.setAmount(mh.getAmount() - 1);
+                    }
+                    final int tr = sh.count() < sh.rclTm() ? sh.count() : sh.rclTm();
+                    sh.cldwn(gt.cld);
+                    for (byte i = gt.brst == 0 ? 1 : gt.brst; i > 0; i--) {
+                        sh.shoot(gt, false, tr);
+                    }
+                    p.setCooldown(gt.getMat(), gt.cld);
+                    Main.plyWrldSnd(p.getLocation(), gt.snd);
+                }
+            }
+            break;
+        default:
+            break;
+        }
+    }
 	
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onInter(final PlayerInteractEvent e) {
@@ -222,25 +199,22 @@ public class InterrLis implements Listener {
 				}
 				b = e.getClickedBlock();
 				if (b != null && b.getType() == Material.TRIPWIRE && !nt.prm) {
-					e.setCancelled(true);
-					final Arena ar = Main.actvarns.get(sh.arena().name);
+					final Arena ar = sh.arena();
 					if (ar != null) {
-						final Team tm = ar.shtrs.get(sh);
-						for (final TripWire tn : ar.tws) {
-							if (tm == tn.tm) {
-								for (final Block bl : tn.bs) {
-									if (b.getX() == bl.getX() && b.getY() == bl.getY() && b.getZ() == bl.getZ()) {
-										tn.chngNt(sh.getPlayer().getInventory().getItemInMainHand(), ar);
-										it.setAmount(it.getAmount() - 1);
-										p.sendMessage(Main.prf() + "§7Вы зарядили растяжку гранатой!");
-										p.getWorld().playSound(b.getLocation(), Sound.ITEM_CROSSBOW_LOADING_END, 1f, 1f);
-										return;
-									}
-								}
+						final TripWire tw = Arena.tblks.get(new XYZ(b.getLocation()));
+						if (tw != null) {
+							e.setCancelled(true);
+							if (tw.tm == ar.shtrs.get(sh)) {
+								tw.chgNade(sh.getPlayer().getInventory().getItemInMainHand(), ar);
+								it.setAmount(it.getAmount() - 1);
+								p.sendMessage(Main.prf() + "§7Вы зарядили растяжку гранатой!");
+								p.getWorld().playSound(b.getLocation(), Sound.ITEM_CROSSBOW_LOADING_END, 1f, 1f);
+								return;
 							}
 						}
 					}
 				}
+
 				final Snowball sb = p.launchProjectile(Snowball.class);
 				sb.setItem(it.clone());
 				it.setAmount(it.getAmount() - 1);
@@ -285,7 +259,7 @@ public class InterrLis implements Listener {
 										Inventories.fillCTsInv();
 									}
 									break;
-								case NA:
+								case SPEC:
 								default:
 									inv = Inventories.LBShop;
 									if (ItemUtils.isBlank(inv.getItem(4), false)) {
@@ -297,7 +271,7 @@ public class InterrLis implements Listener {
 								break;
 							case ROUND:
 								if (sh.arena() instanceof Defusal && ((Defusal) sh.arena()).isBmbOn()) {
-									PacketUtils.sendAcBr(p, "§c§lВремя закупки вышло, бомба постовлена!", 30);
+									PacketUtils.sendAcBr(p, "§c§lВремя закупки вышло, бомба постовлена!");
 								} else if (sh.arena().canOpnShp(p.getLocation(), tm)) {
 									switch (tm) {
 									case Ts:
@@ -312,7 +286,7 @@ public class InterrLis implements Listener {
 											Inventories.fillCTsInv();
 										}
 										break;
-									case NA:
+									case SPEC:
 									default:
 										inv = Inventories.LBShop;
 										if (ItemUtils.isBlank(inv.getItem(4), false)) {
@@ -322,7 +296,7 @@ public class InterrLis implements Listener {
 									}
 									p.openInventory(inv);
 								} else {
-									PacketUtils.sendAcBr(p, "§c§lЗакупатся можно только на спавне!", 30);
+									PacketUtils.sendAcBr(p, "§c§lЗакупатся можно только на спавне!");
 								}
 								break;
 							case ENDRND:
@@ -347,21 +321,35 @@ public class InterrLis implements Listener {
 						sh = Shooter.getPlShooter(p.getName(), true);
 						if (b != null && sh.arena() != null && p.getGameMode() == GameMode.SURVIVAL) {
 							e.setCancelled(true);
+							final Arena ar = sh.arena();
 							if (b.getType() == Material.CRIMSON_BUTTON) {
-								final Inventory def = Bukkit.createInventory(null, bg ? 54 : 27, Component.text("§3§lРазминировка Бомбы"));
-								p.getWorld().playSound(b.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 0.5f);
-								def.setContents(Inventories.fillDfsInv(b, (byte) (bg ? 54 : 27)));
-								p.openInventory(def);
+								if (ar instanceof final Defusal df) {
+									final Bomb bmb = df.getBomb();
+									if (bmb != null) {
+										if (bmb.defusing == null) {
+											final Inventory def = Bukkit.createInventory(null, bg ? 54 : 27, TCUtils.format("§3§lРазминировка Бомбы"));
+											p.getWorld().playSound(b.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 0.5f);
+											def.setContents(Inventories.fillDfsInv((byte) (bg ? 54 : 27)));
+											p.openInventory(def);
+											bmb.defusing = sh;
+										} else {
+											ApiOstrov.sendActionBarDirect(p, "§c§lЭту бомбу уже обезвреживают!");
+										}
+									}
+								}
 							} else if (b.getType() == Material.SPAWNER) {
-								final Arena ar = sh.arena();
-								if (ar instanceof Invasion && ar.gst == GameState.ROUND) {
-									final Mobber m = ((Invasion) ar).mbbrs.get(new XYZ("", b.getX(), b.getY(), b.getZ()));
-									if (m != null && m.ind.isGlowing()) {
-										final Inventory def = Bukkit.createInventory(null, 54, Component.text("§3§lОбезвреживание Спавнера"));
-										p.getWorld().playSound(b.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 0.5f);
-										def.setContents(Inventories.fillDfSpInv(m, (byte) 54, bg));
-										p.openInventory(def);
-										((Invasion) ar).dfs.put(sh, m);
+								if (ar instanceof final Invasion in && ar.gst == GameState.ROUND) {
+									final Mobber m = in.mbbrs.get(new WXYZ(b).getSLoc());
+									if (m != null && m.isAlive()) {
+										if (m.defusing == null) {
+											final Inventory def = Bukkit.createInventory(null, 54, TCUtils.format("§3§lОбезвреживание Спавнера"));
+											p.getWorld().playSound(b.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 0.5f);
+											def.setContents(Inventories.fillDfSpInv(m, (byte) 54, bg));
+											p.openInventory(def);
+											m.defusing = sh;
+										} else {
+											ApiOstrov.sendActionBarDirect(p, "§c§lЭтот спавнер уже обезвреживают!");
+										}
 									}
 								}
 							}
@@ -419,11 +407,7 @@ public class InterrLis implements Listener {
 							sh = Shooter.getPlShooter(p.getName(), true);
 							p.playSound(p.getLocation(), Sound.BLOCK_CONDUIT_ATTACK_TARGET, 1f, 2f);
 							if (sh.arena() != null) {
-								if (sh.arena() instanceof Defusal) {
-									p.openInventory(((Defusal) sh.arena()).tms);
-								} else if (sh.arena() instanceof Gungame) {
-									p.openInventory(((Gungame) sh.arena()).tms);
-								}
+								sh.arena().teamInv.open(p);
 							}
 						}
 						break;
@@ -440,9 +424,7 @@ public class InterrLis implements Listener {
 							sh = Shooter.getPlShooter(p.getName(), true);
 							if (sh.arena() != null && sh.arena().botInv != null) {
 								p.playSound(p.getLocation(), Sound.BLOCK_BREWING_STAND_BREW, 1f, 1.6f);
-								final BotMenu bm = (BotMenu) sh.arena().botInv.getProvider();
-								if (bm.its == null) sh.arena().botInv.open(p);
-								else bm.reopen(p, bm.its);
+								sh.arena().botInv.open(p);
 							}
 						}
 						break;
@@ -475,23 +457,12 @@ public class InterrLis implements Listener {
 					sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
 					final Arena ar = sh.arena();
 					if (ar != null) {
-						final Iterator<TripWire> i = ar.tws.iterator();
-						while (i.hasNext()) {
-							
-							final TripWire tn = i.next();
-							for (final Block bl : tn.bs) {
-								if (b.getX() == bl.getX() && b.getY() == bl.getY() && b.getZ() == bl.getZ()) {
-									e.setCancelled(true);
-									if (ar.name.equals(sh.arena().name) && ar.shtrs.get(sh) != tn.tm) {
-										for (final Block r : tn.bs) {
-											r.setType(Material.AIR, false);
-										}
-										tn.hdNdAll(ar);
-										tn.trgr(bl.getLocation().add(0.5d, 0d, 0.5d));
-										i.remove();
-									}
-									return;
-								}
+						final TripWire tw = Arena.tblks.get(new XYZ(b.getLocation()));
+						if (tw != null) {
+							e.setCancelled(true);
+							if (ar.name.equals(sh.arena().name) && ar.shtrs.get(sh) != tw.tm) {
+								tw.remove(); ar.tws.remove(tw);
+								tw.trigger(b.getLocation().add(0.5d, 0d, 0.5d));
 							}
 						}
 					}
@@ -522,7 +493,7 @@ public class InterrLis implements Listener {
 				SkinQuest.tryCompleteQuest(sh, Quest.ОКЕАН, ApiOstrov.getStat(p, Stat.CS_bomb));
             	e.setCancelled(false);
 			} else {
-            	PacketUtils.sendAcBr(p, "§c§lУ тебя не дотягиваются руки!", 20);
+            	PacketUtils.sendAcBr(p, "§c§lУ тебя не дотягиваются руки!");
             	e.setCancelled(true);
 			}
 			return;
@@ -539,9 +510,9 @@ public class InterrLis implements Listener {
 			if (canPlcBmb(p.getLocation(), (Defusal) ar)) {
 				p.getInventory().setItemInMainHand(new ItemStack(Material.CRIMSON_BUTTON));
 				Main.plnts.put(p, new BaseBlockPosition(p.getLocation().getBlockX(), p.getLocation().getBlockY(), p.getLocation().getBlockZ()));
-				PacketUtils.sendAcBr(p, "§d§lВыбирите место для установки бомбы...", 30);
+				PacketUtils.sendAcBr(p, "§d§lВыбирите место для установки бомбы...");
 			} else {
-            	PacketUtils.sendAcBr(p, "§c§lБомбу можно ставить только на точках!", 20);
+            	PacketUtils.sendAcBr(p, "§c§lБомбу можно ставить только на точках!");
 			}
 		}
 	}
@@ -572,7 +543,7 @@ public class InterrLis implements Listener {
 					if (t.getType().isOccluding()) {
 						final Shooter sh = Shooter.getPlShooter(p.getName(), true);
 						if (sh.arena() != null) {
-							sh.arena().tws.add(new TripWire(twbs, sh, bf, i));
+							new TripWire(twbs, sh, bf, i);
 							p.getWorld().playSound(b.getLocation(), Sound.ITEM_CROSSBOW_QUICK_CHARGE_1, 2f, 1f);
 							p.sendMessage(Main.prf() + "§7Растяжка поставлена, \n§7можете прицепить на нее гранату!");
 							return true;

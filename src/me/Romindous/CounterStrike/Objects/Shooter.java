@@ -22,10 +22,13 @@ import ru.komiss77.notes.Slow;
 
 public interface Shooter {
 
+	int MAX_DST = 6;
+
 	String name();
 	
 	void rotPss();
-	Vector getLoc(final boolean dir);
+	Vector getLoc();
+	Vector getLoc(final int dst);
 	WXYZ getPos();
 	
 	Player getPlayer();
@@ -74,6 +77,8 @@ public interface Shooter {
 	boolean hasModel(final GunType gt, final int mdl);
 	void giveModel(final GunType gt, final int cmd);
 	void setModel(final GunType gt, final int cmd);
+
+	void setTabTag(final String pfx, final String sfx, final String afx);
 	
 	@Override
 	int hashCode();
@@ -81,7 +86,7 @@ public interface Shooter {
 	@Override
 	boolean equals(final Object o);
 	
-	@Slow(priority = 4)
+	@Slow(priority = 3)
     void shoot(final GunType gt, final boolean dff, final int tr);
 	
 	static PlShooter getPlShooter(final String nm, final boolean crt) {
@@ -101,7 +106,7 @@ public interface Shooter {
 			return getPlShooter(le.getName(), crt);
 		} else {
 			final BotEntity bh = BotManager.getBot(le.getEntityId(), BotEntity.class);
-			return bh != null && bh instanceof Shooter ? (Shooter) bh : null;
+			return bh instanceof Shooter ? (Shooter) bh : null;
 		}
 	}
 

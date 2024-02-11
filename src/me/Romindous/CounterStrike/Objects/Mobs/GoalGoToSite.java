@@ -19,7 +19,7 @@ import me.Romindous.CounterStrike.Game.Arena.Team;
 import me.Romindous.CounterStrike.Game.Invasion;
 import me.Romindous.CounterStrike.Listeners.DmgLis;
 import me.Romindous.CounterStrike.Objects.Shooter;
-import me.Romindous.CounterStrike.Objects.Game.GameState;
+import me.Romindous.CounterStrike.Enums.GameState;
 import ru.komiss77.modules.world.AStarPath;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.utils.LocationUtil;
@@ -80,7 +80,7 @@ public class GoalGoToSite implements Goal<Mob> {
 					}
 				}
 			} else {
-				final Vector pos = tgt.getLoc(true);
+				final Vector pos = tgt.getLoc();
 				if (!LocationUtil.rayThruAir(eyel, pos, 0.1F)) {
 					tgt = null;
 				}
@@ -98,7 +98,7 @@ public class GoalGoToSite implements Goal<Mob> {
 				pthTo = le.getEyeLocation();
 				if (lc.distanceSquared(pthTo) < 4d) {
 					mob.swingMainHand();
-					DmgLis.prcDmg(le, tgt, null, Mobber.getMbPow(mob.getType()) * 0.4d + 1d, Team.NA.clr + mob.getName() + " §f\u929a", 5);
+					DmgLis.prcDmg(le, tgt, null, Mobber.getMbPow(mob.getType()) * 0.4d + 1d, Team.SPEC.clr + mob.getName() + " §f\u929a", 5);
 				}
 				
 				mob.getPathfinder().moveTo(pthTo, Mobber.getMbSpd(mob.getType()));

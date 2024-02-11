@@ -6,16 +6,17 @@ import org.jetbrains.annotations.Nullable;
 
 public enum NadeType {
 	
-	FRAG(true, (short)6, (short)300, "§f鉬", (byte)36),
-	FLAME(true, (short)36, (short)250, "§f鉫", (byte)37, BlockFace.UP),
-	SMOKE(false, (short)14, (short)100, "§f鉪", (byte)46),
-	FLASH(false, (short)4, (short)50, "§f鉩", (byte)38, BlockFace.WEST, BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH),
-	DECOY(false, (short)10, (short)20, "§f鉭", (byte)47);
+	FRAG(true, 6, 300, "§f鉬", "frag", 36),
+	FLAME(true, 36, 250, "§f鉫", "flame", 37, BlockFace.UP),
+	SMOKE(false, 14, 100, "§f鉪", "smoke", 46),
+	FLASH(false, 4, 50, "§f鉩", "flash", 38, BlockFace.WEST, BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH),
+	DECOY(false, 10, 20, "§f鉭", "decoy", 47);
 	
 	public final boolean prm;
 	public final short time;
 	public final short prc;
 	public final String icn;
+	public final String snd;
 	public final byte slt;
 	public final BlockFace[] popOn;
 
@@ -23,12 +24,14 @@ public enum NadeType {
 	public static final byte scdSlot = 4;
 	public static final short nadeRwd = 160;
 	
-	NadeType(final boolean prm, final short time, final short prc, final String icn, final byte slt, final BlockFace... popOn) {
-		this.time = time;
+	NadeType(final boolean prm, final int time, final int prc, final String icn,
+		final String snd, final int slt, final BlockFace... popOn) {
+		this.time = (short) time;
 		this.prm = prm;
-		this.prc = prc;
+		this.prc = (short) prc;
 		this.icn = icn;
-		this.slt = slt;
+		this.snd = snd;
+		this.slt = (byte) slt;
 		this.popOn = popOn;
 	}
   

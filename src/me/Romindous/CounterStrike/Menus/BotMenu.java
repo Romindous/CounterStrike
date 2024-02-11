@@ -1,19 +1,13 @@
 package me.Romindous.CounterStrike.Menus;
 
-import java.util.ArrayList;
-
+import me.Romindous.CounterStrike.Game.Arena;
+import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.Shooter;
 import org.bukkit.Material;
 import org.bukkit.Sound;
-import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
-
-import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Game.Arena;
 import ru.komiss77.utils.ItemBuilder;
-import ru.komiss77.utils.inventory.ClickableItem;
-import ru.komiss77.utils.inventory.InventoryContent;
-import ru.komiss77.utils.inventory.InventoryProvider;
-
+import ru.komiss77.utils.inventory.*;
 
 
 public class BotMenu implements InventoryProvider {
@@ -48,19 +42,29 @@ public class BotMenu implements InventoryProvider {
         	its.set(Main.srnd.nextInt(3) + 1, ClickableItem.of(new ItemBuilder(Material.PINK_DYE).name("§7Клик -> §cВыключить Ботов!").build(), e -> {
 				p.playSound(p.getLocation(), Sound.ENTITY_SNIFFER_DROP_SEED, 1f, 0.6f);
         		ar.bots = false;
-        		final ArrayList<HumanEntity> hes = new ArrayList<>(its.getInventory().getViewers());
-                for (final HumanEntity he : hes) {
-                    reopen((Player) he, its);
-                }
+				for (final Shooter sh : ar.shtrs.keySet()) {
+					final Player pl = sh.getPlayer();
+					if (pl == null) continue;
+					final SmartInventory si = InventoryManager.getInventory(pl).orElse(null);
+					if (si != null && si.getProvider() instanceof final BotMenu bm) {
+						pl.closeInventory();
+						bm.reopen(pl, its);
+					}
+				}
         	}));
     	} else {
         	its.set(Main.srnd.nextInt(3) + 5, ClickableItem.of(new ItemBuilder(Material.LIME_DYE).name("§7Клик -> §aВключить Ботов!").build(), e -> {
 				p.playSound(p.getLocation(), Sound.ENTITY_SNIFFER_DROP_SEED, 1f, 1.2f);
         		ar.bots = true;
-        		final ArrayList<HumanEntity> hes = new ArrayList<>(its.getInventory().getViewers());
-                for (final HumanEntity he : hes) {
-                    reopen((Player) he, its);
-                }
+				for (final Shooter sh : ar.shtrs.keySet()) {
+					final Player pl = sh.getPlayer();
+					if (pl == null) continue;
+					final SmartInventory si = InventoryManager.getInventory(pl).orElse(null);
+					if (si != null && si.getProvider() instanceof final BotMenu bm) {
+						pl.closeInventory();
+						bm.reopen(pl, its);
+					}
+				}
         	}));
 		}
     }

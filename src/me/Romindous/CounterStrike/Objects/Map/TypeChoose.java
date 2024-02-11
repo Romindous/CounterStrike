@@ -2,6 +2,7 @@ package me.Romindous.CounterStrike.Objects.Map;
 
 import java.util.Arrays;
 
+import me.Romindous.CounterStrike.Enums.GameType;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
@@ -9,7 +10,6 @@ import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Commands.CSCmd;
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Objects.Shooter;
-import me.Romindous.CounterStrike.Objects.Game.GameType;
 import ru.komiss77.utils.ItemBuilder;
 import ru.komiss77.utils.inventory.ClickableItem;
 import ru.komiss77.utils.inventory.InventoryContent;

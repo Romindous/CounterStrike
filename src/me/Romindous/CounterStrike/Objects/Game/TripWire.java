@@ -5,34 +5,26 @@ import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Game.Arena.Team;
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Objects.Shooter;
-import me.Romindous.CounterStrike.Utils.PacketUtils;
-import net.minecraft.network.protocol.game.PacketPlayOutEntityDestroy;
-import net.minecraft.network.protocol.game.PacketPlayOutEntityMetadata;
-import net.minecraft.network.protocol.game.PacketPlayOutSpawnEntity;
-import net.minecraft.server.network.PlayerConnection;
-import net.minecraft.world.entity.EntityTypes;
-import net.minecraft.world.entity.decoration.EntityItemFrame;
-import net.minecraft.world.entity.projectile.EntitySnowball;
-import net.minecraft.world.level.World;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Particle;
-import org.bukkit.Sound;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.Tripwire;
-import org.bukkit.entity.ItemFrame;
+import org.bukkit.entity.GlowItemFrame;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.ThrowableProjectile;
-import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
+import org.bukkit.entity.Snowball;
 import org.bukkit.inventory.ItemStack;
+import ru.komiss77.modules.world.XYZ;
 
 import java.util.Map.Entry;
  
 public class TripWire {
-	
-	public final Block[] bs;
-	public final EntityItemFrame eif;
+
+	private static int cid = 0;
+	private final int id;
+
+	public final World w;
+	public final XYZ[] blks;
+	public final GlowItemFrame eif;
 	public final Team tm;
 	public NadeType nt;
    
@@ -41,75 +33,54 @@ public class TripWire {
 		tw.setAttached(true);
 		tw.setFace(bf, true);
 		tw.setFace(bf.getOppositeFace(), true);
-		this.bs = new Block[i];
+		this.id = cid++;
+		this.w = bs[0].getWorld();
+		this.blks = new XYZ[i];
 		for (i--; i >= 0; i--) {
-			bs[i].setType(Material.TRIPWIRE, false);
 			bs[i].setBlockData(tw, false);
-			this.bs[i] = bs[i];
+			final XYZ bl = new XYZ(bs[i].getLocation());
+			this.blks[i] = bl;
+			Arena.tblks.put(bl, this);
 		}
 		this.nt = null;
-		eif = new EntityItemFrame(EntityTypes.af, PacketUtils.getNMSWrld(bs[0].getWorld()));
-		eif.j(true);
-		eif.e(true);
-		eif.setPosRaw(bs[0].getX() + 0.5d, bs[0].getY() - 1d, bs[0].getZ() + 0.5d, false);
+		sh.arena().tws.add(this);
+		eif = w.spawn(bs[0].getLocation().add(0.5d, -1d, 0.5d), GlowItemFrame.class, fr -> {
+			fr.setFacingDirection(BlockFace.DOWN, true);
+			fr.setVisibleByDefault(false);
+			fr.setVisible(false);
+			fr.setFixed(true);
+		});
 		this.tm = sh.arena().shtrs.get(sh);
-		final PacketPlayOutSpawnEntity pe = new PacketPlayOutSpawnEntity(eif);
-		final PacketPlayOutEntityMetadata pm = new PacketPlayOutEntityMetadata(eif.af(), eif.aj().c());
 		for (final Entry<Shooter, Team> e : sh.arena().shtrs.entrySet()) {
 			if (e.getValue() == tm) {
 				final Player p = e.getKey().getPlayer();
 				if (p != null) {
-					shwNd(PacketUtils.getNMSPl(p).c, pe, pm);
+					p.showEntity(Main.plug, eif);
 				}
 			}
 		}
 	}
 	
-	public void trgr(final Location loc) {
+	public void trigger(final Location loc) {
 		loc.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, loc, 10, 0.4d, 0.4d, 0.4d);
 		loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_BREAK_BLOCK, 2f, 0.8f);
 		if (this.nt != null) {
-			final Material m; 
-			final World w = PacketUtils.getNMSWrld(loc.getWorld());
-			final EntitySnowball sb = new EntitySnowball(EntityTypes.aP, w);
-            m = switch (this.nt) {
-                case FRAG -> Material.OAK_SAPLING;
-                case FLAME -> Material.ACACIA_SAPLING;
-                case SMOKE -> Material.DARK_OAK_SAPLING;
-                case FLASH -> Material.BIRCH_SAPLING;
-                case DECOY -> Material.JUNGLE_SAPLING;
-            };
-			sb.a(PacketUtils.getNMSIt(new ItemStack(m)));
-			sb.setPosRaw(loc.getX(), loc.getY(), loc.getZ(), false);
-			w.addFreshEntity(sb, SpawnReason.CUSTOM);
-			Nade.expld((ThrowableProjectile) sb.getBukkitEntity(), null);
+			final Material m = switch (this.nt) {
+				case FRAG -> Material.OAK_SAPLING;
+				case FLAME -> Material.ACACIA_SAPLING;
+				case SMOKE -> Material.DARK_OAK_SAPLING;
+				case FLASH -> Material.BIRCH_SAPLING;
+				case DECOY -> Material.JUNGLE_SAPLING;
+			};
+			final Snowball sb = loc.getWorld().spawn(loc, Snowball.class);
+			sb.setItem(new ItemStack(m));
+			Nade.expld(sb, null);
 		} 
 	}
 
-	public void chngNt(final ItemStack it, final Arena ar) {
+	public void chgNade(final ItemStack it, final Arena ar) {
 		this.nt = NadeType.getNdTp(it);
-		((ItemFrame) eif.getBukkitEntity()).setItem(it);
-		final PacketPlayOutEntityMetadata pp = new PacketPlayOutEntityMetadata(eif.af(), eif.aj().c());
-		for (final Entry<Shooter, Team> e : ar.shtrs.entrySet()) {
-			if (e.getValue() == tm) {
-				final Player p = e.getKey().getPlayer();
-				if (p != null) {
-					PacketUtils.getNMSPl(p).c.a(pp);
-				}
-			}
-		}
-	}
-
-	public void hdNdAll(final Arena ar) {
-		final PacketPlayOutEntityDestroy pd = new PacketPlayOutEntityDestroy(eif.af());
-		for (final Entry<Shooter, Team> e : ar.shtrs.entrySet()) {
-			if (tm == e.getValue()) {
-				final Player p = e.getKey().getPlayer();
-				if (p != null) {
-					PacketUtils.getNMSPl(p).c.a(pd);
-				}
-			}
-		}
+		eif.setItem(it);
 	}
 
     
@@ -125,20 +96,30 @@ public class TripWire {
 		return nm;
   	}
 
-	public void shwNd(final PlayerConnection pc) {
-		pc.a(new PacketPlayOutSpawnEntity(eif));
-		pc.a(new PacketPlayOutEntityMetadata(eif.af(), eif.aj().c()));
+	public void showNade(final Player p) {
+		p.showEntity(Main.plug, eif);
 	}
 
-	public void shwNd(final PlayerConnection pc, final PacketPlayOutSpawnEntity pe, final PacketPlayOutEntityMetadata pm) {
-		pc.a(pe);
-		pc.a(pm);
+	public void hideNade(final Player p) {
+		p.hideEntity(Main.plug, eif);
 	}
 
-	public void rmv(final Arena ar) {
-		for (final Block r : bs) {
-			r.setType(Material.AIR, false);
+	public void remove() {
+		for (final XYZ r : blks) {
+			Arena.tblks.remove(r);
+			r.getCenterLoc(w).getBlock()
+				.setType(Material.AIR, false);
 		}
-		hdNdAll(ar);
+		eif.remove();
+	}
+
+	@Override
+	public boolean equals(final Object o) {
+		return o instanceof TripWire && ((TripWire) o).id == id;
+	}
+
+	@Override
+	public int hashCode() {
+		return id;
 	}
 }

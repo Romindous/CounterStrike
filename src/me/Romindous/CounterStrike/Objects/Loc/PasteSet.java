@@ -1,22 +1,13 @@
 package me.Romindous.CounterStrike.Objects.Loc;
 
-import me.Romindous.CounterStrike.Objects.Map.TileSet;
+import me.Romindous.CounterStrike.Enums.TileSet;
 import ru.komiss77.modules.world.XYZ;
 
-public class PasteSet {
-	
-	public final TileSet ts;
-	public final byte rtt;
-	public final XYZ loc;
-	
-	public PasteSet(final TileSet ts, final byte rtt, final XYZ loc) {
-		this.ts = ts;
-		this.rtt = rtt;
-		this.loc = loc;
-	}
-	
+public record PasteSet(TileSet set, byte rtt, XYZ loc) {
+
 	@Override
 	public String toString() {
-		return ts.toString() + " r-" + rtt + " loc-" + loc.toString();
+		return set.toString() + " r-" + rtt + " loc-" + loc.toString();
 	}
+
 }

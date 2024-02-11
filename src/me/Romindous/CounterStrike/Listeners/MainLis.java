@@ -1,14 +1,18 @@
 package me.Romindous.CounterStrike.Listeners;
 
-import java.util.Random;
-
+import com.destroystokyo.paper.event.player.PlayerJumpEvent;
+import me.Romindous.CounterStrike.Enums.GameState;
+import me.Romindous.CounterStrike.Enums.GunType;
+import me.Romindous.CounterStrike.Enums.NadeType;
+import me.Romindous.CounterStrike.Game.Arena;
+import me.Romindous.CounterStrike.Game.Arena.Team;
+import me.Romindous.CounterStrike.Game.Defusal;
+import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.Shooter;
+import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.HumanEntity;
-import org.bukkit.entity.Item;
-import org.bukkit.entity.Mob;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -17,33 +21,19 @@ import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.ItemMergeEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerExpChangeEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.player.PlayerSwapHandItemsEvent;
-import org.bukkit.event.player.PlayerToggleSneakEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.potion.PotionEffectType;
-import org.spigotmc.event.entity.EntityDismountEvent;
-
-import com.destroystokyo.paper.event.player.PlayerJumpEvent;
-
-import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Enums.GunType;
-import me.Romindous.CounterStrike.Enums.NadeType;
-import me.Romindous.CounterStrike.Game.Arena;
-import me.Romindous.CounterStrike.Game.Arena.Team;
-import me.Romindous.CounterStrike.Game.Defusal;
-import me.Romindous.CounterStrike.Objects.Shooter;
-import me.Romindous.CounterStrike.Objects.Game.GameState;
-import net.kyori.adventure.text.Component;
 import ru.komiss77.enums.Data;
 import ru.komiss77.events.BungeeDataRecieved;
 import ru.komiss77.events.LocalDataLoadEvent;
 import ru.komiss77.modules.player.Oplayer;
 import ru.komiss77.utils.ItemUtils;
- 
+import ru.komiss77.utils.TCUtils;
+
+import java.util.Random;
+
 public class MainLis implements Listener {
 	
 	@EventHandler(priority = EventPriority.MONITOR)
@@ -78,23 +68,39 @@ public class MainLis implements Listener {
 	public void onData(final LocalDataLoadEvent e) {
 		Main.lobbyPl(e.getPlayer());
 		final String title = switch (new Random().nextInt(4)) {
-            case 0 -> "Добро пожаловать!";
-            case 1 -> "Приятной игры!";
-            case 2 -> "Желаем удачи!";
-            case 3 -> "Развлекайтесь!";
-            default -> "";
-        };
+			case 0 -> "Добро пожаловать!";
+			case 1 -> "Приятной игры!";
+			case 2 -> "Желаем удачи!";
+			case 3 -> "Развлекайтесь!";
+			default -> "";
+		};
 
-        e.getPlayer().sendPlayerListHeaderAndFooter(Component.text("§7<§5Counter Strike§7>\n" + title),
-			Component.text("§7Сейчас в игре: §d" + getPlaying() + "§7 человек!"));
+		e.getPlayer().sendPlayerListHeaderAndFooter(TCUtils.format("§7<§5Counter Strike§7>\n" + title),
+				TCUtils.format("§7Сейчас в игре: §d" + getPlaying() + "§7 человек!"));
+	}
+
+	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+	public void onWorld(final PlayerChangedWorldEvent e) {
+		final Player p = e.getPlayer();
+		for (final Player pl : Bukkit.getOnlinePlayers()) {
+			if (p.getEntityId() == pl.getEntityId()) continue;
+			pl.hidePlayer(Main.plug, p);
+			p.hidePlayer(Main.plug, pl);
+		}
+
+		for (final Player pl : p.getWorld().getPlayers()) {
+			if (p.getEntityId() == pl.getEntityId()) continue;
+			pl.showPlayer(Main.plug, p);
+			p.showPlayer(Main.plug, pl);
+		}
 	}
 	
-	public static byte getPlaying() {
+	public static int getPlaying() {
 		int in = 0;
 		for (final Arena ar : Main.actvarns.values()) {
 			in += ar.shtrs.size();
 		}
-		return (byte) in;
+		return in;
 	}
 
 	@EventHandler
@@ -235,11 +241,11 @@ public class MainLis implements Listener {
 	public void onMerge(final ItemMergeEvent e) {
 		e.setCancelled(true);
 	}
-	   
-	@EventHandler
+
+	/*@EventHandler
 	public void onOut(final EntityDismountEvent e) {
 		e.setCancelled(e.getEntityType() != EntityType.PLAYER || ((HumanEntity) e.getEntity()).getGameMode() != GameMode.CREATIVE);
-	}
+	}*/
 
 	@EventHandler
 	public void onSwap(final PlayerSwapHandItemsEvent e) {

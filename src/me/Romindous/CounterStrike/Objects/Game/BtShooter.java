@@ -1,6 +1,7 @@
 package me.Romindous.CounterStrike.Objects.Game;
 
 import com.destroystokyo.paper.entity.ai.Goal;
+import me.Romindous.CounterStrike.Enums.GameState;
 import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Enums.NadeType;
 import me.Romindous.CounterStrike.Game.Arena;
@@ -11,6 +12,7 @@ import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Objects.Bots.BotGoal;
 import me.Romindous.CounterStrike.Objects.EntityShootAtEntityEvent;
 import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
+import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Skins.GunSkin;
 import me.Romindous.CounterStrike.Utils.Inventories;
@@ -29,6 +31,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.Nullable;
 import ru.komiss77.modules.bots.BotEntity;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.notes.Slow;
@@ -36,8 +39,7 @@ import ru.komiss77.utils.FastMath;
 import ru.komiss77.utils.ItemBuilder;
 import ru.komiss77.utils.ItemUtils;
 import ru.komiss77.utils.LocationUtil;
-import ru.komiss77.version.IServer;
-import ru.komiss77.version.VM;
+import ru.komiss77.version.Nms;
 
 import java.lang.ref.WeakReference;
 import java.util.HashSet;
@@ -46,27 +48,40 @@ import java.util.TreeMap;
 
 public class BtShooter extends BotEntity implements Shooter {
 	
-	private static int botID = 0;
-	
 	public Shooter tgtSh;
 	public WeakReference<LivingEntity> tgtLe;
 	public boolean willBuy;
 	
-	public BtShooter(final Arena ar) {
-		super("Bot-v" + botID++, ar.w);
+	public BtShooter(final String name, final Arena ar) {
+		super(name, ar.w);
 		rclTm = 50; cldwn = 0; count = 0; shtTm = 0;
 		money = 0; kills = 0; spwnrs = 0; deaths = 0;
 		arena = ar; rid = -1; willBuy = false;
 		tgtSh = null; tgtLe = new WeakReference<>(null);
 		pss = new LinkedList<>();
-//		setGoal(mb -> new BotGoal(this, mb));
-//		onDamage(e -> {});
-//		tagVisIf(pl -> {
-//			final Team tm = ar.shtrs.get(Shooter.getPlShooter(pl.getName(), true));
-//			return tm != null && ar.shtrs.get(this) == tm;
-//		});
+		final Vector vc = new Vector();
+		for (int i = 0; i != MAX_DST; i++) pss.add(vc);
 	}
-	
+
+	@Override
+	public void die(@Nullable LivingEntity mb) {
+		super.die(mb);
+		if (arena == null) return;
+		if (arena instanceof final Defusal df) {
+			if (df.isBmbOn()) {
+				final Shooter sh = df.getBomb().defusing;
+				if (sh != null && sh.equals(this))
+					df.getBomb().defusing = null;
+			}
+		} else if (arena instanceof final Invasion in) {
+			for (final Mobber m : in.mbbrs.values()) {
+				final Shooter sh = m.defusing;
+				if (sh != null && sh.equals(this))
+					m.defusing = null;
+			}
+		}
+	}
+
 	@Override
 	public Goal<Mob> getGoal(final Mob org) {
 		return new BotGoal(this, org);
@@ -89,11 +104,11 @@ public class BtShooter extends BotEntity implements Shooter {
 		if (it.hasItemMeta() && ((Damageable) it.getItemMeta()).hasDamage()) {
 			count++;
 			if ((count & 0x3) == 0) {
-				le.getWorld().playSound(le.getLocation(), Sound.BLOCK_CHAIN_FALL, 0.5f, 2f);
+				le.getWorld().playSound(loc, Sound.BLOCK_CHAIN_FALL, 0.5f, 2f);
 			} 
 			Main.setDmg(it, it.getType().getMaxDurability() * count / gt.rtm);
 			if (count >= gt.rtm) {
-				le.getWorld().playSound(le.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 2f);
+				le.getWorld().playSound(loc, Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 2f);
 				it.setAmount(gt.amo);
 				count = 0;
 				item(it, EquipmentSlot.HAND);
@@ -109,7 +124,7 @@ public class BtShooter extends BotEntity implements Shooter {
 		final ItemStack it = item(EquipmentSlot.HAND);
 		final GunType gt = GunType.getGnTp(it);
 		if (gt != null) {
-			final boolean ps = ((Damageable)it.getItemMeta()).hasDamage();
+			final boolean ps = ((Damageable) it.getItemMeta()).hasDamage();
 			count = count + (ps ? 0 : 1);
 			if (count % gt.cld == 0) {
 				final int tr = count < rclTm ? count : rclTm;
@@ -153,7 +168,7 @@ public class BtShooter extends BotEntity implements Shooter {
 
 	@Override
 	public Player getPlayer() {return null;}
-	
+
 	@Override
 	public LivingEntity getEntity() {
 		return super.getEntity();
@@ -168,12 +183,12 @@ public class BtShooter extends BotEntity implements Shooter {
 	public void rotPss() {
 		final LivingEntity le = getEntity();
 		if (le == null || !le.isValid()) return;
-		pss.poll();
-		pss.add(le.getLocation().toVector());
+		pss.poll(); pss.add(le.getLocation().toVector());
 	}
-	
-	public Vector getLoc(final boolean dir) 
-	{return dir ? pss.getLast().clone() : pss.getFirst().clone();}
+	public Vector getLoc() {return pss.getLast().clone();}
+	public Vector getLoc(final int dst) {
+		return pss.get(Math.max(pss.size() - dst, 0)).clone();
+	}
 	
 	private int shtTm;
 	public int shtTm() {return shtTm;}
@@ -221,13 +236,19 @@ public class BtShooter extends BotEntity implements Shooter {
 	public void setModel(final GunType gt, final int cmd) {}
 
 	@Override
+	public void setTabTag(final String pfx, final String sfx, final String afx) {
+		tab(pfx, afx, sfx);
+		tag(pfx, afx, sfx);
+	}
+
+	@Override
 	@Slow(priority = 4)
 	public void shoot(final GunType gt, final boolean dff, final int tr) {
 		final LivingEntity ent = getEntity();
 		if (ent == null) return;
 		final Location loc = ent.getEyeLocation();
 		if (tgtSh != null) {
-			loc.setDirection(tgtSh.getLoc(true).subtract(ent.getLocation().toVector()));
+			loc.setDirection(tgtSh.getLoc().subtract(ent.getLocation().toVector()));
 		} else {
 			final LivingEntity le = tgtLe.get();
 			if (le != null) {
@@ -255,26 +276,24 @@ public class BtShooter extends BotEntity implements Shooter {
 			final double dx;
 			final double dz;
 			switch (e.getType()) {
-			case PLAYER:
-			case HUSK:
-				if (e.getEntityId() == ent.getEntityId()) continue;
-				final Shooter sh = Shooter.getShooter(e, false);
-				if (sh == null || sh.isDead()) {
-					continue;
-				}
-				final Vector lc = sh.getLoc(false);
-				ebx = new BoundingBox(lc.getX(), lc.getY(), lc.getZ(), lc.getX(), lc.getY() + 
-				(sh instanceof PlShooter && e.isSneaking() ? 1.5d : 1.9d), lc.getZ());
-				dx = lc.getX() - loc.getX();
-				dz = lc.getZ() - loc.getZ();
-				break;
 			case ARMOR_STAND:
 			case TURTLE:
 				continue;
 			default:
-				ebx = e.getBoundingBox();
-				dx = ebx.getCenterX() - loc.getX();
-				dz = ebx.getCenterZ() - loc.getZ();
+				if (e.getEntityId() == ent.getEntityId()) continue;
+				final Shooter sh = Shooter.getShooter(e, false);
+				if (sh == null) {
+					ebx = e.getBoundingBox();
+					dx = ebx.getCenterX() - loc.getX();
+					dz = ebx.getCenterZ() - loc.getZ();
+					break;
+				}
+				if (sh.isDead()) continue;
+				final Vector lc = sh.getLoc(sh instanceof PlShooter || gt.snp ? 4 : 2);
+				ebx = new BoundingBox(lc.getX(), lc.getY(), lc.getZ(), lc.getX(), lc.getY() +
+					(sh instanceof PlShooter && e.isSneaking() ? 1.5d : 1.9d), lc.getZ());
+				dx = lc.getX() - loc.getX();
+				dz = lc.getZ() - loc.getZ();
 				break;
 			}
 			final double ln = Math.sqrt(dx * dx + dz * dz);
@@ -297,7 +316,6 @@ public class BtShooter extends BotEntity implements Shooter {
 		double x = 20d * vec.getX() + loc.getX();
 		double y = 20d * vec.getY() + loc.getY();
 		double z = 20d * vec.getZ() + loc.getZ();
-		final IServer is = VM.getNmsServer();
 		LivingEntity tgt;
 		BoundingBox ebx;
 		
@@ -307,10 +325,10 @@ public class BtShooter extends BotEntity implements Shooter {
 			y += vec.getY();
 			z += vec.getZ();
 			if ((i & 63) == 0) {
-				w.spawnParticle(Particle.ASH, x, y, z, 1);
+				world.spawnParticle(Particle.ASH, x, y, z, 1);
 			}
 			
-			final Material mat = is.getFastMat(w, (int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
+			final Material mat = Nms.getFastMat(w, (int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
 			final Block b;
 			switch(mat) {
 			case OAK_LEAVES, ACACIA_LEAVES, BIRCH_LEAVES, JUNGLE_LEAVES, 
@@ -321,10 +339,10 @@ public class BtShooter extends BotEntity implements Shooter {
 			WHITE_STAINED_GLASS_PANE, DIAMOND_ORE, 
 			COAL_ORE, IRON_ORE, EMERALD_ORE:
 				if (brkBlks) {
-					b = w.getBlockAt((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
+					b = world.getBlockAt((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
 					arena().brkn.add(new BrknBlck(b));
-					w.playSound(b.getLocation(), Sound.BLOCK_SHROOMLIGHT_FALL, 2f, 0.8f);
-					w.spawnParticle(Particle.BLOCK_CRACK, b.getLocation().add(0.5d, 0.5d, 0.5d), 40, 0.4d, 0.4d, 0.4d, b.getType().createBlockData());
+					world.playSound(b.getLocation(), Sound.BLOCK_SHROOMLIGHT_FALL, 2f, 0.8f);
+					world.spawnParticle(Particle.BLOCK_CRACK, b.getLocation().add(0.5d, 0.5d, 0.5d), 40, 0.4d, 0.4d, 0.4d, b.getType().createBlockData());
 					b.setType(Material.AIR, false);
 					wls.add(new BaseBlockPosition(b.getX(), b.getY(), b.getZ()));
 					dmg *= 0.5f;
@@ -369,7 +387,7 @@ public class BtShooter extends BotEntity implements Shooter {
 			JUNGLE_DOOR, MANGROVE_DOOR, WARPED_DOOR, SPRUCE_DOOR, 
 			
 			BARREL, BEEHIVE, BEE_NEST, NOTE_BLOCK, JUKEBOX, CRAFTING_TABLE:
-				b = w.getBlockAt((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
+				b = world.getBlockAt((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
 				if (b.getBoundingBox().contains(x, y, z) && wls.add(new BaseBlockPosition(b.getX(), b.getY(), b.getZ()))) {
 					PacketUtils.blkCrckClnt(new WXYZ(b, 640));
 					dmg *= 0.5f;
@@ -389,7 +407,7 @@ public class BtShooter extends BotEntity implements Shooter {
 				break;
 			default:
 				if (mat.isCollidable()) {
-					b = w.getBlockAt((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
+					b = world.getBlockAt((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
 					if (b.getBoundingBox().contains(x, y, z)) {
 						b.getWorld().spawnParticle(Particle.BLOCK_CRACK, new Location(b.getWorld(), x, y, z), 10, 0.1d, 0.1d, 0.1d, b.getBlockData());
 						PacketUtils.blkCrckClnt(new WXYZ(b, 640));
@@ -406,7 +424,7 @@ public class BtShooter extends BotEntity implements Shooter {
 				if (sh == null) {
 					nr = Math.pow(x - ebx.getCenterX(), 2d) + Math.pow(z - ebx.getCenterZ(), 2d) < 0.2d;
 				} else {
-					final Vector vc = sh.getLoc(false);
+					final Vector vc = sh.getLoc(sh instanceof PlShooter || gt.snp ? 4 : 2);
 					nr = Math.pow(x - vc.getX(), 2d) + Math.pow(z - vc.getZ(), 2d) < 0.2d;
 				}
 				
@@ -448,30 +466,29 @@ public class BtShooter extends BotEntity implements Shooter {
 	
 	@Override
 	public void dropIts(final Location loc) {
-		final World w = loc.getWorld();
 		ItemStack it = item(3);
 		if (!ItemUtils.isBlank(it, false)) {
-			w.dropItem(loc, it);
+			world.dropItem(loc, it);
 		}
 		it = item(4);
 		if (!ItemUtils.isBlank(it, false)) {
 			if (it.getAmount() == 1) {
-				w.dropItem(loc, it);
+				world.dropItem(loc, it);
 			} else {
 				it.setAmount(1);
-				w.dropItem(loc, it);
-				w.dropItem(loc, it);
+				world.dropItem(loc, it);
+				world.dropItem(loc, it);
 			}
 		}
 		
 		if (arena() instanceof Defusal) {
 			it = item(0);
 			if (!ItemUtils.isBlank(it, false)) {
-				w.dropItem(loc, it);
+				world.dropItem(loc, it);
 			}
 			it = item(1);
 			if (!ItemUtils.isBlank(it, false)) {
-				w.dropItem(loc, it);
+				world.dropItem(loc, it);
 			}
 		}
 		
@@ -481,14 +498,14 @@ public class BtShooter extends BotEntity implements Shooter {
 				if (arena instanceof final Defusal df) {
                     //bomb dropped
 					if (df.getTmAmt(Team.Ts, true, true) != 1) {
-						df.dropBomb(w.dropItem(loc, Main.bmb));
+						df.dropBomb(world.dropItem(loc, Main.bmb));
 					}
 					if (df.indon) {
 						df.indSts(getPlayer());
 					}
 				}
 			} else if (it.getType() == Material.SHEARS) {
-				w.dropItem(loc, it);
+				world.dropItem(loc, it);
 			}
 		}
 		clearInv();
@@ -509,7 +526,7 @@ public class BtShooter extends BotEntity implements Shooter {
 							item(is, 7);
 							((Defusal) arena()).pickBomb();
 							it.remove();
-							w.playSound(loc, Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
+							world.playSound(loc, Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
 						} else {
 							it.setPickupDelay(40);
 						}
@@ -518,7 +535,7 @@ public class BtShooter extends BotEntity implements Shooter {
 						if (arena().shtrs.get(this) == Team.CTs) {
 							item(is, 7);
 							it.remove();
-							w.playSound(loc, Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
+							world.playSound(loc, Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
 						} else {
 							it.setPickupDelay(40);
 						}
@@ -534,7 +551,7 @@ public class BtShooter extends BotEntity implements Shooter {
 				if (own == null) {
 					item(is, slt);
 					it.remove();
-					w.playSound(loc, Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
+					world.playSound(loc, Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
 				}
 				return;
 			}
@@ -544,12 +561,12 @@ public class BtShooter extends BotEntity implements Shooter {
 			if (own == null) {
 				item(is.asQuantity(gt.amo), slt);
 				it.remove();
-				w.playSound(loc, Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 1.4f);
+				world.playSound(loc, Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 1.4f);
 			} else if (gt.prc > own.prc) {
-				w.dropItem(loc, eqp);
+				world.dropItem(loc, eqp);
 				item(is.asQuantity(gt.amo), slt);
 				it.remove();
-				w.playSound(loc, Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 1.4f);
+				world.playSound(loc, Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 1.4f);
 			}
 			switchToGun();
 		}
@@ -572,40 +589,40 @@ public class BtShooter extends BotEntity implements Shooter {
 		
 		final Team tm = arena.shtrs.get(this);
 		if (money < 1000) {//save
-			tryBuyItem(GunType.hlmtSlt, GunType.hlmtPrc, EquipmentSlot.HEAD, tm);
-			if (Main.srnd.nextBoolean()) tryBuyItem(GunType.chstSlt, GunType.chstPrc, EquipmentSlot.CHEST, tm);
-			else if (Main.srnd.nextBoolean()) tryBuyItem(NadeType.FLASH.slt, NadeType.FLASH.prc, NadeType.scdSlot, tm);
+			buyItem(GunType.hlmtSlt, GunType.hlmtPrc, EquipmentSlot.HEAD, tm);
+			if (Main.srnd.nextBoolean()) buyItem(GunType.chstSlt, GunType.chstPrc, EquipmentSlot.CHEST, tm);
+			else if (Main.srnd.nextBoolean()) buyItem(NadeType.FLASH.slt, NadeType.FLASH.prc, NadeType.scdSlot, tm);
 			
-			if (!tryBuyItem(GunType.DGL.slt, GunType.DGL.prc, 1, tm)) {
-				if (!tryBuyItem(GunType.TP7.slt, GunType.TP7.prc, 1, tm)) {
-					tryBuyItem(GunType.USP.slt, GunType.USP.prc, 1, tm);
+			if (!buyItem(GunType.DGL.slt, GunType.DGL.prc, 1, tm)) {
+				if (!buyItem(GunType.TP7.slt, GunType.TP7.prc, 1, tm)) {
+					buyItem(GunType.USP.slt, GunType.USP.prc, 1, tm);
 				}
 			}
 			
 		} else {//not save
-			tryBuyItem(GunType.hlmtSlt, GunType.hlmtPrc, EquipmentSlot.HEAD, tm);
-			tryBuyItem(GunType.chstSlt, GunType.chstPrc, EquipmentSlot.CHEST, tm);
+			buyItem(GunType.hlmtSlt, GunType.hlmtPrc, EquipmentSlot.HEAD, tm);
+			buyItem(GunType.chstSlt, GunType.chstPrc, EquipmentSlot.CHEST, tm);
 			
 			final GunType top = Main.srnd.nextBoolean() ? GunType.AWP : GunType.SCAR;
-			if (!tryBuyItem(top.slt, top.prc, 0, tm)) {
+			if (!buyItem(top.slt, top.prc, 0, tm)) {
 				final GunType gud = Main.srnd.nextBoolean() ? GunType.M4 : GunType.AK47;
-				if (!tryBuyItem(gud.slt, gud.prc, 0, tm)) {
+				if (!buyItem(gud.slt, gud.prc, 0, tm)) {
 					final GunType mid = Main.srnd.nextBoolean() ? GunType.P90 : GunType.MP5;
-					if (!tryBuyItem(mid.slt, mid.prc, 0, tm)) {
+					if (!buyItem(mid.slt, mid.prc, 0, tm)) {
 						final GunType low = Main.srnd.nextBoolean() ? GunType.SG13 : GunType.NOVA;
-						tryBuyItem(low.slt, low.prc, 0, tm);
+						buyItem(low.slt, low.prc, 0, tm);
 					}
 				}
 			}
 			
-			if (tryBuyItem(NadeType.FRAG.slt, NadeType.FRAG.prc, NadeType.prmSlot, tm))
-				tryBuyItem(NadeType.FLASH.slt, NadeType.FLASH.prc, NadeType.scdSlot, tm);
+			if (buyItem(NadeType.FRAG.slt, NadeType.FRAG.prc, NadeType.prmSlot, tm))
+				buyItem(NadeType.FLASH.slt, NadeType.FLASH.prc, NadeType.scdSlot, tm);
 		}
 		
 		switchToGun();
 	}
 	
-	private boolean tryBuyItem(final byte slot, final short prc, final EquipmentSlot to, final Team tm) {
+	private boolean buyItem(final byte slot, final short prc, final EquipmentSlot to, final Team tm) {
 		final ItemStack eq = item(to);
 		final Inventory inv = switch (tm) {
             case CTs -> Inventories.CTShop;
@@ -619,7 +636,7 @@ public class BtShooter extends BotEntity implements Shooter {
 				if (ItemUtils.isBlank(eq, false) && prc <= money) {//armor?
 					money -= prc;
 					item(it.clone(), to);
-					w.playSound(getEntity().getLocation(), Sound.ITEM_ARMOR_EQUIP_IRON, 1f, 1.4f);
+					world.playSound(getEntity().getLocation(), Sound.ITEM_ARMOR_EQUIP_IRON, 1f, 1.4f);
 					return true;
 				}
 			} else if (prc <= money) {//nades
@@ -627,28 +644,28 @@ public class BtShooter extends BotEntity implements Shooter {
 				money -= prc;
 				if (own != null) {
 					if (own.prc > prc) return false;
-					w.dropItem(getEntity().getLocation(), eq);
+					world.dropItem(getEntity().getLocation(), eq);
 				}
 				item(it.clone(), to);
-				w.playSound(getEntity().getLocation(), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
+				world.playSound(getEntity().getLocation(), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
 				return true;
 			}
 		} else if (prc <= money) {//guns
 			final GunType own = GunType.getGnTp(eq);
 			if (own != null) {
 				if (own.prc > prc) return false;
-				w.dropItem(getEntity().getLocation(), eq.asOne());
+				world.dropItem(getEntity().getLocation(), eq.asOne());
 			}
 			money -= prc;
 			item(new ItemBuilder(it.getType()).name("§5" + gt.toString() + " " + gt.icn)
 				.setAmount(gt.amo).setModelData(GunType.defCMD).build(), to);
-			w.playSound(getEntity().getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 1.4f);
+			world.playSound(getEntity().getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 1.4f);
 			return true;
 		}
 		return false;
 	}
 	
-	private boolean tryBuyItem(final byte slot, final short prc, final int to, final Team tm) {
+	private boolean buyItem(final byte slot, final short prc, final int to, final Team tm) {
 		final ItemStack eq = item(to);
 		final GunType gt = GunType.getGnTp(eq);
 		final ItemStack it;
@@ -667,7 +684,7 @@ public class BtShooter extends BotEntity implements Shooter {
 				it = null;
 			} else {
 				money -= prc;
-				w.dropItem(getEntity().getLocation(), eq);
+				world.dropItem(getEntity().getLocation(), eq);
                 it = switch (tm) {
                     case CTs -> Inventories.CTShop.getItem(slot);
                     default -> Inventories.TShop.getItem(slot);
@@ -681,22 +698,22 @@ public class BtShooter extends BotEntity implements Shooter {
 		final GunType ngt = GunType.getGnTp(it);
 		if (ngt == null) {
 			item(it.clone(), to);
-			w.playSound(getEntity().getLocation(), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
+			world.playSound(getEntity().getLocation(), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
 		} else {
 			item(new ItemBuilder(it.getType()).name("§5" + ngt.toString() + " " + ngt.icn)
 				.setAmount(ngt.amo).setModelData(GunType.defCMD).build(), to);
-			w.playSound(getEntity().getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 1.4f);
+			world.playSound(getEntity().getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 1.4f);
 		}
 		return true;
 	}
-	
-	@Override
+
+	/*@Override
 	public int hashCode() {
-		return fM().getName().hashCode();
+		return super.hashCode();
 	}
-	
+
 	@Override
 	public boolean equals(final Object o) {
-		return o instanceof Shooter && ((Shooter) o).name().equals(fM().getName());
-	}
+		return o instanceof Shooter && ((Shooter) o).name().equals(fR().getName());
+	}*/
 }
