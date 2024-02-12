@@ -16,6 +16,7 @@ import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
 import me.Romindous.CounterStrike.Utils.Inventories;
 import me.Romindous.CounterStrike.Utils.PacketUtils;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.FireworkEffect.Type;
 import org.bukkit.block.Block;
@@ -177,7 +178,7 @@ public class Invasion extends Arena {
 				}
 				
 				for (final Mobber mb : mbbrs.values()) {
-					Nms.colorGlow(mb.ind, '4', false);
+					if (mb.isAlive()) Nms.colorGlow(mb.ind, NamedTextColor.DARK_RED, false);
 				}
 				break;
 			case BUYTIME:
@@ -404,6 +405,8 @@ public class Invasion extends Arena {
 		for (int i = spots.length >> 1; i >= 0; i--) {
 			new Mobber(spots[i], this);
 		}
+		Nms.colorGlow(ads, NamedTextColor.AQUA, false);
+		Nms.colorGlow(bds, NamedTextColor.GOLD, false);
 		swpDayNght();
 		Inventories.updtGm(this);
 	}
@@ -678,11 +681,6 @@ public class Invasion extends Arena {
 			.add(MONEY, "§7Монет: §d" + sh.money() + " §6⛃")
 			.add(" ")
 			.add("§e   ostrov77.ru").build();
-		for (final Mobber m : mbbrs.values()) {
-			Nms.colorGlow(m.ind, '4', false);
-		}
-		Nms.colorGlow(ads, 'b', false);
-		Nms.colorGlow(bds, '6', false);
 	}
 
 	private void winScore(final Shooter sh, final Player p, final boolean isCTWn) {

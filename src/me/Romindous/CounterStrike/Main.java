@@ -305,24 +305,6 @@ public final class Main extends JavaPlugin implements Listener {
 		});
 		p.showEntity(plug, tds);
 		Ostrov.sync(() -> tds.remove(), 24);
-		/*final WorldServer wm = VM.getNmsServer().toNMS(loc.getWorld());
-		net.minecraft.world.entity.Display.TextDisplay tds
-		final int eid = tds.af();
-		tds.e(true);
-		tds.a(BillboardConstraints.b);
-		tds.b(160);
-	    byte flagBits = tds.t();//getFlags
-	    flagBits = (byte) (flagBits | 1);
-	    flagBits = (byte) (flagBits | 2);
-	    tds.d(flagBits);
-		
-		tds.setPosRaw(0.5f - srnd.nextFloat() + loc.getX(), lc * 0.001f + loc.getY() - srnd.nextFloat(), 0.5f - srnd.nextFloat() + loc.getZ(), false);
-		tds.c(PaperAdventure.asVanilla(TCUtils.format(nm)));
-		
-		final PlayerConnection pc = VM.getNmsServer().toNMS(p).c;
-		pc.a(new PacketPlayOutSpawnEntity(tds));
-		pc.a(new PacketPlayOutEntityMetadata(eid, tds.aj().c()));
-		tds.a(RemovalReason.a);*/
    }
    
    public static ItemStack mkItm(final Material mt, final String nm, final int mdl, final String... lr) {
@@ -358,23 +340,6 @@ public final class Main extends JavaPlugin implements Listener {
 			p.getInventory().clear();
 		}
 	}
-	
-	/*public static void crtSbdTm(final Scoreboard sb, final String nm, final String prf, final String val, final String sfx) {
-		final Team tm = sb.registerNewTeam(nm);
-		tm.addEntry(val);
-		tm.prefix(Component.text(prf));
-		tm.suffix(Component.text(sfx));
-	}
-	
-	public static void chgSbdTm(final Scoreboard sb, final String nm, final String prf, final String sfx) {
-		final Team tm = sb.getTeam(nm);
-		if (tm == null) {
-			plug.getLogger().info("Team " + nm + " is null");
-		} else {
-			tm.prefix(Component.text(prf));
-			tm.suffix(Component.text(sfx));
-		}
-	}*/
 	
 	public Arena crtArena(final String nm, final GameType gt) {
 		final Setup stp = nnactvarns.get(nm);

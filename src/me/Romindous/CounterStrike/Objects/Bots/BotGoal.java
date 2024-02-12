@@ -33,7 +33,6 @@ import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.utils.ItemUtils;
 import ru.komiss77.utils.LocationUtil;
-import ru.komiss77.utils.TCUtils;
 import ru.komiss77.version.Nms;
 
 import java.lang.ref.WeakReference;
@@ -129,7 +128,7 @@ public class BotGoal implements Goal<Mob> {
 		if (rplc.hasPotionEffect(PotionEffectType.SLOW) || //blind or buy
 			rplc.hasPotionEffect(PotionEffectType.BLINDNESS)) {
 			vc = eyel.getDirection();
-			changeTLoc(null, null, "1");
+			changeTLoc(null, null);
 			
 			if ((tick & DEL_TGT) == 0) {
 				bot.tryBuy();
@@ -157,7 +156,7 @@ public class BotGoal implements Goal<Mob> {
 						agro+=SHIFT_TGT;
 						tle = bot.tgtSh.getEntity();
 						if (tle == null || !LocationUtil.rayThruAir(eyel, tle.getEyeLocation().toVector(), 0.1F)) {
-							changeTLoc(bot.tgtSh.getPos(), DIRECT, "1");
+							changeTLoc(bot.tgtSh.getPos(), DIRECT);
 							bot.tgtLe = nrf;
 							bot.tgtSh = null;
 						}
@@ -181,7 +180,7 @@ public class BotGoal implements Goal<Mob> {
 						agro+=SHIFT_TGT;
 						tle = bot.tgtSh.getEntity();
 						if (tle == null || !LocationUtil.rayThruAir(eyel, tle.getEyeLocation().toVector(), 0.1F)) {
-							changeTLoc(bot.tgtSh.getPos(), DIRECT, "1");
+							changeTLoc(bot.tgtSh.getPos(), DIRECT);
 							bot.tgtLe = nrf;
 							bot.tgtSh = null;
 						}
@@ -202,7 +201,7 @@ public class BotGoal implements Goal<Mob> {
 						agro+=SHIFT_TGT;
 						tle = bot.tgtLe.get();
 						if (tle == null || !tle.isValid() || !LocationUtil.rayThruAir(eyel, tle.getEyeLocation().toVector(), 0.1F)) {
-							changeTLoc(new WXYZ(tle.getLocation()), DIRECT, "1");
+							changeTLoc(new WXYZ(tle.getLocation()), DIRECT);
 							bot.tgtLe = nrf;
 							bot.tgtSh = null;
 						}
@@ -218,14 +217,14 @@ public class BotGoal implements Goal<Mob> {
 				switch (bot.getHandSlot()) {
 				case 2:
 					if (vc.lengthSquared() < NEAR_DST_SQ) {
-						if ((tick & DEL_TGT) == 0) changeTLoc(getStrfLoc(loc, vc, -2), DIRECT, "1221");
+						if ((tick & DEL_TGT) == 0) changeTLoc(getStrfLoc(loc, vc, -2), DIRECT);
 						if (tick % KNIFE_KD == 0) {
 							Nms.sendWorldPacket(bot.world, new PacketPlayOutAnimation(bot, 0));
 							DmgLis.prcDmg(le, bot.tgtSh, bot, le.getEquipment().getChestplate() == null ? 3d : 2d,
 									"§f\u9298", 5, GunType.knfRwd, false, false, false, false, false);
 						}
 					} else {
-						if ((tick & DEL_TGT) == 0) changeTLoc(getStrfLoc(loc, vc, 8), DIRECT, "1254");
+						if ((tick & DEL_TGT) == 0) changeTLoc(getStrfLoc(loc, vc, 8), DIRECT);
 					}
 					break;
 				case 0, 1:
@@ -234,7 +233,7 @@ public class BotGoal implements Goal<Mob> {
 						bot.tryShoot(rplc, eyel);
 					}
 
-					if ((tick & DEL_TGT) == 0) changeTLoc(getStrfLoc(loc, vc, -2), DIRECT, "1234");
+					if ((tick & DEL_TGT) == 0) changeTLoc(getStrfLoc(loc, vc, -2), DIRECT);
 					break;
 				case 7:
 					acttm = 0;
@@ -278,7 +277,7 @@ public class BotGoal implements Goal<Mob> {
 					if (df.isBmbOn()) {
 						if (site == null || act == NEAR_SITE) {
 							site = df.getBomb();
-							changeTLoc(Main.getNrPos(df.getClosestPos(site, 10)), NEAR_BOMB, "125");
+							changeTLoc(Main.getNrPos(df.getClosestPos(site, 10)), NEAR_BOMB);
 						} else {
 							final boolean tAct = (tick & DEL_ACT) == 0;
 							if (!arp.hasTgt() || tLoc == null || act == DIRECT || tAct) {
@@ -291,7 +290,7 @@ public class BotGoal implements Goal<Mob> {
 												acttm += DEL_ACT;
 												bmb.defusing = bot;
 											} else {//defend defuser
-												changeTLoc(Main.getNrPos(site), SITE_ACT, "124");
+												changeTLoc(Main.getNrPos(site), SITE_ACT);
 											}
 										} else if (tAct) {
 											if (acttm > ACT_TIME << (bot.item(EquipmentSlot.HAND)
@@ -306,12 +305,12 @@ public class BotGoal implements Goal<Mob> {
 										}
 									} else {
 										acttm = 0;
-										changeTLoc(Main.getNrPos(site), SITE_ACT, "123");
+										changeTLoc(Main.getNrPos(site), SITE_ACT);
 										final Shooter ds = bmb.defusing;
 										if (bot.equals(ds)) bmb.defusing = null;
 									}
 								} else {//set go defend
-									changeTLoc(Main.getNrPos(df.getClosestPos(site, 10)), NEAR_BOMB, "122");
+									changeTLoc(Main.getNrPos(df.getClosestPos(site, 10)), NEAR_BOMB);
 								}
 							}
 						}
@@ -320,13 +319,13 @@ public class BotGoal implements Goal<Mob> {
 						if (bLoc == null) {//if bomb not dropped
 							if (site == null) {
 								site = Main.srnd.nextBoolean() ? df.ast : df.bst;
-								changeTLoc(Main.getNrPos(df.getClosestPos(site, 10)), NEAR_SITE, "112");
+								changeTLoc(Main.getNrPos(df.getClosestPos(site, 10)), NEAR_SITE);
 							} else {
 								final boolean tAct = (tick & DEL_ACT) == 0;
 								if (!arp.hasTgt() || tLoc == null || act == DIRECT || tAct) {
 									if (tm == Team.Ts) {//set go plant
 										if (ItemUtils.isBlank(bot.item(7), false)) {
-											changeTLoc(Main.getNrPos(df.getClosestPos(site, 10)), NEAR_SITE, "111");
+											changeTLoc(Main.getNrPos(df.getClosestPos(site, 10)), NEAR_SITE);
 										} else {//has bomb
 											if (df.gst == GameState.ROUND && act == SITE_ACT
 												&& site.distSq(bot.getPos()) < SPOT_DST_SQ) {
@@ -342,25 +341,25 @@ public class BotGoal implements Goal<Mob> {
 															bot.item(Main.air.clone(), 7);
 															df.chngMn(bot, 250);
 															df.plant(b);
-															changeTLoc(Main.getNrPos(df.getClosestPos(site, 10)), NEAR_SITE, "19");
+															changeTLoc(Main.getNrPos(df.getClosestPos(site, 10)), NEAR_SITE);
 															acttm = 0;
 														} else {//if obstructed
-															changeTLoc(Main.getNrPos(site), SITE_ACT, "18");
+															changeTLoc(Main.getNrPos(site), SITE_ACT);
 														}
 													} else acttm += DEL_ACT;
 												}
 											} else {
 												acttm = 0;
-												changeTLoc(Main.getNrPos(site), SITE_ACT, "17");
+												changeTLoc(Main.getNrPos(site), SITE_ACT);
 											}
 										}
 									} else {//cts go to cites
-										changeTLoc(Main.getNrPos(df.getClosestPos(site, 20)), NEAR_SITE, "16");
+										changeTLoc(Main.getNrPos(df.getClosestPos(site, 20)), NEAR_SITE);
 									}
 								}
 							}
 						} else if (act != PICK_BOMB) {//if bomb dropped
-							changeTLoc(tm == Team.Ts ? bLoc : Main.getNrPos(df.getClosestPos(bLoc, 10)), PICK_BOMB, "15");
+							changeTLoc(tm == Team.Ts ? bLoc : Main.getNrPos(df.getClosestPos(bLoc, 10)), PICK_BOMB);
 						}
 					}
 					break;
@@ -369,7 +368,7 @@ public class BotGoal implements Goal<Mob> {
 						case GO_SPOT:
 							if (arp.hasTgt()) break;
 						case DIRECT:
-							changeTLoc(Main.getNrPos(bot.arena().getClosestPos(bot.getPos(), 20)), GO_SPOT, "14");
+							changeTLoc(Main.getNrPos(bot.arena().getClosestPos(bot.getPos(), 20)), GO_SPOT);
 							break;
 						default:
 							break;
@@ -382,12 +381,12 @@ public class BotGoal implements Goal<Mob> {
 							final Mobber mb = in.getRndMbbr(true);
 							if (mb != null) {
 								site = mb;
-								changeTLoc(Main.getNrPos(site), GO_SPOT, "13");
+								changeTLoc(Main.getNrPos(site), GO_SPOT);
 							}
 						} else {
 							site = new XYZ(in.bds.getViewRange() == 0f || Main.srnd.nextBoolean()
 								? in.ads.getLocation() : in.bds.getLocation());
-							changeTLoc(Main.getNrPos(site), NEAR_SITE, "12");
+							changeTLoc(Main.getNrPos(site), NEAR_SITE);
 						}
 					} else {
 						if (site instanceof final Mobber mb) {
@@ -419,7 +418,7 @@ public class BotGoal implements Goal<Mob> {
 										}
 									} else {
 										acttm = 0;
-										changeTLoc(Main.getNrPos(site), GO_SPOT, "11");
+										changeTLoc(Main.getNrPos(site), GO_SPOT);
 										final Shooter ds = mb.defusing;
 										if (bot.equals(ds)) mb.defusing = null;
 									}
@@ -434,7 +433,7 @@ public class BotGoal implements Goal<Mob> {
 								site = null;
 							} else if (act != GO_SPOT) {
 								acttm = 0;
-								changeTLoc(Main.getNrPos(site), GO_SPOT, "0");
+								changeTLoc(Main.getNrPos(site), GO_SPOT);
 							}
 						}
 					}
@@ -463,7 +462,7 @@ public class BotGoal implements Goal<Mob> {
 		}
     }
     
-    private void changeTLoc(final XYZ nlc, final ActType at, final String v) {
+    private void changeTLoc(final XYZ nlc, final ActType at) {
     	if (at == DIRECT) {
         	tLoc = nlc;
         	act = DIRECT;
@@ -471,8 +470,8 @@ public class BotGoal implements Goal<Mob> {
     	}
     	
     	if (at == act && arp.hasTgt() && tLoc != null) return;
-		Bukkit.broadcast(TCUtils.format(bot.name() + ", " + nlc + ", " + at + ", " + v + ", "
-			+ bot.name() + ", " + !arp.hasTgt() + ", " + tLoc + ", " + act + ", " + ((tick & DEL_ACT) == 0)));
+//		Bukkit.broadcast(TCUtils.format(bot.name() + ", " + nlc + ", " + at + ", " + v + ", "
+//			+ bot.name() + ", " + !arp.hasTgt() + ", " + tLoc + ", " + act + ", " + ((tick & DEL_ACT) == 0)));
 		if (nlc != null) arp.setTgt(new WXYZ(bot.world, nlc));
 		tLoc = nlc;
 		act = at;

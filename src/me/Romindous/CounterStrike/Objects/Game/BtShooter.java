@@ -177,6 +177,7 @@ public class BtShooter extends BotEntity implements Shooter {
 	@Override
 	public void teleport(final LivingEntity le, final Location to) {
 		super.telespawn(to, le);
+		tag(true);
 	}
 
 	public final LinkedList<Vector> pss;

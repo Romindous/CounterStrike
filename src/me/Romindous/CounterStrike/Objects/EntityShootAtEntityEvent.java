@@ -3,6 +3,8 @@ package me.Romindous.CounterStrike.Objects;
 import java.util.EnumMap;
 import java.util.Map;
 
+import org.bukkit.damage.DamageSource;
+import org.bukkit.damage.DamageType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 
@@ -19,8 +21,11 @@ public class EntityShootAtEntityEvent extends EntityDamageByEntityEvent {
 	@SuppressWarnings("deprecation")
 	private static final Map<DamageModifier, Function<Double, Double>> fnks = new EnumMap<DamageModifier, Function<Double, Double>>(DamageModifier.class);
 	
-	public EntityShootAtEntityEvent(final LivingEntity dmgr, final LivingEntity ent, final double dmg, final boolean hst, final boolean wb, final boolean nscp) {
-		super(dmgr, ent, DamageCause.ENTITY_ATTACK, makeDmgMods(dmg), makeDmgFnks(dmg), hst);
+	public EntityShootAtEntityEvent(final LivingEntity dmgr, final LivingEntity ent,
+		final double dmg, final boolean hst, final boolean wb, final boolean nscp) {
+		super(dmgr, ent, DamageCause.ENTITY_ATTACK,
+			DamageSource.builder(DamageType.PLAYER_ATTACK).build(),
+			makeDmgMods(dmg), makeDmgFnks(dmg), hst);
 		this.hst = hst;
 		this.wb = wb;
 		this.nscp = nscp;

@@ -28,7 +28,6 @@ import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scoreboard.Scoreboard;
 import org.jetbrains.annotations.Nullable;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
@@ -923,9 +922,6 @@ public class Defusal extends Arena {
 	}
 	
 	private void gameScore(final Shooter sh, final Player pl) {
-		final Scoreboard sb = pl.getScoreboard();
-		final org.bukkit.scoreboard.Team t = sb.getTeam(RED_IND);
-		(t == null ? sb.registerNewTeam(RED_IND) : t).color(NamedTextColor.DARK_RED);
 		final Team tm = shtrs.get(sh);
 		PM.getOplayer(pl).score.getSideBar().reset().title("§7[§5CS:GO§7]")
 			.add(SCORE, Team.Ts.icn + " §7: " + Team.Ts.clr + getWns(Team.Ts) + " §7--=x=-- "
@@ -1164,8 +1160,7 @@ public class Defusal extends Arena {
 			final Player pl = n.getKey().getPlayer();
 			if (pl != null) {
 				pl.playSound(loc, "cs.info." + (n.getValue() == Team.Ts ? "tdropbmb" : "ctdropbmb"), 10f, 1f);
-//				pl.getScoreboard().getTeam("bmb").addEntry(bmb.getUniqueId().toString());
-				Nms.colorGlow(bmb, '4', true);
+				Nms.colorGlow(bmb, NamedTextColor.DARK_RED, true);
 			}
 		}
 		bmb.setGlowing(true);

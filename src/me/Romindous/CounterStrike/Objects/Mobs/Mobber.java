@@ -3,6 +3,7 @@ package me.Romindous.CounterStrike.Objects.Mobs;
 import me.Romindous.CounterStrike.Game.Invasion;
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Objects.Shooter;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -41,8 +42,6 @@ public class Mobber extends WXYZ {
 		ind = ar.w.spawn(new Location(ar.w, loc.x, loc.y, loc.z), BlockDisplay.class);
 		ind.setGravity(false);
 		ind.setViewRange(100f);
-//		ind.setDisplayWidth(1.2f);
-//		ind.setDisplayHeight(1.2f);
 		ind.setBillboard(Billboard.FIXED);
 		setSpwn();
 		et = EntityType.ZOMBIE_VILLAGER;
@@ -110,7 +109,7 @@ public class Mobber extends WXYZ {
 
 	public void setSpwn() {
 		ind.setBlock(spn);
-		Nms.colorGlow(ind, '4', false);
+		Nms.colorGlow(ind, NamedTextColor.DARK_RED, false);
 	}
 
 	public void setDef() {
