@@ -34,7 +34,7 @@ public class Mobber extends WXYZ {
 	public final BlockDisplay ind;
 	private final Invasion ar;
 	public Shooter defusing;
-	public EntityType et;
+	public MobType mt;
   
 	public Mobber(final XYZ loc, final Invasion ar) {
         super(ar.w, loc);
@@ -44,13 +44,13 @@ public class Mobber extends WXYZ {
 		ind.setViewRange(100f);
 		ind.setBillboard(Billboard.FIXED);
 		setSpwn();
-		et = EntityType.ZOMBIE_VILLAGER;
+		mt = MobType.WEAK;
 		
 		final Block b = getBlock();
 		b.setType(Material.SPAWNER, false);
 		
 		final CreatureSpawner cs = (CreatureSpawner) b.getState();
-		cs.setSpawnedType(et);
+		cs.setSpawnedType(mt.type);
 		cs.setSpawnCount(0);
 		cs.update();
 
@@ -58,18 +58,12 @@ public class Mobber extends WXYZ {
 	}
 
 	public void spwnMb() {
-		final float hlth = switch (et) {
-			case PIGLIN_BRUTE -> 12f;
-			case PILLAGER -> 8f;
-			case STRAY -> 10f;
-            default -> 8f;
-        };
 
         final Location loc = getCenterLoc();
-		final Mob mb = (Mob) ar.w.spawnEntity(Main.getNrLoc(loc), et, false);
-		mb.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(getMbSpd(et));
-		mb.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(hlth);
-		mb.setHealth(hlth);
+		final Mob mb = (Mob) ar.w.spawnEntity(Main.getNrLoc(loc), mt.type, false);
+		mb.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(mt.spd);
+		mb.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(mt.hp);
+		mb.setHealth(mt.hp);
         //Bukkit.getMobGoals().removeAllGoals(mb);
         Bukkit.getMobGoals().removeAllGoals(mb);
         Bukkit.getMobGoals().addGoal(mb, 0, new GoalGoToSite(mb, ar));
@@ -79,24 +73,6 @@ public class Mobber extends WXYZ {
 		if (mb instanceof PiglinBrute) {
 			((PiglinBrute) mb).setImmuneToZombification(true);
 		}
-	}
-	
-	public static double getMbSpd(final EntityType e) {
-        return switch (e) {
-			case PIGLIN_BRUTE -> 0.52d;
-			case PILLAGER -> 0.55d;
-			case STRAY -> 0.52d;
-            default -> 0.50d;
-        };
-	}
-	
-	public static int getMbPow(final EntityType e) {
-        return switch (e) {
-			case PIGLIN_BRUTE -> 3;
-			case PILLAGER -> 2;
-			case STRAY -> 1;
-            default -> 0;
-        };
 	}
 
 	public Material getType() {
@@ -116,5 +92,33 @@ public class Mobber extends WXYZ {
 		ind.setBlock(dfs);
 		ind.setGlowing(false);
 		defusing = null;
+	}
+
+	public enum MobType {
+		WEAK(EntityType.ZOMBIE_VILLAGER, 10d, 0.50d),
+		NORM(EntityType.STRAY, 14d, 0.54d),
+		DANG(EntityType.VINDICATOR, 8d, 0.58d),
+		TERM(EntityType.WITHER_SKELETON, 16d, 0.58d);
+
+		public final EntityType type;
+		public final double hp;
+		public final double spd;
+		public final int pow;
+
+		MobType(final EntityType type, final double hp, final double spd) {
+			this.pow = ordinal();
+            this.type = type;
+			this.hp = hp;
+			this.spd = spd;
+        }
+
+		public static MobType get(final EntityType type) {
+			return switch (type) {
+				default -> WEAK;
+				case STRAY -> NORM;
+				case VINDICATOR -> DANG;
+				case WITHER_SKELETON -> TERM;
+			};
+		}
 	}
 }

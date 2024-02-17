@@ -1,6 +1,5 @@
 package me.Romindous.CounterStrike;
 
-import me.Romindous.CounterStrike.Commands.CSCmd;
 import me.Romindous.CounterStrike.Enums.GameType;
 import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Game.Arena;
@@ -14,7 +13,7 @@ import me.Romindous.CounterStrike.Objects.Map.MapBuilder;
 import me.Romindous.CounterStrike.Objects.Map.Setup;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Utils.Inventories;
-import me.Romindous.CounterStrike.Utils.PacketUtils;
+import me.Romindous.CounterStrike.Utils.Utils;
 import net.kyori.adventure.text.Component;
 import net.minecraft.core.BaseBlockPosition;
 import org.bukkit.*;
@@ -28,11 +27,10 @@ import org.bukkit.entity.TextDisplay;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
-import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scoreboard.*;
+import org.bukkit.scoreboard.ScoreboardManager;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
 import org.joml.Vector3f;
@@ -61,14 +59,17 @@ public final class Main extends JavaPlugin implements Listener {
 	public static ScoreboardManager smg;
 	public static YamlConfiguration ars;
 	public static final SecureRandom srnd = new SecureRandom();
-    public static final LivingEntity[] a = new LivingEntity[0];
-	public static final HashMap<UUID, LivingEntity[]> wlents = new HashMap<>();
-	public static ItemStack cp;
-	public static ItemStack bmb;
-	public static ItemStack air;
-	public static ItemStack spy;
-	public static ItemStack thlmt;
-	public static ItemStack cthlmt;
+    public static final LivingEntity[] emt = new LivingEntity[0];
+	public static final ItemStack air = new ItemStack(Material.AIR),
+		spy = Main.mkItm(Material.SPYGLASS, "§8О.О", 10),
+		bmb = Main.mkItm(Material.GOLDEN_APPLE, "§4§lС*4 §c\u926e",
+			10, "§dПКМ §7- Заложить бомбу", "§7Можно установить на точку §5A §7или §5B"),
+		thelm = new ItemBuilder(Material.LEATHER_HELMET).name("§cШапка Террориста §f\u9267")
+			.addLore("§7Цена: §d" + GunType.helmPrc + " §6⛃").setColor(Color.RED).build(),
+		cthelm = new ItemBuilder(Material.LEATHER_HELMET).name("§3Шлем Спецназа §f\u9267")
+			.addLore("§7Цена: §d" + GunType.helmPrc + " §6⛃").setColor(Color.TEAL).build();
+
+	private static final HashMap<UUID, LivingEntity[]> wlents = new HashMap<>();
 	
 	public static final HashMap<String, Arena> actvarns = new HashMap<>();
 	public static final HashMap<String, Setup> nnactvarns = new HashMap<>();
@@ -78,9 +79,9 @@ public final class Main extends JavaPlugin implements Listener {
 	public static final ArrayList<WXYZ> ndBlks = new ArrayList<>();
 	public static final HashMap<Player, BaseBlockPosition> plnts = new HashMap<>();
 	public static final HashMap<String, MapBuilder> mapBlds = new HashMap<>();
-	public static final ArrayList<Nade> nades = new ArrayList<>();
+	public static final HashMap<UUID, Nade> nades = new HashMap<>();
 	public static final ArrayList<WXYZ> decoys = new ArrayList<>();
-	
+
 	public void onEnable() {
 		
 		plug = this;
@@ -111,7 +112,7 @@ public final class Main extends JavaPlugin implements Listener {
 	            	if (e.getKey().getInventory().getHeldItemSlot() == 7 && loc.getBlockX() == e.getValue().u() && loc.getBlockY() == e.getValue().v() && loc.getBlockZ() == e.getValue().w()) {
 	            		continue;
 	            	}
-	            	PacketUtils.sendAcBr(e.getKey(), "§c§lВы вышли из режима установки");
+	            	Utils.sendAcBr(e.getKey(), "§c§lВы вышли из режима установки");
 	            	e.getKey().getInventory().setItem(7, Main.mkItm(Material.GOLDEN_APPLE, "§4§lС*4 §c\u926e", 10, "§dПКМ §7- Заложить бомбу", "§7Можно установить на точку §5A §7или §5B"));
 	            	pi.remove();
 	            } 
@@ -125,14 +126,12 @@ public final class Main extends JavaPlugin implements Listener {
                     }
 	            } 
 	
-	            final Iterator<Nade> ni = Main.nades.iterator();
+	            final Iterator<Nade> ni = Main.nades.values().iterator();
 	            while (ni.hasNext()) {
 	            	final Nade nd = ni.next();
 	            	if (nd.prj.isValid()) {
-	            		if ((nd.tm--) != 0) {
-	            			continue;
-	            		}
-	            		Nade.expld(nd.prj, (Player) nd.prj.getShooter());
+	            		if ((nd.tm--) != 0) continue;
+	            		nd.explode();
 	            	}
 	            	ni.remove();
 	            } 
@@ -149,7 +148,7 @@ public final class Main extends JavaPlugin implements Listener {
 	            	loc.w.spawnParticle(Particle.SOUL, loc.getCenterLoc(), 2, 0.2D, 0.2D, 0.2D, 0.0D, null, false);
 	            	final GunType gt = GunType.values()[loc.yaw];
 	            	if ((loc.pitch & 31) < 16 && loc.pitch % gt.cld == 0) {
-	            		Main.plyWrldSnd(loc.getCenterLoc(), gt.snd);
+	            		Main.plyWrldSnd(loc.getCenterLoc(), gt.snd, 1f);
 	            	}
 	                if ((loc.pitch--) == 0) {
 	                	li.remove();
@@ -157,18 +156,24 @@ public final class Main extends JavaPlugin implements Listener {
 	            }
 	            
 				for (final Entry<UUID, LivingEntity[]> we : Main.wlents.entrySet()) {
-					we.setValue(Bukkit.getWorld(we.getKey()).getLivingEntities().toArray(a));
+					we.setValue(Bukkit.getWorld(we.getKey()).getLivingEntities().toArray(emt));
 				}
 			}
 		}.runTaskTimer(this, 1L, 1L);
    	}
 
 	public void onDisable() {
+		for (final PlShooter sh : shtrs.values()) {
+			if (sh.arena() != null) sh.arena().rmvPl(sh);
+		}
 	}
 
-	@SuppressWarnings("deprecation")
 	public void loadConfigs() {
 		try {
+			for (final PlShooter sh : shtrs.values()) {
+				if (sh.arena() != null) sh.arena().rmvPl(sh);
+			}
+
 			File file = new File(getDataFolder() + File.separator + "config.yml");
 	        if (!file.exists() || !getConfig().contains("spawns")) {
 	        	getServer().getConsoleSender().sendMessage("Config for CS not found, creating a new one...");
@@ -181,23 +186,6 @@ public final class Main extends JavaPlugin implements Listener {
 	        file = new File(getDataFolder() + File.separator + "arenas.yml");
 	        file.createNewFile();
 	        ars = YamlConfiguration.loadConfiguration(file);
-	        
-	    	cp = new ItemStack(Material.CARVED_PUMPKIN);
-	    	air = new ItemStack(Material.AIR);
-	    	spy = Main.mkItm(Material.SPYGLASS, "§8О.О", 10);
-	    	bmb = Main.mkItm(Material.GOLDEN_APPLE, "§4§lС*4 §c\u926e", 10, "§dПКМ §7- Заложить бомбу", "§7Можно установить на точку §5A §7или §5B");
-	    	thlmt = new ItemStack(Material.LEATHER_HELMET);
-			final LeatherArmorMeta hm = (LeatherArmorMeta) thlmt.getItemMeta();
-			hm.setColor(Color.RED);
-			hm.displayName(Component.text("§cШапка Террориста §f\u9267"));
-			hm.setLore(Arrays.asList("§7Цена: §d" + GunType.hlmtPrc + " §6⛃"));
-			thlmt.setItemMeta(hm);
-	    	cthlmt = new ItemStack(Material.LEATHER_HELMET);
-			final LeatherArmorMeta chm = (LeatherArmorMeta) cthlmt.getItemMeta();
-			chm.setColor(Color.TEAL);
-			chm.displayName(Component.text("§3Шлем Спецназа §f\u9267"));
-			chm.setLore(Arrays.asList("§7Цена: §d" + GunType.hlmtPrc + " §6⛃"));
-			cthlmt.setItemMeta(chm);
 	        
 	        nnactvarns.clear();
 	        if (!ars.contains("arenas")) {
@@ -212,7 +200,8 @@ public final class Main extends JavaPlugin implements Listener {
 								WorldManager.load(getServer().getConsoleSender(), wn, Environment.NORMAL, Generator.Empty);
 							}
 						}
-						ApiOstrov.sendArenaData(stp.nm, ru.komiss77.enums.GameState.ОЖИДАНИЕ, "§7[§5CS§7]", "§8Не Выбрано", " ", "§7Игроков: §50§7/§5" + ars.getString("arenas." + s + ".min"), "", 0);
+						ApiOstrov.sendArenaData(stp.nm, ru.komiss77.enums.GameState.ОЖИДАНИЕ, "§7Тип: §8Не Выбран",
+							"§5=-=-=-=-=-=-", "§7Нужно: §d" + stp.min + " §7чел.", "", "", shtrs.size());
 						nnactvarns.put(stp.nm, stp);
 					}
 				}
@@ -225,11 +214,8 @@ public final class Main extends JavaPlugin implements Listener {
 	        }
 	        
 	        wlents.clear();
-	        for (final World w : getServer().getWorlds()) {
-	        	wlents.put(w.getUID(), w.getLivingEntities().toArray(a));
-	        }
-	        
-	        Inventories.fillGmInv();
+			wlents.put(lobby.w.getUID(), emt);
+
 	        Inventories.fillLbbInv();
 	        Inventories.fillTsInv();
 	        Inventories.fillCTsInv();
@@ -309,10 +295,6 @@ public final class Main extends JavaPlugin implements Listener {
    
    public static ItemStack mkItm(final Material mt, final String nm, final int mdl, final String... lr) {
 	   return new ItemBuilder(mt).name(nm).setModelData(mdl).addLore(Arrays.asList(lr)).build();
-   }
-   
-   public static boolean isHdMat(final ItemStack it, final Material mt) {
-	   return (it != null && it.getType() == mt);
    }
    
    public static void setDmg(final ItemStack it, final int d) {
@@ -409,23 +391,31 @@ public final class Main extends JavaPlugin implements Listener {
 	public static XYZ getNrPos(final XYZ loc) {
 		return loc.clone().add(Main.srnd.nextBoolean() ? -1 : 1, 0, Main.srnd.nextBoolean() ? -1 : 1);
 	}
-	
-	public static void plyWrldSnd(final Location org, final String snd) {
+
+	public static void plyWrldSnd(final Location org, final String snd, final float pt) {
 		Ostrov.async(() -> {
 			for (final Player p : org.getWorld().getPlayers()) {
-				final float d = (float) p.getLocation().distanceSquared(org);
-				p.playSound(org, snd, d < 1f ? 1f : 400f / d, 1f);
+				p.playSound(org, snd, (float) (2000 / ((int) p.getLocation().distanceSquared(org) + 1)), pt);
+			}
+		});
+	}
+	
+	public static void plyWrldSnd(final LivingEntity src, final String snd, final float pt) {
+		final Location org = src.getEyeLocation();
+		Ostrov.async(() -> {
+			for (final Player p : org.getWorld().getPlayers()) {
+				p.playSound(org, snd, (float) (2000 / ((int) p.getLocation().distanceSquared(org) + 1)), pt);
 			}
 		});
 	}
 
-	public static void plyWrldSnd(final Location org, final Arena ar, final Arena.Team tm, final String snd) {
+	public static void plyWrldSnd(final LivingEntity src, final Arena ar, final Arena.Team tm, final String snd, final float pt) {
+		final Location org = src.getEyeLocation();
 		Ostrov.async(() -> {
 			for (final Entry<Shooter, Arena.Team> en : ar.shtrs.entrySet()) {
 				final Player p = en.getKey().getPlayer();
 				if (p == null || en.getValue() != tm) continue;
-				final float d = (float) p.getLocation().distanceSquared(org);
-				p.playSound(org, snd, d < 1f ? 1f : 400f / d, 1f);
+				p.playSound(src, snd, (float) (2000 / ((int) p.getLocation().distanceSquared(org) + 1)), pt);
 			}
 		});
 	}
@@ -459,9 +449,17 @@ public final class Main extends JavaPlugin implements Listener {
 		}
 	}*/
 
-	public static LivingEntity[] getWLnts(final UUID wnm) {
-		final LivingEntity[] arr = wlents.get(wnm);
-		return arr == null ? a : arr;
+	public static LivingEntity[] getLEs(final World w) {
+		final LivingEntity[] arr = wlents.get(w.getUID());
+		return arr == null ? emt : arr;
+	}
+
+	public static void addLEWorld(final World w) {
+		wlents.put(w.getUID(), emt);
+	}
+
+	public static void delLEWorld(final World w) {
+		wlents.remove(w.getUID());
 	}
 	
 	public static int parseInt(final String n) {

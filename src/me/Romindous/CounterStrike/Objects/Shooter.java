@@ -1,5 +1,10 @@
 package me.Romindous.CounterStrike.Objects;
 
+import me.Romindous.CounterStrike.Enums.GunType;
+import me.Romindous.CounterStrike.Game.Arena;
+import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.Game.PlShooter;
+import me.Romindous.CounterStrike.Objects.Skins.GunSkin;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.EntityType;
@@ -9,20 +14,18 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
-
-import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Enums.GunType;
-import me.Romindous.CounterStrike.Game.Arena;
-import me.Romindous.CounterStrike.Objects.Game.PlShooter;
-import me.Romindous.CounterStrike.Objects.Skins.GunSkin;
 import ru.komiss77.modules.bots.BotEntity;
 import ru.komiss77.modules.bots.BotManager;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.notes.Slow;
 
+import java.util.function.Predicate;
+
 public interface Shooter {
 
 	int MAX_DST = 6;
+	double TRC_STEP = 0.05d;
+	double TRC_FCT = 1d / TRC_STEP;
 
 	String name();
 	
@@ -79,6 +82,8 @@ public interface Shooter {
 	void setModel(final GunType gt, final int cmd);
 
 	void setTabTag(final String pfx, final String sfx, final String afx);
+
+	Predicate<Player> allyTest();
 	
 	@Override
 	int hashCode();

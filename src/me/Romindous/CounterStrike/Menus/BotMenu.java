@@ -13,17 +13,13 @@ import ru.komiss77.utils.inventory.*;
 public class BotMenu implements InventoryProvider {
 
     private final Arena ar;
-    
-    public InventoryContent its;
 
     public BotMenu(final Arena ar) {
         this.ar = ar;
-        its = null;
     }
 
     @Override
     public void init(final Player p, final InventoryContent its) {
-    	this.its = its;
     	for (int i = 1; i < 7; i++) {
     		if (i < 4) {
 				its.set(i, ar.bots ? ClickableItem.empty(new ItemBuilder(Material.GRAY_DYE).name("§0.").build()) 

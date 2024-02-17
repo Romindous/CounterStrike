@@ -74,13 +74,16 @@ public class TripWire {
 			};
 			final Snowball sb = loc.getWorld().spawn(loc, Snowball.class);
 			sb.setItem(new ItemStack(m));
-			Nade.expld(sb, null);
+			new Nade(sb, 0).explode();
 		} 
 	}
 
-	public void chgNade(final ItemStack it, final Arena ar) {
-		this.nt = NadeType.getNdTp(it);
+	public boolean chgNade(final ItemStack it, final Arena ar) {
+		final NadeType nn = NadeType.getNdTp(it);
+		if (nn == nt) return false;
 		eif.setItem(it);
+		nt = nn;
+		return true;
 	}
 
     

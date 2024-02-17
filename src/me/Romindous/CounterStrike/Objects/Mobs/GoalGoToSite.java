@@ -23,10 +23,12 @@ import me.Romindous.CounterStrike.Enums.GameState;
 import ru.komiss77.modules.world.AStarPath;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.utils.LocationUtil;
+import ru.komiss77.version.Nms;
 
 public class GoalGoToSite implements Goal<Mob> {
 	
     private final Mob mob;
+	private final Mobber.MobType mt;
 
     private final GoalKey<Mob> key;
 	private final Invasion ar;
@@ -36,6 +38,7 @@ public class GoalGoToSite implements Goal<Mob> {
     
     public GoalGoToSite(final Mob mob, final Invasion ar) {
         this.key = GoalKey.of(Mob.class, new NamespacedKey(Main.plug, "site"));
+		this.mt = Mobber.MobType.get(mob.getType());
         this.mob = mob;
         this.ar = ar;
         this.tgt = null;
@@ -76,32 +79,36 @@ public class GoalGoToSite implements Goal<Mob> {
 					final LivingEntity le = en.getKey().getEntity();
 					if (le != null && LocationUtil.rayThruAir(eyel, le.getEyeLocation().toVector(), 0.1F)) {
 						tgt = Shooter.getShooter(le, false);
+						Nms.setAggro(mob, true);
 						break;
 					}
 				}
 			} else {
 				final Vector pos = tgt.getLoc();
 				if (!LocationUtil.rayThruAir(eyel, pos, 0.1F)) {
+					Nms.setAggro(mob, false);
 					tgt = null;
 				}
 			}
 			
 			final Location pthTo;
 			if (tgt == null || tgt.isDead()) {
-				ap.tickGo(Mobber.getMbSpd(mob.getType()));
+				ap.tickGo(mt.spd);
 			} else if ((tick & 7) == 0) {//attack
 				final LivingEntity le = tgt.getEntity();
 				if (le == null) {
+					Nms.setAggro(mob, false);
 					tgt = null;
 					return;
 				}
 				pthTo = le.getEyeLocation();
 				if (lc.distanceSquared(pthTo) < 4d) {
 					mob.swingMainHand();
-					DmgLis.prcDmg(le, tgt, null, Mobber.getMbPow(mob.getType()) * 0.4d + 1d, Team.SPEC.clr + mob.getName() + " §f\u929a", 5);
+					DmgLis.prcDmg(le, tgt, null, mt.pow * 0.4d + 1d,
+						Team.SPEC.clr + mob.getName() + " §f\u929a", 5);
 				}
 				
-				mob.getPathfinder().moveTo(pthTo, Mobber.getMbSpd(mob.getType()));
+				mob.getPathfinder().moveTo(pthTo, mt.spd);
 			}
     	}
     }

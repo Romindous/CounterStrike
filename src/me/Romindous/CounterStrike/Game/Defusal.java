@@ -13,11 +13,9 @@ import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
 import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
-import me.Romindous.CounterStrike.Utils.Inventories;
-import me.Romindous.CounterStrike.Utils.PacketUtils;
+import me.Romindous.CounterStrike.Utils.Utils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.util.TriState;
 import org.bukkit.*;
 import org.bukkit.FireworkEffect.Type;
 import org.bukkit.block.Block;
@@ -28,7 +26,9 @@ import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Transformation;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3f;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.modules.player.PM;
@@ -38,13 +38,15 @@ import ru.komiss77.utils.ItemUtils;
 import ru.komiss77.utils.TCUtils;
 import ru.komiss77.version.Nms;
 
+import java.util.ArrayList;
 import java.util.Map.Entry;
 
 public class Defusal extends Arena {
 
 	public final XYZ ast;
 	public final XYZ bst;
-	private final Item[] inds;
+	private final TextDisplay ads;
+	private final TextDisplay bds;
 	private WXYZ bLoc;
 	private Bomb bmb;
 	private int TBns;
@@ -63,57 +65,53 @@ public class Defusal extends Arena {
 		bmb = null;
 		TBns = 0;
 		CTBns = 0;
-		inds = new Item[32];
-		
-		int n = 0;
-		final ItemStack cri = new ItemStack(Material.SMALL_AMETHYST_BUD);
-		for (byte x = -2; x < 3; x++) {
-			for (byte z = -2; z < 3; z++) {
-				if (Math.abs(z) == 2 || Math.abs(x) == 2) {
-					final Item ait = w.dropItem(new Location(w, ast.x + x + 0.5d, ast.y, ast.z + z + 0.5d),
-						cri, it -> it.setVisibleByDefault(false));
-					ait.setInvulnerable(true);
-					ait.setGravity(false);
-					ait.setGlowing(true);
-					ait.setCanMobPickup(false);
-					ait.setCanMobPickup(false);
-					ait.setFrictionState(TriState.FALSE);
-					inds[n] = ait; n++;
-					final Item bit = w.dropItem(new Location(w, bst.x + x + 0.5d, bst.y, bst.z + z + 0.5d),
-						cri, it -> it.setVisibleByDefault(false));
-					bit.setInvulnerable(true);
-					bit.setGravity(false);
-					bit.setGlowing(true);
-					bit.setCanMobPickup(false);
-					bit.setCanMobPickup(false);
-					bit.setFrictionState(TriState.FALSE);
-					inds[n] = bit; n++;
-				}
-			}
-		}
+		ads = w.spawn(new Location(w, ast.x + 0.5d, ast.y + 2d, ast.z + 0.5d), TextDisplay.class, it -> {
+			it.setVisibleByDefault(false);
+			it.text(TCUtils.format("§b§lA\n§4§l↳§c§lx§4§l↲"));
+			final Transformation tr = it.getTransformation();
+			it.setTransformation(new Transformation(tr.getTranslation(), tr.getLeftRotation(),
+				new Vector3f(8f, 8f, 8f), tr.getRightRotation()));
+			it.setBillboard(Display.Billboard.VERTICAL);
+			it.setBackgroundColor(Color.fromARGB(0));
+			it.setViewRange(200f);
+			it.setSeeThrough(true);
+			it.setShadowed(true);
+			it.setGravity(false);
+		});
+
+		bds = w.spawn(new Location(w, bst.x + 0.5d, bst.y + 2d, bst.z + 0.5d), TextDisplay.class, it -> {
+			it.setVisibleByDefault(false);
+			it.text(TCUtils.format("§6§lB\n§4§l↳§c§lx§4§l↲"));
+			final Transformation tr = it.getTransformation();
+			it.setTransformation(new Transformation(tr.getTranslation(), tr.getLeftRotation(),
+					new Vector3f(8f, 8f, 8f), tr.getRightRotation()));
+			it.setBillboard(Display.Billboard.VERTICAL);
+			it.setBackgroundColor(Color.fromARGB(0));
+			it.setViewRange(200f);
+			it.setSeeThrough(true);
+			it.setShadowed(true);
+			it.setGravity(false);
+		});
 
 		this.gst = GameState.WAITING;
 		this.bLoc = null;
-		ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ОЖИДАНИЕ, "§7[§5CS§7]",
-			"§dКлассика", " ", "§7Игроков: §50§7/§5" + this.min, "", 0);
-		Inventories.updtGm(this);
+		updateData();
 	}
 
 	@Override
-	public boolean addPl(final Shooter sh) {
+	public boolean addPl(final PlShooter sh) {
 		sh.kills0();
 		sh.spwnrs0();
 		sh.deaths0();
 		sh.money(0);
 		sh.arena(this);
 		final Player p = sh.getPlayer();
-		if (p != null) {
-			Main.nrmlzPl(p, true);
-			switch (gst) {
+		Main.nrmlzPl(p, true);
+		switch (gst) {
 			case WAITING:
-				chngTm(sh, Team.SPEC);
+				chngTeam(sh, Team.SPEC);
 				sh.item(Main.mkItm(Material.NETHER_STAR, "§eВыбор Комманды", 10), 2);
-				sh.item(Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10), 4);
+				sh.item(Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10), 5);
 				sh.item(Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10), 6);
 				sh.item(Main.mkItm(Material.SLIME_BALL, "§cВыход", 10), 8);
 				if (shtrs.size() == min) {
@@ -122,9 +120,10 @@ public class Defusal extends Arena {
 						if (pl != null) {
 							beginScore(pl, en.getValue());
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел на карту!");
-							PacketUtils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
+							Utils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
 							if (!rnd) pl.teleport(Main.getNrLoc(Main.srnd.nextBoolean() ? ApiOstrov.rndElmt(TSpawns) : ApiOstrov.rndElmt(CTSawns), w));
-							pl.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 600, 1));
+							pl.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING,
+								600, 1, true, false, false));
 						}
 					}
 					cntBeg();
@@ -135,26 +134,27 @@ public class Defusal extends Arena {
 						final Player pl = s.getPlayer();
 						if (pl != null) {
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел на карту!");
-							PacketUtils.sendAcBr(pl, "§7Нужно еще §d" + rm + " §7игроков для начала!");
+							Utils.sendAcBr(pl, "§7Нужно еще §d" + rm + " §7игроков для начала!");
 							PM.getOplayer(pl).score.getSideBar().update(LIMIT, "§7Ждем еще §5" + rm + (rm > 1 ? " §7игроков" : " §7игрокa"));
 						}
 					}
 				}
 				break;
 			case BEGINING:
-				chngTm(sh, Team.SPEC);
 				sh.item(Main.mkItm(Material.NETHER_STAR, "§eВыбор Комманды", 10), 2);
-				sh.item(Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10), 4);
+				sh.item(Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10), 5);
 				sh.item(Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10), 6);
 				sh.item(Main.mkItm(Material.SLIME_BALL, "§cВыход", 10), 8);
 				if (!rnd) p.teleport(Main.getNrLoc(Main.srnd.nextBoolean() ? ApiOstrov.rndElmt(TSpawns) : ApiOstrov.rndElmt(CTSawns), w));
-				p.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, time * 20, 1));
+				p.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING,
+					time * 20, 1, true, false, false));
 				beginScore(p, Team.SPEC);
+				chngTeam(sh, Team.SPEC);
 				for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
 					final Player pl = e.getKey().getPlayer();
 					if (pl != null) {
 						pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел на карту!");
-						PacketUtils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
+						Utils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
 					}
 				}
 				break;
@@ -162,53 +162,36 @@ public class Defusal extends Arena {
 			case ROUND:
 			case ENDRND:
 				if (!shtrs.containsKey(sh)) {//spec
-					chngTm(sh, Team.SPEC);
 					gameScore(sh, p);
+					chngTeam(sh, Team.SPEC);
 					p.setGameMode(GameMode.SPECTATOR);
 					p.teleport(Main.getNrLoc(Main.srnd.nextBoolean() ? ApiOstrov.rndElmt(TSpawns) : ApiOstrov.rndElmt(CTSawns), w));
 					sh.item(Main.mkItm(Material.NETHER_STAR, "§eВыбор Комманды", 10), 2);
 					sh.item(Main.mkItm(Material.SLIME_BALL, "§cВыход", 10), 8);
 					for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
 						final Shooter s = e.getKey();
-                        final Player pl = s.getPlayer();
+						final Player pl = s.getPlayer();
 						if (pl != null) {
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел посмотреть!");
 						}
 					}
 					break;
 				}
-				//play
-				final Team tm = getMinTm();
-				chngTm(sh, tm);
-				addToTm(p, tm);
-				gameScore(sh, p);
-				chngMn(sh, (getRnd() & 3) == 0 ? 550 : 550 + (tm == Team.Ts ? TBns : CTBns));
-				for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
-					final Player pl = e.getKey().getPlayer();
-					if (pl != null) {
-						pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел играть за комманду " + tm.icn + "§7!");
-					}
-				}
-				
-				for (final TripWire tw : tws) {
-					if (tm == tw.tm) tw.showNade(p);
-				}
 				break;
 			case FINISH:
 				p.sendMessage(Main.prf() + "§cЭта игра уже заканчивается!");
 				Main.lobbyPl(p);
 				return false;
-			}
-			Inventories.updtGm(this);
-			final Component tpl = TCUtils.format("§7Сейчас в игре: §d" + MainLis.getPlaying() + "§7 человек!");
-			for (final Player pl : Bukkit.getOnlinePlayers()) {
-				pl.sendPlayerListFooter(tpl);
-			}
+		}
+		updateData();
+		final Component tpl = TCUtils.format("§7Сейчас в игре: §d" + MainLis.getPlaying() + "§7 человек!");
+		for (final Player pl : Bukkit.getOnlinePlayers()) {
+			pl.sendPlayerListFooter(tpl);
 		}
 		return true;
 	}
 
-	public void addToTm(final Player p, final Team tm) {
+	public void addToTm(final Player p, final PlShooter sh, final Team tm) {
 		p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1, 1);
 		p.teleport(Main.getNrLoc(tm == Team.Ts ? ApiOstrov.rndElmt(TSpawns) : ApiOstrov.rndElmt(CTSawns), w).add(0d, 2d, 0d));
 		if (gst == GameState.BUYTIME) {
@@ -225,24 +208,36 @@ public class Defusal extends Arena {
 			p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 40, 2, true, false, false));
 		} else {
 			p.setGameMode(GameMode.SPECTATOR);
-			p.getInventory().setItem(8, Main.mkItm(Material.REDSTONE, "§cВыход", 10));
+			p.getInventory().setItem(8, Main.mkItm(Material.SLIME_BALL, "§cВыход", 10));
+		}
+
+		gameScore(sh, p);
+		chngMn(sh, (getRnd() & 3) == 0 ? 550 : 550 + (tm == Team.Ts ? TBns : CTBns));
+		for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
+			final Player pl = e.getKey().getPlayer();
+			if (pl != null) {
+				pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел играть за комманду " + tm.icn + "§7!");
+			}
+		}
+
+		for (final TripWire tw : tws) {
+			if (tm == tw.tm) tw.showNade(p);
 		}
 	}
 
 	@Override
-	public boolean rmvPl(final Shooter sh) {
+	public boolean rmvPl(final PlShooter sh) {
 		sh.kills0();
 		sh.spwnrs0();
 		sh.deaths0();
 		sh.money(0);
 		final Team tm = shtrs.remove(sh);
 		final Player p = sh.getPlayer();
-		if (p != null) {
-			if (tm == null) {
-				p.sendMessage(Main.prf() + "§cВы не находитесь в игре!");
-				return false;
-			}
-			switch (gst) {
+		if (tm == null) {
+			p.sendMessage(Main.prf() + "§cВы не находитесь в игре!");
+			return false;
+		}
+		switch (gst) {
 			case WAITING:
 				if (shtrs.size() > 0) {
 					final int rm = min - shtrs.size();
@@ -250,12 +245,12 @@ public class Defusal extends Arena {
 						final Player pl = e.getKey().getPlayer();
 						if (pl != null) {
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7вышел с карты!");
-							PacketUtils.sendAcBr(pl, "§7Нужно еще §d" + rm + " §7игроков для начала!");
+							Utils.sendAcBr(pl, "§7Нужно еще §d" + rm + " §7игроков для начала!");
 							PM.getOplayer(p).score.getSideBar()
 								.update(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
-									+ (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."))
+									+ (e.getValue() == Team.Ts ? " §7чел. §8✦ Ты" : " §7чел."))
 								.update(CT_AMT, Team.CTs.icn + " §7: " + getTmAmt(Team.CTs, true, true)
-									+ (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."))
+									+ (e.getValue() == Team.CTs ? " §7чел. §8✦ Ты" : " §7чел."))
 								.update(LIMIT, "§7Ждем еще §5" + rm + (rm > 1 ? " §7игроков" : " §7игрокa"));
 						}
 					}
@@ -275,7 +270,7 @@ public class Defusal extends Arena {
 							waitScore(pl, min - 1);
 							pl.teleport(Main.getNrLoc(Main.lobby));
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7вышел с карты,\n§7Слишком мало игроков для начала!");
-							PacketUtils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
+							Utils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
 							pl.removePotionEffect(PotionEffectType.GLOWING);
 						}
 					}
@@ -284,12 +279,12 @@ public class Defusal extends Arena {
 						final Player pl = e.getKey().getPlayer();
 						if (pl != null) {
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7вышел с карты!");
-							PacketUtils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
+							Utils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
 							PM.getOplayer(p).score.getSideBar()
-								.update(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
-									+ (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."))
-								.update(CT_AMT, Team.CTs.icn + " §7: " + getTmAmt(Team.CTs, true, true)
-									+ (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
+									.update(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
+											+ (e.getValue() == Team.Ts ? " §7чел. §8✦ Ты" : " §7чел."))
+									.update(CT_AMT, Team.CTs.icn + " §7: " + getTmAmt(Team.CTs, true, true)
+											+ (e.getValue() == Team.CTs ? " §7чел. §8✦ Ты" : " §7чел."));
 						}
 					}
 				}
@@ -326,10 +321,10 @@ public class Defusal extends Arena {
 						if (pl != null) {
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7вышел из игры!");
 							PM.getOplayer(pl).score.getSideBar()
-								.update(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
-									+ (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."))
-								.update(CT_AMT, Team.CTs.icn + " §7: " + getTmAmt(Team.CTs, true, true)
-									+ (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
+									.update(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
+											+ (e.getValue() == Team.Ts ? " §7чел. §8✦ Ты" : " §7чел."))
+									.update(CT_AMT, Team.CTs.icn + " §7: " + getTmAmt(Team.CTs, true, true)
+											+ (e.getValue() == Team.CTs ? " §7чел. §8✦ Ты" : " §7чел."));
 						}
 					}
 				}
@@ -339,10 +334,9 @@ public class Defusal extends Arena {
 					this.time = 1;
 				}
 				break;
-			}
-			Inventories.updtGm(this);
-			Main.lobbyPl(p);
 		}
+		updateData();
+		Main.lobbyPl(p);
 		return true;
 	}
 
@@ -351,8 +345,6 @@ public class Defusal extends Arena {
 		time = 30;
 		gst = GameState.BEGINING;
 		final Arena ar = this;
-		ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.СТАРТ, "§7[§5CS§7]",
-			"§dКлассика", " ", "§7Игроков: §5" + shtrs.size() + "§7/§5" + this.max, "", shtrs.size());
 		tsk = new BukkitRunnable() {
 			@Override
 			public void run() {
@@ -363,7 +355,7 @@ public class Defusal extends Arena {
 						final Player pl = sh.getPlayer();
 						if (pl != null) {
 							pl.playSound(pl.getLocation(), Sound.BLOCK_DISPENSER_FAIL, 0.8f, 1.2f);
-							PacketUtils.sendSbTtl(pl, "§5§l" + time, 10);
+							Utils.sendSbTtl(pl, "§5§l" + time, 10);
 							PM.getOplayer(pl).score.getSideBar().update(LIMIT, rtm);
 						}
 					}
@@ -373,7 +365,7 @@ public class Defusal extends Arena {
 						final Player pl = sh.getPlayer();
 						if (pl != null) {
 							pl.playSound(pl.getLocation(), Sound.BLOCK_DISPENSER_FAIL, 0.8f, 1.4f);
-							PacketUtils.sendSbTtl(pl, "§d§l" + time, 10);
+							Utils.sendSbTtl(pl, "§d§l" + time, 10);
 							PM.getOplayer(pl).score.getSideBar().update(LIMIT, rtm);
 						}
 					}
@@ -382,6 +374,11 @@ public class Defusal extends Arena {
 					if (tsk != null) {
 						tsk.cancel();
 					}
+					final ArrayList<Shooter> sts = new ArrayList<>();
+					for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
+						if (e.getValue() == Team.SPEC) sts.add(e.getKey());
+					}
+					for (final Shooter s : sts) chngTeam(s, getMinTm());
 					cntBuy(true);
 					if (rnd) Main.mapBlds.get(name).placeSets(ar, 5);
 					break;
@@ -404,10 +401,7 @@ public class Defusal extends Arena {
 		TBns = getBns(Team.Ts);
 		CTBns = getBns(Team.CTs);
 		gst = GameState.BUYTIME;
-		final int pls = getPlaying(true, false);
-		ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ЭКИПИРОВКА, "§7[§5CS§7]",
-			"§dКлассика", " ", "§7Игроков: §5" + pls + "§7/§5" + this.max, "", pls);
-		Inventories.updtGm(this);
+		updateData();
 
 		for (final Entity e : w.getEntitiesByClasses(Item.class, ArmorStand.class, Turtle.class)) {
 			e.remove();
@@ -423,7 +417,7 @@ public class Defusal extends Arena {
 				if (sh instanceof PlShooter) {
 					final Player p = sh.getPlayer();
 					gameScore(sh, p);
-					PacketUtils.sendTtlSbTtl(p, getRnd() == 0 ? "" : "§eСмена Ролей", "§l§6⛃§5Закупка§6⛃", 30);
+					Utils.sendTtlSbTtl(p, getRnd() == 0 ? "" : "§eСмена Ролей", "§l§6⛃§5Закупка§6⛃", 30);
 					if (e.getValue() == Team.SPEC) continue;
 
 					Main.nrmlzPl(p, true);
@@ -462,7 +456,7 @@ public class Defusal extends Arena {
 					final Player p = sh.getPlayer();
 					if (p.getGameMode() == GameMode.SPECTATOR) {
 						gameScore(sh, p);
-						PacketUtils.sendSbTtl(p, "§l§6⛃§5Закупка§6⛃", 30);
+						Utils.sendSbTtl(p, "§l§6⛃§5Закупка§6⛃", 30);
 						if (e.getValue() == Team.SPEC) continue;
 
 						Main.nrmlzPl(p, true);
@@ -487,7 +481,7 @@ public class Defusal extends Arena {
 						}
 					} else {
 						Main.nrmlzPl(p, false);
-						PacketUtils.sendSbTtl(p, "§l§6⛃§5Закупка§6⛃", 30);
+						Utils.sendSbTtl(p, "§l§6⛃§5Закупка§6⛃", 30);
 						final ItemStack it0 = sh.item(0);
 						if (!ItemUtils.isBlank(it0, false)) {
 							it0.setAmount(GunType.getGnTp(it0).amo);
@@ -559,7 +553,7 @@ public class Defusal extends Arena {
 						break;
 					}
 					sh.getEntity().addPotionEffect(new PotionEffect(PotionEffectType.SLOW,
-						250, 250, true, false, false));
+						200, 200, true, false, false));
 					sh.getEntity().addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING,
 						40, 2, true, false, false));
 					sh.setTabTag(e.getValue().icn + " ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", e.getValue().clr);
@@ -575,17 +569,17 @@ public class Defusal extends Arena {
 		tsk = new BukkitRunnable() {
 			@Override
 			public void run() {
-				final String rtm = getTime(time, "§5") + "§7до конца!";
-				for (final LivingEntity le : w.getLivingEntities()) {
-					le.setFireTicks(-1);
-				}
+				final String rtm = getTime(time, "§5") + " §7до конца!";
+//				for (final LivingEntity le : w.getLivingEntities()) {
+//					le.setFireTicks(-1);
+//				}
 				switch (time) {
 				case 3, 2, 1:
 					for (final Shooter sh : shtrs.keySet()) {
 						final Player p = sh.getPlayer();
 						if (p != null) {
 							p.playSound(p.getLocation(), Sound.BLOCK_DISPENSER_FAIL, 0.8f, 1.2f);
-							PacketUtils.sendSbTtl(p, "§d§l" + time, 10);
+							Utils.sendSbTtl(p, "§d§l" + time, 10);
 							PM.getOplayer(p).score.getSideBar().update(LIMIT, rtm);
 						}
 					}
@@ -631,14 +625,12 @@ public class Defusal extends Arena {
 		time = 120;
 		bLoc = null;
 		gst = GameState.ROUND;
-		final int pls = getPlaying(true, false);
-		ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ИГРА, "§7[§5CS§7]",
-			"§dКлассика", " ", "§7Игроков: §5" + pls + "§7/§5" + this.max, "", pls);
-		Inventories.updtGm(this);
+		updateData();
+
 		for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
 			final Player p = e.getKey().getPlayer();
 			if (p != null) {
-				PacketUtils.sendSbTtl(p, e.getValue().icn.substring(0, 2) + "§lВперед", 30);
+				Utils.sendSbTtl(p, e.getValue().icn.substring(0, 2) + "§lВперед", 30);
 				PM.getOplayer(p).score.getSideBar().update(STAGE, "§7Cтадия: §5Бой");
 				p.playSound(p, "cs.info." + e.getValue().goSnd, 10f, 1f);
 				p.removePotionEffect(PotionEffectType.SLOW);
@@ -651,17 +643,17 @@ public class Defusal extends Arena {
 			public void run() {
 				final String rtm;
 				if (bmb == null || (time > 10 && (time & 1) == 0)) {
-					rtm = getTime(time, "§d") + "§7до конца!";
+					rtm = getTime(time, "§d") + " §7до конца!";
 				} else {
-					rtm = getTime(time, "§c") + "§7до конца!";
-					Main.plyWrldSnd(bmb.getCenterLoc(), "cs.rand.bmbbeep");
+					rtm = getTime(time, "§c") + " §7до конца!";
+					Main.plyWrldSnd(bmb.getCenterLoc(), "cs.rand.bmbbeep", 1f);
 				}
 				switch (time) {
 				case 60:
 					for (final Shooter sh : shtrs.keySet()) {
 						final Player p = sh.getPlayer();
 						if (p != null) {
-							PacketUtils.sendAcBr(p, "§7Осталась §d1 §7минута!");
+							Utils.sendAcBr(p, "§7Осталась §d1 §7минута!");
 							PM.getOplayer(p).score.getSideBar().update(LIMIT, rtm);
 						}
 					}
@@ -670,7 +662,7 @@ public class Defusal extends Arena {
 					for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
 						final Player p = e.getKey().getPlayer();
 						if (p != null) {
-							PacketUtils.sendAcBr(p, "§7Осталось §d" + time + " §7секунд!");
+							Utils.sendAcBr(p, "§7Осталось §d" + time + " §7секунд!");
 							PM.getOplayer(p).score.getSideBar().update(LIMIT, rtm);
 							p.playSound(p.getLocation(), "cs.info." + (e.getValue() == Team.Ts ? "t30sec" : "ct30sec"), 10f, 1f);
 						}
@@ -680,7 +672,7 @@ public class Defusal extends Arena {
 					for (final Shooter sh : shtrs.keySet()) {
 						final Player p = sh.getPlayer();
 						if (p != null) {
-							PacketUtils.sendAcBr(p, "§7Осталось §d" + time + " §7секунд!");
+							Utils.sendAcBr(p, "§7Осталось §d" + time + " §7секунд!");
 							PM.getOplayer(p).score.getSideBar().update(LIMIT, rtm);
 						}
 					}
@@ -775,7 +767,7 @@ public class Defusal extends Arena {
 				if (p != null) {
 					p.closeInventory();
 					PM.getOplayer(p).score.getSideBar().update(LIMIT, "§d00:00 §7до конца!");
-					PacketUtils.sendTtlSbTtl(p, ttl, sbttl, 30);
+					Utils.sendTtlSbTtl(p, ttl, sbttl, 30);
 					p.playSound(p.getLocation(), "cs.info." + (e.getValue() == Team.Ts ? "t" : "ct") + snd, 10f, 1f);
 					p.sendMessage(" \n§7Победа в раунде: " + (tm == Team.CTs ? "§3Спецназ" : "§4Террористы")
 						+ "\n \n§5=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n§7Лучший спецназовец: §3" + bct.name() + 
@@ -797,13 +789,10 @@ public class Defusal extends Arena {
 	private void cntFnsh(final Team wn) {
 		time = 10;
 		gst = GameState.FINISH;
-		final int pls = getPlaying(true, false);
-		ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ФИНИШ, "§7[§5CS§7]",
-			"§dКлассика", " ", "§7Игроков: §5" + pls + "§7/§5" + this.max, "", pls);
-		Inventories.updtGm(this);
 		for (final Entity e : w.getEntitiesByClasses(Item.class, ArmorStand.class, Turtle.class)) {
 			e.remove();
 		}
+		updateData();
 
 		for (final BrknBlck bb : brkn) {
 			bb.getBlock().setBlockData(bb.bd, false);
@@ -833,7 +822,7 @@ public class Defusal extends Arena {
 				final Player p = sh.getPlayer();
 				p.closeInventory();
 				p.playSound(p, "cs.info." + e.getValue().finSnd, 10f, 1f);
-				PacketUtils.sendTtlSbTtl(p, "§5Финиш", st, 40);
+				Utils.sendTtlSbTtl(p, "§5Финиш", st, 40);
 				sh.setTabTag("§7<§d" + name + "§7> ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", Team.SPEC.clr);
 				if (indon && sh.inv().contains(Material.GOLDEN_APPLE)) {
 					indSts(p);
@@ -891,7 +880,7 @@ public class Defusal extends Arena {
 		PM.getOplayer(pl).score.getSideBar().reset().title("§7[§5CS:GO§7]")
 			.add(" ")
 			.add("§7Карта: §5" + name)
-			.add("§7Режим: §dКлассика")
+			.add("§7Режим: §d" + getType().name)
 			.add("§7=-=-=-=-=-=-=-=-")
 			.add("§7Комманды:")
 			.add(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true) + " §7чел.")
@@ -907,7 +896,7 @@ public class Defusal extends Arena {
 		PM.getOplayer(pl).score.getSideBar().reset().title("§7[§5CS:GO§7]")
 			.add(" ")
 			.add("§7Карта: §5" + name)
-			.add("§7Режим: §dКлассика")
+			.add("§7Режим: §d" + getType().name)
 			.add("§7=-=-=-=-=-=-=-=-")
 			.add("§7Комманды:")
 			.add(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
@@ -928,7 +917,7 @@ public class Defusal extends Arena {
 				+ Team.CTs.clr + getWns(Team.CTs) + " §7: " + Team.CTs.icn)
 			.add(" ")
 			.add("§7Карта: §5" + name)
-			.add("§7Режим: §dКлассика")
+			.add("§7Режим: §d" + getType().name)
 			.add("§7=-=-=-=-=-=-=-=-")
 			.add(STAGE, "§7Cтадия: " + (gst == GameState.BUYTIME ? "§5Закупка" : "§5Бой"))
 			.add(LIMIT, getTime(time, "§d") + " §7до конца!")
@@ -952,7 +941,7 @@ public class Defusal extends Arena {
 				+ Team.CTs.clr + getWns(Team.CTs) + " §7: " + Team.CTs.icn)
 			.add(" ")
 			.add("§7Карта: §5" + name)
-			.add("§7Режим: §dКлассика")
+			.add("§7Режим: §d" + getType().name)
 			.add("§7=-=-=-=-=-=-=-=-")
 			.add("§7Cтадия: §dФиниш")
 			.add(LIMIT, getTime(time, "§d") + " §7до конца!")
@@ -1117,7 +1106,7 @@ public class Defusal extends Arena {
 				final Player p = e.getKey().getPlayer();
 				if (p != null) {
 					p.closeInventory();
-					PacketUtils.sendTtlSbTtl(p, "§4\u926e", "§c§lБомба установлена!", 30);
+					Utils.sendTtlSbTtl(p, "§4\u926e", "§c§lБомба установлена!", 30);
 					p.playSound(p.getLocation(), "cs.info." + (e.getValue() == Team.Ts ? "tplant" : "ctplant"), 10f, 1f);
 				}
 			}
@@ -1140,16 +1129,12 @@ public class Defusal extends Arena {
 
 	public void indSts(final Player p) {
 		if (indon) {
-			for (final Item e : inds) {
-				p.hideEntity(Main.plug, e);
-			}
+			p.hideEntity(Main.plug, ads);
+			p.hideEntity(Main.plug, bds);
 			indon = false;
 		} else {
-			final org.bukkit.scoreboard.Team tm = p.getScoreboard().getTeam(RED_IND);
-			for (final Item e : inds) {
-				tm.addEntry(e.getUniqueId().toString());
-				p.showEntity(Main.plug, e);
-			}
+			p.showEntity(Main.plug, ads);
+			p.showEntity(Main.plug, bds);
 			indon = true;
 		}
 	}
@@ -1160,11 +1145,10 @@ public class Defusal extends Arena {
 			final Player pl = n.getKey().getPlayer();
 			if (pl != null) {
 				pl.playSound(loc, "cs.info." + (n.getValue() == Team.Ts ? "tdropbmb" : "ctdropbmb"), 10f, 1f);
-				Nms.colorGlow(bmb, NamedTextColor.DARK_RED, true);
 			}
 		}
-		bmb.setGlowing(true);
 		bmb.setPersistent(true);
+		Nms.colorGlow(bmb, NamedTextColor.DARK_RED, false);
 		bLoc = new WXYZ(bmb.getLocation().add(bmb.getVelocity().setY(0d).multiply(10d)));
 	}
 	

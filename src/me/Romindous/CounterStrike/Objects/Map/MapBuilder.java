@@ -152,7 +152,7 @@ public class MapBuilder {
 		
 		//upstairs stairs and sites
 		final int halfX = lenX >> 1, halfZ = widZ >> 1,
-			totalSpots = (halfX + halfZ) >> 2;
+			totalSpots = (halfX + halfZ) >> 1;
 		Arrays.fill(stairs, 0);
 		switch (flr) {
 		case BOT:

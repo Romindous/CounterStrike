@@ -32,6 +32,8 @@ import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.version.Nms;
 
+import javax.annotation.Nullable;
+
 public class DmgLis implements Listener {
 	
 	@EventHandler
@@ -39,7 +41,9 @@ public class DmgLis implements Listener {
 		switch (e.getCause()) {
 		case ENTITY_ATTACK:
 			if (e instanceof final EntityDamageByEntityEvent ee) {
-                if (e.getEntity() instanceof final LivingEntity ent && ee.getDamager() instanceof final LivingEntity dmgr && !e.getEntity().isInvulnerable()) {
+                if (e.getEntity() instanceof final LivingEntity ent
+					&& ee.getDamager() instanceof final LivingEntity dmgr
+					&& !e.getEntity().isInvulnerable()) {
                     final Shooter sh = Shooter.getShooter(dmgr, false);
 					if (sh != null) {
 						//if player shoots living
@@ -72,7 +76,7 @@ public class DmgLis implements Listener {
 									if (ent.getNoDamageTicks() == 0) {
 										e.setDamage(ent.getEquipment().getChestplate() == null ? 3d : 2d);
 										prcDmg(ent, Shooter.getShooter(ent, false), sh, e.getDamage(), 
-										"§f\u9298", 5, GunType.knfRwd, false, false, false, false, false);
+										"§f\u9298", 5, GunType.knifRwd, false, false, false, false, false);
 										if (dmgr.getType() == EntityType.PLAYER) {
 											Main.dmgInd((Player) dmgr, ent.getEyeLocation(), "§6" + (int) e.getDamage() * 5);
 										}
@@ -89,7 +93,8 @@ public class DmgLis implements Listener {
 							e.setCancelled(true);
 							e.setDamage(ent.getEquipment().getChestplate() == null ? e.getDamage() : e.getDamage() * 0.6);
 							e.setDamage(ent.getEquipment().getHelmet() == null ? e.getDamage() : e.getDamage() * 0.8);
-							prcDmg(ent, Shooter.getShooter(ent, false), null, e.getDamage(), Team.SPEC.clr + ee.getDamager().getName() + "§f\u929a", 5);
+							prcDmg(ent, Shooter.getShooter(ent, false), null, e.getDamage(),
+								Team.SPEC.clr + ee.getDamager().getName() + "§f\u929a", 5);
 						}
 					}
 				}
@@ -97,6 +102,7 @@ public class DmgLis implements Listener {
 			break;
 		case FIRE_TICK:
 			e.getEntity().setFireTicks(0);
+		case BLOCK_EXPLOSION:
 		case ENTITY_EXPLOSION:
 		case FREEZE:
 			e.setCancelled(true);
@@ -136,12 +142,12 @@ public class DmgLis implements Listener {
 
 	public static double prcDmg(final LivingEntity target, final Shooter tgtsh, 
 		final Shooter damager, final double dmg, final String icon, final int ndts) {
-		return prcDmg(target, tgtsh, damager, dmg, icon, ndts, (short) 0, false, false, false, false, false);
+		return prcDmg(target, tgtsh, damager, dmg, icon, ndts, (short) 0,
+			false, false, false, false, false);
 	}
 
-	public static double prcDmg(final LivingEntity target, final Shooter tgtsh, 
-		final Shooter damager, final double dmg, final String icon, final int ndts, 
-		final short rwd, final boolean blind, final boolean smoked, 
+	public static double prcDmg(final LivingEntity target, final @Nullable Shooter tgtsh, final @Nullable Shooter damager,
+		final double dmg, final String icon, final int ndts, final short rwd, final boolean blind, final boolean smoked,
 		final boolean noscp, final boolean head, final boolean walled) {
 		//target.sendMessage("hit-" + tgtsh + "," + damager + "," + dmg);
 		final double health = target.getHealth() - dmg;
@@ -198,12 +204,13 @@ public class DmgLis implements Listener {
 					case ROUND:
 						if (damager != null) {
 							inv.addMbKll(damager);
-							inv.chngMn(damager, rwd << Mobber.getMbPow(target.getType()) >> 2);
+							inv.chngMn(damager, rwd << Mobber.MobType.get(target.getType()).pow >> 2);
 						}
 					case BEGINING:
 						inv.TMbs.remove(target.getEntityId());
-						target.getWorld().spawnParticle(Particle.SOUL, target.getLocation().add(0, 1d, 0), 40, 0.5D, 0.5D, 0.5D, 0.0D, null, false);
-						target.getWorld().playSound(target.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, 10f, 2f);
+						target.getWorld().spawnParticle(Particle.SOUL, target.getLocation()
+							.add(0, 1d, 0), 40, 0.5D, 0.5D, 0.5D, 0.0D, null, false);
+						Main.plyWrldSnd(target, Sound.BLOCK_ENDER_CHEST_OPEN.key().value(), 2f);
 						target.remove();
 					default:
 						break;
@@ -220,8 +227,9 @@ public class DmgLis implements Listener {
 							for (final Player p : target.getWorld().getPlayers()) {
 								p.sendMessage(klfd);
 							}
-							target.getWorld().spawnParticle(Particle.SOUL, target.getLocation().add(0, 1d, 0), 40, 0.5D, 0.5D, 0.5D, 0.0D, null, false);
-							target.getWorld().playSound(target.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, 10f, 2f);
+							target.getWorld().spawnParticle(Particle.SOUL, target.getLocation()
+								.add(0, 1d, 0), 40, 0.5D, 0.5D, 0.5D, 0.0D, null, false);
+							Main.plyWrldSnd(target, Sound.BLOCK_ENDER_CHEST_OPEN.key().value(), 2f);
 							ar.killSh(tgtsh);
 							break;
 						default:
@@ -246,8 +254,9 @@ public class DmgLis implements Listener {
 							for (final Player p : target.getWorld().getPlayers()) {
 								p.sendMessage(klfd);
 							}
-							target.getWorld().spawnParticle(Particle.SOUL, target.getLocation().add(0, 1d, 0), 40, 0.5D, 0.5D, 0.5D, 0.0D, null, false);
-							target.getWorld().playSound(target.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, 10f, 2f);
+							target.getWorld().spawnParticle(Particle.SOUL, target.getLocation()
+								.add(0, 1d, 0), 40, 0.5D, 0.5D, 0.5D, 0.0D, null, false);
+							Main.plyWrldSnd(target, Sound.BLOCK_ENDER_CHEST_OPEN.key().value(), 2f);
 							SkinQuest.tryCompleteQuest(damager, Quest.АЗИМОВ, smoked && blind && head ? 1 : 0);
 							SkinQuest.tryCompleteQuest(damager, Quest.КРОВЬ, walled ? 1 : 0);
 							final LivingEntity dle = damager.getEntity();
@@ -268,18 +277,17 @@ public class DmgLis implements Listener {
 	public void onHit(final ProjectileHitEvent e) {
 		if (e.getEntityType() == EntityType.SNOWBALL) {
 			final Snowball sb = (Snowball) e.getEntity();
+			final Nade nd = Main.nades.remove(sb.getUniqueId());
 			final NadeType nt = NadeType.getNdTp(sb.getItem());
-			if (nt == null || !(sb.getShooter() instanceof LivingEntity)) {
+			if (nd == null || nt == null) return;
+			if (e.getHitEntity() != null || nt.hasPopFace(e.getHitBlockFace())) {
+				e.setCancelled(true);
+				nd.explode();
 				return;
 			}
-			if (e.getHitEntity() != null || nt.hasPopFace(e.getHitBlockFace())) {
-				Nade.expld(sb, (Player) sb.getShooter()); 
-				e.setCancelled(true);
-				return;
-			} 
+
 			final Vector vec = sb.getVelocity();
 			final Snowball nv = (Snowball) sb.getWorld().spawnEntity(sb.getLocation(), EntityType.SNOWBALL);
-			
 			switch (e.getHitBlockFace()) {
 			case NORTH:
 			case SOUTH:
@@ -292,7 +300,7 @@ public class DmgLis implements Listener {
 			case UP:
 				if (nt == NadeType.SMOKE && sb.getLocation().getBlock().getType() == Material.FIRE) {
 					sb.getWorld().playSound(sb.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 2f, 0.8f);
-					Nade.expld(sb, (Player) sb.getShooter());
+					nd.explode();
 					return;
 				} 
 				if (vec.length() < 0.3D) {
@@ -304,20 +312,16 @@ public class DmgLis implements Listener {
 					vec.setY(-vec.getY());
 				}
 				break;
-         
 			case DOWN:
 				vec.setY(-vec.getY());
 				break;
 			default:
 				break;
 			} 
-       
-			nv.setItem(sb.getItem());
+
 			vec.multiply(0.6F);
 			nv.setVelocity(vec);
-			nv.setShooter(sb.getShooter());
-			Nade.chngNd(sb, nv);
-			sb.remove();
+			nd.chngNd(nv);
 		}
 	}
 }

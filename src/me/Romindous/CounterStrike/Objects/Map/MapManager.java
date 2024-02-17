@@ -125,7 +125,7 @@ public class MapManager implements InventoryProvider {
 			
 			its.set(0, new InputButton(InputType.ANVILL, new ItemBuilder(Material.ENDER_EYE)
 				.name("§7Мир для §5Классики§7: " + stp.worlds.get(GameType.DEFUSAL))
-				.addLore(Arrays.asList("§dКлик §7- изменить")).build(), "Карта", nm -> {
+				.addLore(Arrays.asList("§dКлик §7- изменить")).build(), pl.getWorld().getName(), nm -> {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(GameType.class);
 				worlds.putAll(stp.worlds);
 				worlds.put(GameType.DEFUSAL, nm);
@@ -137,7 +137,7 @@ public class MapManager implements InventoryProvider {
 			
 			its.set(1, new InputButton(InputType.ANVILL, new ItemBuilder(Material.ENDER_PEARL)
 				.name("§7Мир для §5Эстафеты§7: " + stp.worlds.get(GameType.GUNGAME))
-				.addLore(Arrays.asList("§dКлик §7- изменить")).build(), "Карта", nm -> {
+				.addLore(Arrays.asList("§dКлик §7- изменить")).build(), pl.getWorld().getName(), nm -> {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(GameType.class);
 				worlds.putAll(stp.worlds);
 				worlds.put(GameType.GUNGAME, nm);
@@ -149,7 +149,7 @@ public class MapManager implements InventoryProvider {
 			
 			its.set(2, new InputButton(InputType.ANVILL, new ItemBuilder(Material.END_PORTAL_FRAME)
 				.name("§7Мир для §5Вторжения§7: " + stp.worlds.get(GameType.INVASION))
-				.addLore(Arrays.asList("§dКлик §7- изменить")).build(), "Карта", nm -> {
+				.addLore(Arrays.asList("§dКлик §7- изменить")).build(), pl.getWorld().getName(), nm -> {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(GameType.class);
 				worlds.putAll(stp.worlds);
 				worlds.put(GameType.INVASION, nm);
@@ -439,7 +439,7 @@ public class MapManager implements InventoryProvider {
 			
 			its.set(0, new InputButton(InputType.ANVILL, new ItemBuilder(Material.ENDER_EYE)
 				.name("§7Мир для §5Классики§7: " + stp.worlds.get(GameType.DEFUSAL))
-				.addLore(Arrays.asList("§dКлик §7- изменить")).build(), "Карта", nm -> {
+				.addLore(Arrays.asList("§dКлик §7- изменить")).build(), pl.getWorld().getName(), nm -> {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(GameType.class);
 				worlds.putAll(stp.worlds);
 				worlds.put(GameType.DEFUSAL, nm);
@@ -451,7 +451,7 @@ public class MapManager implements InventoryProvider {
 			
 			its.set(1, new InputButton(InputType.ANVILL, new ItemBuilder(Material.ENDER_PEARL)
 				.name("§7Мир для §5Эстафеты§7: " + stp.worlds.get(GameType.GUNGAME))
-				.addLore(Arrays.asList("§dКлик §7- изменить")).build(), "Карта", nm -> {
+				.addLore(Arrays.asList("§dКлик §7- изменить")).build(), pl.getWorld().getName(), nm -> {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(GameType.class);
 				worlds.putAll(stp.worlds);
 				worlds.put(GameType.GUNGAME, nm);
@@ -463,7 +463,7 @@ public class MapManager implements InventoryProvider {
 			
 			its.set(2, new InputButton(InputType.ANVILL, new ItemBuilder(Material.END_PORTAL_FRAME)
 				.name("§7Мир для §5Вторжения§7: " + stp.worlds.get(GameType.INVASION))
-				.addLore(Arrays.asList("§dКлик §7- изменить")).build(), "Карта", nm -> {
+				.addLore(Arrays.asList("§dКлик §7- изменить")).build(), pl.getWorld().getName(), nm -> {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(GameType.class);
 				worlds.putAll(stp.worlds);
 				worlds.put(GameType.INVASION, nm);

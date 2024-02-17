@@ -13,8 +13,7 @@ import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
 import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
-import me.Romindous.CounterStrike.Utils.Inventories;
-import me.Romindous.CounterStrike.Utils.PacketUtils;
+import me.Romindous.CounterStrike.Utils.Utils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
@@ -104,39 +103,38 @@ public class Invasion extends Arena {
 	}
 
 	@Override
-	public boolean addPl(final Shooter sh) {
+	public boolean addPl(final PlShooter sh) {
 		sh.kills0();
 		sh.spwnrs0();
 		sh.deaths0();
 		sh.money(0);
 		sh.arena(this);
 		final Player p = sh.getPlayer();
-		if (p != null) {
-			Main.nrmlzPl(p, true);
-			switch (gst) {
+		Main.nrmlzPl(p, true);
+		switch (gst) {
 			case WAITING:
 			case BEGINING:
-				shtrs.put(sh, Team.CTs);
-				sh.item(Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10), 4);
+				sh.item(Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10), 5);
 				sh.item(Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10), 6);
 				sh.item(Main.mkItm(Material.SLIME_BALL, "§cВыход", 10), 8);
 				if (!rnd) p.teleport(Main.getNrLoc(ApiOstrov.rndElmt(CTSawns), w));
 				p.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, time * 20, 1));
 				beginScore(p);
+				chngTeam(sh, Team.CTs);
 				for (final Shooter s : shtrs.keySet()) {
 					final Player pl = s.getPlayer();
 					if (pl != null) {
 						pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел на карту!");
 						PM.getOplayer(pl).score.getSideBar().update(CT_AMT, "§7Защитников: "
-							+ Team.CTs.clr + getTmAmt(Team.CTs, true, true) + " §7чел.");
-						PacketUtils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
+								+ Team.CTs.clr + getTmAmt(Team.CTs, true, true) + " §7чел.");
+						Utils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
 					}
 				}
 				break;
 			case ROUND:
 				if (!shtrs.containsKey(sh)) {//spec
-					shtrs.put(sh, Team.SPEC);
 					gameScore(sh, p);
+					chngTeam(sh, Team.SPEC);
 					p.setGameMode(GameMode.SPECTATOR);
 					p.teleport(Main.getNrLoc(Main.srnd.nextBoolean() ? ApiOstrov.rndElmt(TSpawns) : ApiOstrov.rndElmt(CTSawns), w));
 					sh.item(Main.mkItm(Material.NETHER_STAR, "§eВыбор Комманды", 10), 2);
@@ -151,35 +149,7 @@ public class Invasion extends Arena {
 					break;
 				}
 
-				shtrs.put(sh, Team.CTs);
 				chngMn(sh, 250);
-				addToGm(p, Team.CTs);
-				gameScore(sh, p);
-				final int pls = getPlaying(true, false);
-				cnt = Math.max(((isDay ? KD_DAY : KD_NIGHT) - (ccl << 1)) / pls, 1);
-				for (final Shooter s : shtrs.keySet()) {
-					final Player pl = s.getPlayer();
-					if (pl != null) {
-						pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел играть!");
-						PM.getOplayer(pl).score.getSideBar()
-							.update(CT_AMT, "§7Защитников: " + Team.CTs.clr
-								+ getTmAmt(Team.CTs, true, true) + " §7чел.")
-							.update(B_HP, "§7Точка §6B §7: §6" + String.valueOf(bpc) + "%");
-					}
-				}
-				
-				if (pls > 1) {
-					bds.setViewRange(100f);
-					bds.getLocation().getBlock().setType(Material.WARPED_PRESSURE_PLATE, false);
-				}
-				
-				for (final TripWire tw : tws) {
-					tw.showNade(p);
-				}
-				
-				for (final Mobber mb : mbbrs.values()) {
-					if (mb.isAlive()) Nms.colorGlow(mb.ind, NamedTextColor.DARK_RED, false);
-				}
 				break;
 			case BUYTIME:
 			case ENDRND:
@@ -187,39 +157,65 @@ public class Invasion extends Arena {
 				p.sendMessage(Main.prf() + "§cЭта игра уже заканчивается!");
 				Main.lobbyPl(p);
 				return false;
-			}
-			Inventories.updtGm(this);
-			final Component tpl = TCUtils.format("§7Сейчас в игре: §d" + MainLis.getPlaying() + "§7 человек!");
-			for (final Player pl : Bukkit.getOnlinePlayers()) {
-				pl.sendPlayerListFooter(tpl);
-			}
+		}
+		updateData();
+		final Component tpl = TCUtils.format("§7Сейчас в игре: §d" + MainLis.getPlaying() + "§7 человек!");
+		for (final Player pl : Bukkit.getOnlinePlayers()) {
+			pl.sendPlayerListFooter(tpl);
 		}
 		return true;
 	}
 
-	public void addToGm(final Player p, final Team tm) {
+	public void addToTm(final Player p, final PlShooter sh, final Team tm) {
 		p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1, 1);
 		p.teleport(Main.getNrLoc(ApiOstrov.rndElmt(CTSawns), w));
 		p.getInventory().setItem(8, Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10));
 		p.getInventory().setItem(7, Main.mkItm(Material.GOLD_NUGGET, "§eКусачки §f\u9268", 10));
 		p.getInventory().setItem(2, Main.mkItm(Material.BLAZE_ROD, "§fНож \u9298", 10));
 		p.setGameMode(isDay ? GameMode.SURVIVAL : GameMode.SPECTATOR);
+
+		gameScore(sh, p);
+		chngTeam(sh, Team.CTs);
+		final int pls = getPlaying(true, false);
+		cnt = Math.max(((isDay ? KD_DAY : KD_NIGHT) - (ccl << 1)) / pls, 1);
+		for (final Shooter s : shtrs.keySet()) {
+			final Player pl = s.getPlayer();
+			if (pl != null) {
+				pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел играть!");
+				PM.getOplayer(pl).score.getSideBar()
+						.update(CT_AMT, "§7Защитников: " + Team.CTs.clr
+								+ getTmAmt(Team.CTs, true, true) + " §7чел.")
+						.update(B_HP, "§7Точка §6B §7: §6" + String.valueOf(bpc) + "%");
+			}
+		}
+
+		if (pls > 1) {
+			bds.setViewRange(100f);
+			bds.getLocation().getBlock().setType(Material.WARPED_PRESSURE_PLATE, false);
+		}
+
+		for (final TripWire tw : tws) {
+			tw.showNade(p);
+		}
+
+		for (final Mobber mb : mbbrs.values()) {
+			if (mb.isAlive()) Nms.colorGlow(mb.ind, NamedTextColor.DARK_RED, false);
+		}
 	}
 
 	@Override
-	public boolean rmvPl(final Shooter sh) {
+	public boolean rmvPl(final PlShooter sh) {
 		sh.kills0();
 		sh.spwnrs0();
 		sh.deaths0();
 		sh.money(0);
 		final Team tm = shtrs.remove(sh);
 		final Player p = sh.getPlayer();
-		if (p != null) {
-			if (tm == null) {
-				p.sendMessage(Main.prf() + "§cВы не находитесь в игре!");
-				return false;
-			}
-			switch (gst) {
+		if (tm == null) {
+			p.sendMessage(Main.prf() + "§cВы не находитесь в игре!");
+			return false;
+		}
+		switch (gst) {
 			case WAITING:
 			case BEGINING:
 				if (shtrs.size() == 0) {
@@ -233,9 +229,9 @@ public class Invasion extends Arena {
 						final Player pl = s.getPlayer();
 						if (pl != null) {
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7вышел с карты!");
-							PacketUtils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
+							Utils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
 							PM.getOplayer(pl).score.getSideBar().update(CT_AMT, "§7Защитников: "
-								+ Team.CTs.clr + getTmAmt(Team.CTs, true, true) + " §7чел.");
+									+ Team.CTs.clr + getTmAmt(Team.CTs, true, true) + " §7чел.");
 						}
 					}
 				}
@@ -254,7 +250,7 @@ public class Invasion extends Arena {
 				}
 
 				final int pls = getPlaying(true, false),
-					sz = getTmAmt(Team.CTs, false, true);
+						sz = getTmAmt(Team.CTs, false, true);
 				if (sz == 0) {
 					final int rm = getTmAmt(Team.CTs, true, true);
 					if (rm == 0 || getTmAmt(Team.CTs, false, false) == 0) {
@@ -264,7 +260,7 @@ public class Invasion extends Arena {
 							final Player pl = s.getPlayer();
 							if (pl != null) {
 								PM.getOplayer(pl).score.getSideBar().update(CT_AMT,
-									"§7Защитников: " + Team.CTs.clr + rm + " §7чел.");
+										"§7Защитников: " + Team.CTs.clr + rm + " §7чел.");
 							}
 						}
 					}
@@ -275,9 +271,9 @@ public class Invasion extends Arena {
 						if (pl != null) {
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7вышел из игры!");
 							PM.getOplayer(pl).score.getSideBar()
-								.update(CT_AMT, "§7Защитников: " + Team.CTs.clr
-									+ getTmAmt(Team.CTs, true, true) + " §7чел.")
-								.update(B_HP, "§7Точка §6B §7: §8Не активна!");
+									.update(CT_AMT, "§7Защитников: " + Team.CTs.clr
+											+ getTmAmt(Team.CTs, true, true) + " §7чел.")
+									.update(B_HP, "§7Точка §6B §7: §8Не активна!");
 						}
 					}
 					bds.setViewRange(0f);
@@ -289,8 +285,8 @@ public class Invasion extends Arena {
 						if (pl != null) {
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7вышел из игры!");
 							PM.getOplayer(pl).score.getSideBar()
-								.update(CT_AMT, "§7Защитников: " + Team.CTs.clr
-									+ getTmAmt(Team.CTs, true, true) + " §7чел.");
+									.update(CT_AMT, "§7Защитников: " + Team.CTs.clr
+											+ getTmAmt(Team.CTs, true, true) + " §7чел.");
 						}
 					}
 				}
@@ -300,9 +296,8 @@ public class Invasion extends Arena {
 					this.time = 1;
 				}
 				break;
-			}
 		}
-		Inventories.updtGm(this);
+		updateData();
 		Main.lobbyPl(p);
 		return true;
 	}
@@ -312,8 +307,7 @@ public class Invasion extends Arena {
 		time = 10;
 		gst = GameState.BEGINING;
 		final Arena ar = this;
-		ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.СТАРТ, "§7[§5CS§7]", 
-			"§dВторжение", " ", "§7Игроков: §5" + shtrs.size() + "§7/§5" + this.min, "", shtrs.size());
+		updateData();
 		tsk = new BukkitRunnable() {
 			@Override
 			public void run() {
@@ -324,7 +318,7 @@ public class Invasion extends Arena {
 						final Player p = sh.getPlayer();
 						if (p != null) {
 							p.playSound(p.getLocation(), Sound.BLOCK_DISPENSER_FAIL, 0.8f, 1.2f);
-							PacketUtils.sendSbTtl(p, "§5§l" + time, 10);
+							Utils.sendSbTtl(p, "§5§l" + time, 10);
 							PM.getOplayer(p).score.getSideBar().update(LIMIT, rtm);
 						}
 					}
@@ -334,7 +328,7 @@ public class Invasion extends Arena {
 						final Player p = sh.getPlayer();
 						if (p != null) {
 							p.playSound(p.getLocation(), Sound.BLOCK_DISPENSER_FAIL, 0.8f, 1.2f);
-							PacketUtils.sendSbTtl(p, "§d§l" + time, 10);
+							Utils.sendSbTtl(p, "§d§l" + time, 10);
 							PM.getOplayer(p).score.getSideBar().update(LIMIT, rtm);
 						}
 					}
@@ -402,13 +396,13 @@ public class Invasion extends Arena {
 		}
 		
 		Ostrov.async(() -> ApiOstrov.shuffle(spots));
-		for (int i = spots.length >> 1; i >= 0; i--) {
+		for (int i = 0; i != spots.length; i++) {
 			new Mobber(spots[i], this);
 		}
-		Nms.colorGlow(ads, NamedTextColor.AQUA, false);
-		Nms.colorGlow(bds, NamedTextColor.GOLD, false);
+//		Nms.colorGlow(ads, NamedTextColor.AQUA, false);
+//		Nms.colorGlow(bds, NamedTextColor.GOLD, false);
 		swpDayNght();
-		Inventories.updtGm(this);
+		updateData();
 	}
 
 	private void swpDayNght() {
@@ -422,20 +416,19 @@ public class Invasion extends Arena {
 			isDay = false;
 			time = (short) (ccl * 20 + 60);
 			cnt = Math.max((KD_NIGHT - (ccl << 1)) / pls, 1);
-			ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ИГРА, "§7[§5CS§7]", "§dВторжение", " ", "§7Игроков: §5" + pls + "§7/§5" + this.max, "", pls);
 //			final ArrayList<Player> pls = new ArrayList<>();
 			for (final Shooter sh : shtrs.keySet()) {
 				sh.item(Main.air, 8);
 				final Player p = sh.getPlayer();
 				if (p != null) {
-					PacketUtils.sendTtlSbTtl(p, "§4Ночь", "§7Крепитесь и защищайте точки!", 50);
+					Utils.sendTtlSbTtl(p, "§4Ночь", "§7Крепитесь и защищайте точки!", 50);
 					PM.getOplayer(p).score.getSideBar().update(STAGE, "§7Cтадия: §5Ночь §7(" + getTime(time, "§5") + "§7)");
 					p.playSound(p.getLocation(), "cs.info.night", 10f, 1f);
 				}
 			}
 
 			Ostrov.async(() -> ApiOstrov.shuffle(spots));
-			for (int i = spots.length >> 1; i > 0; i--) {
+			for (int i = spots.length >> 2; i != spots.length; i++) {
 				final Mobber mb = mbbrs.get(spots[i].getSLoc());
 				if (mb == null) {
 					new Mobber(spots[i], this);
@@ -444,22 +437,12 @@ public class Invasion extends Arena {
 				
 				mb.ind.setGlowing(true);
 				if (mb.getType() == Material.SPAWNER) {
-					switch (mb.et) {
-					case ZOMBIE_VILLAGER:
-						mb.et = EntityType.STRAY;
-						break;
-					case STRAY:
-						mb.et = EntityType.PILLAGER;
-						break;
-					case PILLAGER:
-						mb.et = EntityType.PIGLIN_BRUTE;
-						break;
-					default:
-						break;
-					}
+					final Mobber.MobType[] vls = Mobber.MobType.values();
+					if (mb.mt.ordinal() + 1 != vls.length)
+						mb.mt = vls[mb.mt.ordinal() + 1];
 				} else {
 					mb.setSpwn();
-					mb.et = EntityType.ZOMBIE_VILLAGER;
+					mb.mt = Mobber.MobType.WEAK;
 				}
 			}
 		} else {
@@ -468,15 +451,12 @@ public class Invasion extends Arena {
 			time = (short) (ccl * 10 + 60);
 			cnt = Math.max((KD_DAY - (ccl << 1)) / pls, 1);
 			ccl++;
-			ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ЭКИПИРОВКА, "§7[§5CS§7]", 
-				"§dВторжение", " ", "§7Игроков: §5" + pls + "§7/§5" + this.max, "", pls);
-			Inventories.updtGm(this);
 			for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
 				final Shooter sh = e.getKey();
 				final LivingEntity le = sh.getEntity();
 				if (sh instanceof PlShooter) {
 					final Player p = (Player) le;
-					PacketUtils.sendTtlSbTtl(p, "§3День", "§7Закупайтесь и ломайте спавнеры!", 80);
+					Utils.sendTtlSbTtl(p, "§3День", "§7Закупайтесь и ломайте спавнеры!", 80);
 					PM.getOplayer(p).score.getSideBar().update(STAGE, "§7Cтадия: §dДень §7(" + getTime(time, "§d") + "§7)");
 					p.playSound(p.getLocation(), "cs.info.day", 10f, 1f);
 					if (e.getValue() == Team.SPEC) continue;
@@ -523,7 +503,7 @@ public class Invasion extends Arena {
 					for (final Shooter sh : shtrs.keySet()) {
 						final Player p = sh.getPlayer();
 						if (p != null) {
-							PacketUtils.sendAcBr(p, "§7Осталась §d1 §7минута!");
+							Utils.sendAcBr(p, "§7Осталась §d1 §7минута!");
 							PM.getOplayer(p).score.getSideBar().update(STAGE, ttrm);
 						}
 					}
@@ -532,7 +512,7 @@ public class Invasion extends Arena {
 					for (final Shooter sh : shtrs.keySet()) {
 						final Player p = sh.getPlayer();
 						if (p != null) {
-							PacketUtils.sendAcBr(p, "§7Осталось §d" + time + " §7секунд!");
+							Utils.sendAcBr(p, "§7Осталось §d" + time + " §7секунд!");
 							PM.getOplayer(p).score.getSideBar().update(STAGE, ttrm);
 							p.playSound(p.getLocation(), "cs.info." + (isDay ? "day30sec" : "nit30sec"), 10f, 1f);
 						}
@@ -542,7 +522,7 @@ public class Invasion extends Arena {
 					for (final Shooter sh : shtrs.keySet()) {
 						final Player p = sh.getPlayer();
 						if (p != null) {
-							PacketUtils.sendAcBr(p, "§7Осталось §d" + time + " §7секунд!");
+							Utils.sendAcBr(p, "§7Осталось §d" + time + " §7секунд!");
 							PM.getOplayer(p).score.getSideBar().update(STAGE, ttrm);
 						}
 					}
@@ -568,12 +548,10 @@ public class Invasion extends Arena {
 		if (tsk != null) tsk.cancel();
 		time = 10;
 		gst = GameState.FINISH;
-		ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ФИНИШ, "§7[§5CS§7]", 
-			"§dВторжение", " ", "§7Игроков: §5" + shtrs.size() + "§7/§5" + this.min, "", shtrs.size());
-		Inventories.updtGm(this);
 		for (final Entity e : w.getEntitiesByClasses(Item.class, ArmorStand.class, Turtle.class)) {
 			e.remove();
 		}
+		updateData();
 
 		for (final BrknBlck bb : brkn) {
 			bb.getBlock().setBlockData(bb.bd, false);
@@ -598,7 +576,7 @@ public class Invasion extends Arena {
 				final Player p = sh.getPlayer();
 				p.closeInventory();
 				p.playSound(p.getLocation(), "cs.info." + snd, 10f, 1f);
-				PacketUtils.sendTtlSbTtl(p, ttl, sbt, 50);
+				Utils.sendTtlSbTtl(p, ttl, sbt, 50);
 				sh.setTabTag("§7<§d" + name + "§7> ", " §7[" + sh.kills() +
 					"-" + sh.spwnrs() + "-" + sh.deaths() + "]", Team.SPEC.clr);
 				p.sendMessage(" \n§7Финиш: " + ttl
@@ -653,7 +631,7 @@ public class Invasion extends Arena {
 		PM.getOplayer(p).score.getSideBar().reset().title("§7[§5CS:GO§7]")
 			.add(" ")
 			.add("§7Карта: §5" + name)
-			.add("§7Режим: §dВторжение")
+			.add("§7Режим: §d" + getType().name)
 			.add("§7=-=-=-=-=-=-=-=-")
 			.add(T_AMT, "§7Точки: " + (shtrs.size() == 1 ? "§bA" : "§bA §7и §6B"))
 			.add(" ")
@@ -668,7 +646,7 @@ public class Invasion extends Arena {
 		PM.getOplayer(p).score.getSideBar().reset().title("§7[§5CS:GO§7]")
 			.add(" ")
 			.add("§7Карта: §5" + name)
-			.add("§7Режим: §dВторжение")
+			.add("§7Режим: §d" + getType().name)
 			.add("§7=-=-=-=-=-=-=-=-")
 			.add(STAGE, "§7Cтадия: " + (isDay ? "§dДень §7(" + getTime(time, "§d") 
 					: "§5Ночь §7(" + getTime(time, "§5")) + "§7)")
@@ -676,7 +654,7 @@ public class Invasion extends Arena {
 			.add(A_HP, "§7Точка §bA §7: §b" + String.valueOf(apc) + "%")
 			.add(B_HP, "§7Точка §6B §7: " + (getTmAmt(Team.CTs, true, false) == 1 ? "§7Не активна!" : "§6" + String.valueOf(bpc) + "%"))
 			.add(" ")
-			.add(CT_AMT, "§7Защитников: " + Team.CTs.clr + getTmAmt(Team.CTs, true, true) + " §7чел. §8✦ Ты")
+			.add(CT_AMT, "§7Защитников: " + Team.CTs.clr + getTmAmt(Team.CTs, true, true) + " §7чел.")
 			.add("§7=-=-=-=-=-=-=-=-")
 			.add(MONEY, "§7Монет: §d" + sh.money() + " §6⛃")
 			.add(" ")
@@ -688,12 +666,12 @@ public class Invasion extends Arena {
 			.add(isCTWn ? "§3Защитники §7победили!" : "§4Захватчики §7победили!")
 			.add(" ")
 			.add("§7Карта: §5" + name)
-			.add("§7Режим: §dВторжение")
+			.add("§7Режим: §d" + getType().name)
 			.add("§7=-=-=-=-=-=-=-=-")
 			.add("§7Cтадия: §dФиниш")
 			.add(LIMIT, getTime(time, "§d") + " §7до конца!")
 			.add(" ")
-			.add(CT_AMT, "§7Защитников: " + Team.CTs.clr + getTmAmt(Team.CTs, true, true) + " §7чел. §8✦ Ты")
+			.add(CT_AMT, "§7Защитников: " + Team.CTs.clr + getTmAmt(Team.CTs, true, true) + " §7чел.")
 			.add("§7=-=-=-=-=-=-=-=-")
 			.add(MONEY, "§7Монет: §d" + sh.money() + " §6⛃")
 			.add(" ")
@@ -834,7 +812,7 @@ public class Invasion extends Arena {
 					final Player p = sh.getPlayer();
 					if (p != null) {
 						p.playSound(lc, Sound.BLOCK_SCULK_SENSOR_CLICKING, 40f, 1f);
-						PacketUtils.sendSbTtl(p, "§bA §7атакована : §b" + (apc + dmg) + " §7=-> §b" + apc, 30);
+						Utils.sendSbTtl(p, "§bA §7атакована : §b" + (apc + dmg) + " §7=-> §b" + apc, 30);
 						PM.getOplayer(p).score.getSideBar().update(A_HP, "§7Точка §bA §7: §b" + String.valueOf(apc) + "%");
 					}
 				}
@@ -853,7 +831,8 @@ public class Invasion extends Arena {
 					for (int y = -5; y < 6; y++) {
 						for (int z = -5; z < 6; z++) {
 							final int bnd = x*x + y*y + z*z;
-							if (bnd > 0 && Nms.getFastMat(w, X + x, Y + y, Z + z).isAir() && Nms.getFastMat(w, X + x, Y + y - 1, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 6) {
+							if (bnd > 0 && Nms.getFastMat(w, X + x, Y + y, Z + z).isAir()
+								&& Nms.getFastMat(w, X + x, Y + y - 1, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 6) {
 								for (final Player p : b.getWorld().getPlayers()) {
 									p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Material.FIRE.createBlockData());
 									cls.add(new XYZ("", X + x, Y + y, Z + z));
@@ -889,7 +868,7 @@ public class Invasion extends Arena {
 					final Player p = sh.getPlayer();
 					if (p != null) {
 						p.playSound(lc, Sound.BLOCK_SCULK_SENSOR_CLICKING, 40f, 1f);
-						PacketUtils.sendSbTtl(p, "§6B §7атакована : §6" + (bpc + dmg) + " §7=-> §6" + bpc, 30);
+						Utils.sendSbTtl(p, "§6B §7атакована : §6" + (bpc + dmg) + " §7=-> §6" + bpc, 30);
 						PM.getOplayer(p).score.getSideBar().update(B_HP, "§7Точка §6B §7: §6" + String.valueOf(bpc) + "%");
 					}
 				}
@@ -909,7 +888,8 @@ public class Invasion extends Arena {
 					for (int y = -5; y < 6; y++) {
 						for (int z = -5; z < 6; z++) {
 							final int bnd = x*x + y*y + z*z;
-							if (bnd > 0 && Nms.getFastMat(w, X + x, Y + y, Z + z).isAir() && Nms.getFastMat(w, X + x, Y + y - 1, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 6) {
+							if (bnd > 0 && Nms.getFastMat(w, X + x, Y + y, Z + z).isAir()
+								&& Nms.getFastMat(w, X + x, Y + y - 1, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 6) {
 								for (final Player p : b.getWorld().getPlayers()) {
 									p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Material.FIRE.createBlockData());
 									cls.add(new XYZ("", X + x, Y + y, Z + z));

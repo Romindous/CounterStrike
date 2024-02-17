@@ -1,13 +1,16 @@
 package me.Romindous.CounterStrike.Listeners;
 
 import com.destroystokyo.paper.event.player.PlayerJumpEvent;
+import me.Romindous.CounterStrike.CSCmd;
 import me.Romindous.CounterStrike.Enums.GameState;
+import me.Romindous.CounterStrike.Enums.GameType;
 import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Enums.NadeType;
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Game.Arena.Team;
 import me.Romindous.CounterStrike.Game.Defusal;
 import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -25,48 +28,21 @@ import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.potion.PotionEffectType;
+import ru.komiss77.Ostrov;
 import ru.komiss77.enums.Data;
-import ru.komiss77.events.BungeeDataRecieved;
 import ru.komiss77.events.LocalDataLoadEvent;
-import ru.komiss77.modules.player.Oplayer;
+import ru.komiss77.modules.player.PM;
 import ru.komiss77.utils.ItemUtils;
 import ru.komiss77.utils.TCUtils;
 
 import java.util.Random;
 
 public class MainLis implements Listener {
-	
-	@EventHandler(priority = EventPriority.MONITOR)
-	public void onBungee(final BungeeDataRecieved e) {
-		final Oplayer op = e.getOplayer();
-        final String wa = op.getDataString(Data.WANT_ARENA_JOIN);
-        if (!wa.isEmpty()) {/*
-        	if (Main.nnactvarns.containsKey(wa)) {
-        		final Arena ar;
-            	if (Main.actvarns.get(wa) == null) {
-            		ar = Main.plug.crtArena(wa, GameType.DEFUSAL);
-                } else {
-                	ar = Main.actvarns.get(wa);
-				}
-            	new BukkitRunnable() {
-					@Override
-					public void run() {
-						if (ApiOstrov.hasParty(e.getPlayer()) && ApiOstrov.isPartyLeader(e.getPlayer())) {
-							for (final String pl : ApiOstrov.getPartyPlayers(e.getPlayer())) {
-								pl.charAt(0);
-							}
-						} else {
-							ar.addPl(Shooter.getPlShooter(op.nik, true));
-						}
-					}
-				}.runTaskLater(Main.plug, 5);
-        	}*/
-        }
-	}
 
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onData(final LocalDataLoadEvent e) {
-		Main.lobbyPl(e.getPlayer());
+		final Player p = e.getPlayer();
+		Main.lobbyPl(p);
 		final String title = switch (new Random().nextInt(4)) {
 			case 0 -> "Добро пожаловать!";
 			case 1 -> "Приятной игры!";
@@ -75,13 +51,28 @@ public class MainLis implements Listener {
 			default -> "";
 		};
 
-		e.getPlayer().sendPlayerListHeaderAndFooter(TCUtils.format("§7<§5Counter Strike§7>\n" + title),
+		p.sendPlayerListHeaderAndFooter(TCUtils.format("§7<§5Counter Strike§7>\n" + title),
 				TCUtils.format("§7Сейчас в игре: §d" + getPlaying() + "§7 человек!"));
+		final String wa = PM.getOplayer(p).getDataString(Data.WANT_ARENA_JOIN);
+//		p.sendMessage(" " + wa);
+		if (!wa.isEmpty()) {
+			if (Main.nnactvarns.containsKey(wa)) {
+				final Arena ar;
+				final Arena actv = Main.actvarns.get(wa);
+				if (actv == null) {
+					ar = Main.plug.crtArena(wa, GameType.DEFUSAL);
+				} else ar = actv;
+				Ostrov.sync(() -> {
+					CSCmd.partyJoinMap(Shooter.getPlShooter(p.getName(), true), p, ar);
+				}, 40);
+			}
+		}
 	}
 
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onWorld(final PlayerChangedWorldEvent e) {
 		final Player p = e.getPlayer();
+		PM.getOplayer(p).tag(true);
 		for (final Player pl : Bukkit.getOnlinePlayers()) {
 			if (p.getEntityId() == pl.getEntityId()) continue;
 			pl.hidePlayer(Main.plug, p);
@@ -105,7 +96,7 @@ public class MainLis implements Listener {
 
 	@EventHandler
 	public void onQuit(final PlayerQuitEvent e) {
-		final Shooter pr = Shooter.getPlShooter(e.getPlayer().getName(), true);
+		final PlShooter pr = Shooter.getPlShooter(e.getPlayer().getName(), false);
 		if (pr.arena() != null) {
 			pr.arena().rmvPl(pr); 	
 		}
@@ -119,6 +110,7 @@ public class MainLis implements Listener {
 		final Shooter pr = Shooter.getPlShooter(p.getName(), true);
 		final GunType gt = GunType.getGnTp(it);
 		if (gt != null) {
+			it.setAmount(1);
 			if (pr.arena() == null) drop.remove();
 			else drop.setItemStack(it);
 			p.getInventory().setItemInMainHand(Main.air);
@@ -140,10 +132,10 @@ public class MainLis implements Listener {
 			case GOLDEN_APPLE:
 				final Defusal ar = (Defusal) pr.arena();
 				if (ar != null) {
-					ar.dropBomb(drop);
 					if (ar.indon) {
 						ar.indSts(p);
 					}
+					ar.dropBomb(drop);
 				}
 				break;
 			case SHEARS:

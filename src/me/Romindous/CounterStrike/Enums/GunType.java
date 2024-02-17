@@ -37,17 +37,17 @@ public enum GunType {
 	public final byte slt;
 	public final String snd;
 
-	public static final short hlmtPrc = 150;
-	public static final short chstPrc = 250;
-	public static final short twrPrc = 150;
-	public static final short dfktPrc = 200;
+	public static final short helmPrc = 150;
+	public static final short chestPrc = 250;
+	public static final short wirePrc = 150;
+	public static final short kitPrc = 200;
 	
-	public static final short knfRwd = 200;
+	public static final short knifRwd = 200;
 	
-	public static final byte hlmtSlt = 40;
-	public static final byte chstSlt = 49;
-	public static final byte twrSlt = 29;
-	public static final byte dfktSlt = 33;
+	public static final byte helmSlt = 40;
+	public static final byte chestSlt = 49;
+	public static final byte wireSlt = 29;
+	public static final byte kitSlt = 33;
 	
 	
 	public static final byte defCMD = 10;

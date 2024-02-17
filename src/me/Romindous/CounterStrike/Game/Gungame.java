@@ -14,7 +14,7 @@ import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
 import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
 import me.Romindous.CounterStrike.Utils.Inventories;
-import me.Romindous.CounterStrike.Utils.PacketUtils;
+import me.Romindous.CounterStrike.Utils.Utils;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.FireworkEffect.Type;
@@ -34,6 +34,7 @@ import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.utils.ItemBuilder;
 import ru.komiss77.utils.TCUtils;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -59,26 +60,23 @@ public class Gungame extends Arena {
 		guns[GunType.values().length] = null;
 		this.cycle = (byte) guns.length;
 		this.gst = GameState.WAITING;
-		ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ОЖИДАНИЕ, "§7[§5CS§7]",
-			"§dЭстафета", " ", "§7Игроков: §50§7/§5" + this.min, "", 0);
-		Inventories.updtGm(this);
+		updateData();
 	}
 
 	@Override
-	public boolean addPl(final Shooter sh) {
+	public boolean addPl(final PlShooter sh) {
 		sh.kills0();
 		sh.spwnrs0();
 		sh.deaths0();
 		sh.money(0);
 		sh.arena(this);
 		final Player p = sh.getPlayer();
-		if (p != null) {
-			Main.nrmlzPl(p, true);
-			switch (gst) {
+		Main.nrmlzPl(p, true);
+		switch (gst) {
 			case WAITING:
-				chngTm(sh, Team.SPEC);
+				chngTeam(sh, Team.SPEC);
 				sh.item(Main.mkItm(Material.NETHER_STAR, "§eВыбор Комманды", 10), 2);
-				sh.item(Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10), 4);
+				sh.item(Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10), 5);
 				sh.item(Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10), 6);
 				sh.item(Main.mkItm(Material.SLIME_BALL, "§cВыход", 10), 8);
 				if (shtrs.size() == min) {
@@ -87,7 +85,7 @@ public class Gungame extends Arena {
 						if (pl != null) {
 							beginScore(pl, en.getValue());
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел на карту!");
-							PacketUtils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
+							Utils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
 							if (!rnd) {
 								pl.teleport(ApiOstrov.rndElmt(spots).getCenterLoc(w));
 							}
@@ -98,20 +96,20 @@ public class Gungame extends Arena {
 				} else {
 					final int rm = min - shtrs.size();
 					waitScore(p, rm);
+					chngTeam(sh, Team.SPEC);
 					for (final Shooter s : shtrs.keySet()) {
 						final Player pl = s.getPlayer();
 						if (pl != null) {
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел на карту!");
-							PacketUtils.sendAcBr(pl, "§7Нужно еще §d" + rm + " §7игроков для начала!");
+							Utils.sendAcBr(pl, "§7Нужно еще §d" + rm + " §7игроков для начала!");
 							PM.getOplayer(pl).score.getSideBar().update(LIMIT, "§7Ждем еще §5" + rm + (rm > 1 ? " §7игроков" : " §7игрокa"));
 						}
 					}
 				}
 				break;
 			case BEGINING:
-				chngTm(sh, Team.SPEC);
 				sh.item(Main.mkItm(Material.NETHER_STAR, "§eВыбор Комманды", 10), 2);
-				sh.item(Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10), 4);
+				sh.item(Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10), 5);
 				sh.item(Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10), 6);
 				sh.item(Main.mkItm(Material.SLIME_BALL, "§cВыход", 10), 8);
 				if (!rnd) {
@@ -119,19 +117,20 @@ public class Gungame extends Arena {
 				}
 				p.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, time * 20, 1));
 				beginScore(p, Team.SPEC);
+				chngTeam(sh, Team.SPEC);
 				for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
 					final Player pl = e.getKey().getPlayer();
 					if (pl != null) {
 						pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел на карту!");
-						PacketUtils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
+						Utils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
 					}
 				}
 				break;
 			case BUYTIME:
 			case ROUND:
 				if (!shtrs.containsKey(sh)) {//spec
-					chngTm(sh, Team.SPEC);
 					gameScore(sh, p);
+					chngTeam(sh, Team.SPEC);
 					p.setGameMode(GameMode.SPECTATOR);
 					p.teleport(Main.getNrLoc(Main.srnd.nextBoolean() ? ApiOstrov.rndElmt(TSpawns) : ApiOstrov.rndElmt(CTSawns), w));
 					sh.item(Main.mkItm(Material.NETHER_STAR, "§eВыбор Комманды", 10), 2);
@@ -144,68 +143,65 @@ public class Gungame extends Arena {
 					}
 					break;
 				}
-
-				final Team tm = getMinTm();
-				chngTm(sh, tm);
-				addToTm(p, tm);
-				gameScore(sh, p);
-				for (final Shooter s : shtrs.keySet()) {
-					final Player pl = s.getPlayer();
-					if (pl != null) {
-						pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел играть за комманду " + tm.icn + "§7!");
-					}
-				}
-
-				for (final TripWire tw : tws) {
-					if (tm == tw.tm) tw.showNade(p);
-				}
+				addToTm(p, sh, getMinTm());
 			case ENDRND:
 				break;
 			case FINISH:
 				p.sendMessage(Main.prf() + "§cЭта игра уже заканчивается!");
 				Main.lobbyPl(p);
 				return false;
-			}
-			Inventories.updtGm(this);
-			final Component tpl = TCUtils.format("§7Сейчас в игре: §d" + MainLis.getPlaying() + "§7 человек!");
-			for (final Player pl : Bukkit.getOnlinePlayers()) {
-				pl.sendPlayerListFooter(tpl);
-			}
+		}
+		updateData();
+		final Component tpl = TCUtils.format("§7Сейчас в игре: §d" + MainLis.getPlaying() + "§7 человек!");
+		for (final Player pl : Bukkit.getOnlinePlayers()) {
+			pl.sendPlayerListFooter(tpl);
 		}
 		return true;
 	}
 
-	public void addToTm(final Player p, final Team tm) {
+	public void addToTm(final Player p, final PlShooter sh, final Team tm) {
 		p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1, 1);
 		p.teleport(ApiOstrov.rndElmt(spots).getCenterLoc(w));
 		final PlayerInventory pinv = p.getInventory();
 		p.setGameMode(GameMode.SURVIVAL);
 		pinv.setItem(2, Main.mkItm(Material.BLAZE_ROD, "§fНож \u9298", 10));
 		if (tm == Team.Ts) {
-			pinv.setHelmet(Inventories.TShop.getItem(GunType.hlmtSlt).clone());
-			pinv.setChestplate(Inventories.TShop.getItem(GunType.chstSlt).clone());
+			pinv.setHelmet(Inventories.TShop.getItem(GunType.helmSlt).clone());
+			pinv.setChestplate(Inventories.TShop.getItem(GunType.chestSlt).clone());
 		} else {
-			pinv.setHelmet(Inventories.CTShop.getItem(GunType.hlmtSlt).clone());
-			pinv.setChestplate(Inventories.CTShop.getItem(GunType.chstSlt).clone());
+			pinv.setHelmet(Inventories.CTShop.getItem(GunType.helmSlt).clone());
+			pinv.setChestplate(Inventories.CTShop.getItem(GunType.chestSlt).clone());
 		}
 		p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 250, 250, true, false, false));
 		p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 40, 2, true, false, false));
+
+		gameScore(sh, p);
+		chngTeam(sh, tm);
+		for (final Shooter s : shtrs.keySet()) {
+			final Player pl = s.getPlayer();
+			if (pl != null) {
+				pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел играть за комманду " + tm.icn + "§7!");
+			}
+		}
+
+		for (final TripWire tw : tws) {
+			if (tm == tw.tm) tw.showNade(p);
+		}
 	}
 
 	@Override
-	public boolean rmvPl(final Shooter sh) {
+	public boolean rmvPl(final PlShooter sh) {
 		sh.kills0();
 		sh.spwnrs0();
 		sh.deaths0();
 		sh.money(0);
 		final Team tm = shtrs.remove(sh);
 		final Player p = sh.getPlayer();
-		if (p != null) {
-			if (tm == null) {
-				p.sendMessage(Main.prf() + "§cВы не находитесь в игре!");
-				return false;
-			}
-			switch (gst) {
+		if (tm == null) {
+			p.sendMessage(Main.prf() + "§cВы не находитесь в игре!");
+			return false;
+		}
+		switch (gst) {
 			case WAITING:
 				if (shtrs.size() > 0) {
 					final int rm = min - shtrs.size();
@@ -213,14 +209,14 @@ public class Gungame extends Arena {
 						final Player pl = e.getKey().getPlayer();
 						if (pl != null) {
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7вышел с карты!");
-							PacketUtils.sendAcBr(pl, "§7Нужно еще §d" + rm + " §7игроков для начала!");
+							Utils.sendAcBr(pl, "§7Нужно еще §d" + rm + " §7игроков для начала!");
 							final Scoreboard sb = pl.getScoreboard();
 							PM.getOplayer(p).score.getSideBar()
-								.update(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
-									+ (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."))
-								.update(CT_AMT, Team.CTs.icn + " §7: " + getTmAmt(Team.CTs, true, true)
-									+ (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."))
-								.update(LIMIT, "§7Ждем еще §5" + rm + (rm > 1 ? " §7игроков" : " §7игрокa"));
+									.update(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
+											+ (e.getValue() == Team.Ts ? " §7чел. §8✦ Ты" : " §7чел."))
+									.update(CT_AMT, Team.CTs.icn + " §7: " + getTmAmt(Team.CTs, true, true)
+											+ (e.getValue() == Team.CTs ? " §7чел. §8✦ Ты" : " §7чел."))
+									.update(LIMIT, "§7Ждем еще §5" + rm + (rm > 1 ? " §7игроков" : " §7игрокa"));
 						}
 					}
 				} else {
@@ -236,12 +232,12 @@ public class Gungame extends Arena {
 					for (final Shooter s : shtrs.keySet()) {
 						final Player pl = s.getPlayer();
 						if (pl == null) {
-							
+
 						} else {
 							waitScore(pl, min - 1);
 							pl.teleport(Main.getNrLoc(Main.lobby));
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7вышел с карты,\n§7Слишком мало игроков для начала!");
-							PacketUtils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
+							Utils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
 							pl.removePotionEffect(PotionEffectType.GLOWING);
 						}
 					}
@@ -250,12 +246,12 @@ public class Gungame extends Arena {
 						final Player pl = e.getKey().getPlayer();
 						if (pl != null) {
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7вышел с карты!");
-							PacketUtils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
+							Utils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
 							PM.getOplayer(p).score.getSideBar()
-								.update(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
-									+ (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."))
-								.update(CT_AMT, Team.CTs.icn + " §7: " + getTmAmt(Team.CTs, true, true)
-									+ (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
+									.update(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
+											+ (e.getValue() == Team.Ts ? " §7чел. §8✦ Ты" : " §7чел."))
+									.update(CT_AMT, Team.CTs.icn + " §7: " + getTmAmt(Team.CTs, true, true)
+											+ (e.getValue() == Team.CTs ? " §7чел. §8✦ Ты" : " §7чел."));
 						}
 					}
 				}
@@ -290,10 +286,10 @@ public class Gungame extends Arena {
 						if (pl != null) {
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7вышел из игры!");
 							PM.getOplayer(pl).score.getSideBar()
-								.update(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
-									+ (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."))
-								.update(CT_AMT, Team.CTs.icn + " §7: " + getTmAmt(Team.CTs, true, true)
-									+ (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
+									.update(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
+											+ (e.getValue() == Team.Ts ? " §7чел. §8✦ Ты" : " §7чел."))
+									.update(CT_AMT, Team.CTs.icn + " §7: " + getTmAmt(Team.CTs, true, true)
+											+ (e.getValue() == Team.CTs ? " §7чел. §8✦ Ты" : " §7чел."));
 						}
 					}
 				}
@@ -304,10 +300,9 @@ public class Gungame extends Arena {
 					this.time = 1;
 				}
 				break;
-			}
-			Inventories.updtGm(this);
-			Main.lobbyPl(p);
 		}
+		updateData();
+		Main.lobbyPl(p);
 		return true;
 	}
 
@@ -316,8 +311,7 @@ public class Gungame extends Arena {
 		time = 30;
 		gst = GameState.BEGINING;
 		final Arena ar = this;
-		ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.СТАРТ, "§7[§5CS§7]",
-			"§dЭстафета", " ", "§7Игроков: §5" + shtrs.size() + "§7/§5" + this.max, "", shtrs.size());
+		updateData();
 		tsk = new BukkitRunnable() {
 			@Override
 			public void run() {
@@ -328,7 +322,7 @@ public class Gungame extends Arena {
 						final Player p = sh.getPlayer();
 						if (p != null) {
 							p.playSound(p.getLocation(), Sound.BLOCK_DISPENSER_FAIL, 0.8f, 1.2f);
-							PacketUtils.sendSbTtl(p, "§5§l" + time, 10);
+							Utils.sendSbTtl(p, "§5§l" + time, 10);
 							PM.getOplayer(p).score.getSideBar().update(LIMIT, rtm);
 						}
 					}
@@ -338,7 +332,7 @@ public class Gungame extends Arena {
 						final Player p = sh.getPlayer();
 						if (p != null) {
 							p.playSound(p.getLocation(), Sound.BLOCK_DISPENSER_FAIL, 0.8f, 1.2f);
-							PacketUtils.sendSbTtl(p, "§d§l" + time, 10);
+							Utils.sendSbTtl(p, "§d§l" + time, 10);
 							PM.getOplayer(p).score.getSideBar().update(LIMIT, rtm);
 						}
 					}
@@ -367,13 +361,15 @@ public class Gungame extends Arena {
 	public void cntPrep() {
 		time = 10;
 		gst = GameState.BUYTIME;
-		ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ЭКИПИРОВКА, "§7[§5CS§7]",
-			"§dЭстафета", " ", "§7Игроков: §5" + shtrs.size() + "§7/§5" + this.max, "", shtrs.size());
-		Inventories.updtGm(this);
-		tws.clear();
 		for (final Entity e : w.getEntitiesByClasses(Item.class, ArmorStand.class, Turtle.class)) {
 			e.remove();
 		}
+		updateData();
+		final ArrayList<Shooter> sts = new ArrayList<>();
+		for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
+			if (e.getValue() == Team.SPEC) sts.add(e.getKey());
+		}
+		for (final Shooter s : sts) chngTeam(s, getMinTm());
 		blncTms();
 		for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
 			final Shooter sh = e.getKey();
@@ -382,7 +378,7 @@ public class Gungame extends Arena {
 				Main.nrmlzPl(p, true);
 				gameScore(sh, p);
 				p.setGameMode(GameMode.SURVIVAL);
-				PacketUtils.sendTtlSbTtl(p, "", "§l§eПодготовка Оружейни...", 30);
+				Utils.sendTtlSbTtl(p, "", "§l§eПодготовка Оружейни...", 30);
 			}
 			
 			sh.teleport(sh.getEntity(), ApiOstrov.rndElmt(spots).getCenterLoc(w));
@@ -398,17 +394,17 @@ public class Gungame extends Arena {
 		tsk = new BukkitRunnable() {
 			@Override
 			public void run() {
-				final String rtm = getTime(time, "§5") + "§7до конца!";
-				for (final LivingEntity le : w.getLivingEntities()) {
-					le.setFireTicks(-1);
-				}
+				final String rtm = getTime(time, "§5") + " §7до конца!";
+//				for (final LivingEntity le : w.getLivingEntities()) {
+//					le.setFireTicks(-1);
+//				}
 				switch (time) {
 				case 3, 2, 1:
 					for (final Shooter sh : shtrs.keySet()) {
 						final Player p = sh.getPlayer();
 						if (p != null) {
 							p.playSound(p.getLocation(), Sound.BLOCK_DISPENSER_FAIL, 0.8f, 1.2f);
-							PacketUtils.sendSbTtl(p, "§d§l" + time, 10);
+							Utils.sendSbTtl(p, "§d§l" + time, 10);
 							PM.getOplayer(p).score.getSideBar().update(LIMIT, rtm);
 						}
 					}
@@ -435,16 +431,14 @@ public class Gungame extends Arena {
 	private void cntRnd() {
 		time = 360;
 		gst = GameState.ROUND;
-		final int pls = getPlaying(true, false);
-		ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ИГРА, "§7[§5CS§7]",
-			"§dЭстафета", " ", "§7Игроков: §5" + pls + "§7/§5" + this.max, "", pls);
-		Inventories.updtGm(this);
+		updateData();
+
 		for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
 			final LivingEntity le = e.getKey().getEntity();
 			if (le == null) continue;
 			le.removePotionEffect(PotionEffectType.SLOW);
 			if (le instanceof final Player p) {
-				PacketUtils.sendSbTtl(p, e.getValue().icn.substring(0, 2) + "§lВперед", 30);
+				Utils.sendSbTtl(p, e.getValue().icn.substring(0, 2) + "§lВперед", 30);
 				PM.getOplayer(p).score.getSideBar().update(STAGE, "§7Cтадия: §5Бой");
 				p.playSound(p, "cs.info." + e.getValue().goSnd, 10f, 1f);
 			}
@@ -452,13 +446,13 @@ public class Gungame extends Arena {
 		tsk = new BukkitRunnable() {
 			@Override
 			public void run() {
-				final String rtm = getTime(time, "§d") + "§7до конца!";
+				final String rtm = getTime(time, "§d") + " §7до конца!";
 				switch (time) {
 				case 60:
 					for (final Shooter sh : shtrs.keySet()) {
 						final Player p = sh.getPlayer();
 						if (p != null) {
-							PacketUtils.sendAcBr(p, "§7Осталась §d1 §7минута!");
+							Utils.sendAcBr(p, "§7Осталась §d1 §7минута!");
 							PM.getOplayer(p).score.getSideBar().update(LIMIT, rtm);
 						}
 					}
@@ -467,7 +461,7 @@ public class Gungame extends Arena {
 					for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
 						final Player p = e.getKey().getPlayer();
 						if (p != null) {
-							PacketUtils.sendAcBr(p, "§7Осталось §d" + time + " §7секунд!");
+							Utils.sendAcBr(p, "§7Осталось §d" + time + " §7секунд!");
 							p.playSound(p.getLocation(), "cs.info." + (e.getValue() == Team.Ts ? "t30sec" : "ct30sec"), 10f, 1f);
 							PM.getOplayer(p).score.getSideBar().update(LIMIT, rtm);
 						}
@@ -477,7 +471,7 @@ public class Gungame extends Arena {
 					for (final Shooter sh : shtrs.keySet()) {
 						final Player p = sh.getPlayer();
 						if (p != null) {
-							PacketUtils.sendAcBr(p, "§7Осталось §d" + time + " §7секунд!");
+							Utils.sendAcBr(p, "§7Осталось §d" + time + " §7секунд!");
 							PM.getOplayer(p).score.getSideBar().update(LIMIT, rtm);
 						}
 					}
@@ -506,13 +500,10 @@ public class Gungame extends Arena {
 		if (tsk != null) tsk.cancel();
 		time = 10;
 		gst = GameState.FINISH;
-		final int pls = getPlaying(true, false);
-		ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ФИНИШ, "§7[§5CS§7]",
-			"§dЭстафета", " ", "§7Игроков: §5" + pls + "§7/§5" + this.max, "", pls);
-		Inventories.updtGm(this);
 		for (final Entity e : w.getEntitiesByClasses(Item.class, ArmorStand.class, Turtle.class)) {
 			e.remove();
 		}
+		updateData();
 
 		for (final BrknBlck bb : brkn) {
 			bb.getBlock().setBlockData(bb.bd, false);
@@ -572,7 +563,7 @@ public class Gungame extends Arena {
 				PM.getOplayer(p).score.getSideBar().update(LIMIT, "§d00:00 §7до конца!");
 				p.playSound(p, "cs.info." + e.getValue().finSnd, 10f, 1f);
 				p.sendMessage(msg);
-				PacketUtils.sendTtlSbTtl(p, "§5Финиш", st, 40);
+				Utils.sendTtlSbTtl(p, "§5Финиш", st, 40);
 				sh.setTabTag("§7<§d" + name + "§7> ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", Team.SPEC.clr);
 				winScore(sh, p, wn == Team.CTs);
 				if (e.getValue() == Team.SPEC) continue;
@@ -632,7 +623,7 @@ public class Gungame extends Arena {
 		PM.getOplayer(p).score.getSideBar().reset().title("§7[§5CS:GO§7]")
 			.add(" ")
 			.add("§7Карта: §5" + name)
-			.add("§7Режим: §dЭстафета")
+			.add("§7Режим: §d" + getType().name)
 			.add("§7=-=-=-=-=-=-=-=-")
 			.add("§7Комманды:")
 			.add(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true) + " §7чел.")
@@ -648,7 +639,7 @@ public class Gungame extends Arena {
 		PM.getOplayer(p).score.getSideBar().reset().title("§7[§5CS:GO§7]")
 			.add(" ")
 			.add("§7Карта: §5" + name)
-			.add("§7Режим: §dЭстафета")
+			.add("§7Режим: §d" + getType().name)
 			.add("§7=-=-=-=-=-=-=-=-")
 			.add("§7Комманды:")
 			.add(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
@@ -669,7 +660,7 @@ public class Gungame extends Arena {
 				+ " §7-=x=- " + Team.CTs.clr + getTmProg(Team.CTs) + "§7/" + Team.CTs.clr + cycle + " §7: " + Team.CTs.icn)
 			.add(" ")
 			.add("§7Карта: §5" + name)
-			.add("§7Режим: §dЭстафета")
+			.add("§7Режим: §d" + getType().name)
 			.add("§7=-=-=-=-=-=-=-=-")
 			.add(STAGE, "§7Cтадия: " + (gst == GameState.BUYTIME ? "§5Подготовка" : "§5Бой"))
 			.add(LIMIT, getTime(time, "§d") + " §7до конца!")
@@ -702,7 +693,7 @@ public class Gungame extends Arena {
 				: Team.Ts.icn + " §7: " + Team.Ts.clr + cycle + "§7/" + Team.Ts.clr + cycle + " §7-=x=- "
 				+ Team.CTs.clr + getTmProg(Team.CTs) + "§7/" + Team.CTs.clr + cycle + " §7: " + Team.CTs.icn)
 			.add("§7Карта: §5" + name)
-			.add("§7Режим: §dЭстафета")
+			.add("§7Режим: §d" + getType().name)
 			.add("§7=-=-=-=-=-=-=-=-")
 			.add("§7Cтадия: §dФиниш")
 			.add(LIMIT, getTime(time, "§d") + " §7до конца!")
@@ -737,7 +728,7 @@ public class Gungame extends Arena {
 		}
 		if (gst != GameState.FINISH) {
 			final Location loc = rnd && gst != GameState.ROUND ?
-				Main.lobby.getCenterLoc() : Main.getNrLoc(ApiOstrov.rndElmt(CTSawns), w);
+				Main.lobby.getCenterLoc() : Main.getNrLoc(ApiOstrov.rndElmt(spots), w);
 			loc.getWorld().spawnParticle(Particle.PORTAL, loc, 200, 0.2D, 0.4D, 0.2D, 0.4D, null, false);
 			sh.teleport(le, loc);
 		}
@@ -755,12 +746,12 @@ public class Gungame extends Arena {
 		
 		switch (shtrs.get(sh)) {
 		case Ts:
-			sh.item(Inventories.TShop.getItem(GunType.hlmtSlt).clone(), EquipmentSlot.HEAD);
-			sh.item(Inventories.TShop.getItem(GunType.chstSlt).clone(), EquipmentSlot.CHEST);
+			sh.item(Inventories.TShop.getItem(GunType.helmSlt).clone(), EquipmentSlot.HEAD);
+			sh.item(Inventories.TShop.getItem(GunType.chestSlt).clone(), EquipmentSlot.CHEST);
 			break;
 		case CTs:
-			sh.item(Inventories.CTShop.getItem(GunType.hlmtSlt).clone(), EquipmentSlot.HEAD);
-			sh.item(Inventories.CTShop.getItem(GunType.chstSlt).clone(), EquipmentSlot.CHEST);
+			sh.item(Inventories.CTShop.getItem(GunType.helmSlt).clone(), EquipmentSlot.HEAD);
+			sh.item(Inventories.CTShop.getItem(GunType.chestSlt).clone(), EquipmentSlot.CHEST);
 			break;
 		default:
 			break;
@@ -770,7 +761,7 @@ public class Gungame extends Arena {
 		if (gt == null) {
 			final Player p = sh.getPlayer();
 			if (p != null) {
-				PacketUtils.sendTtlSbTtl(p, "", "§7Последний §dцыкл §7оружия!", 20);
+				Utils.sendTtlSbTtl(p, "", "§7Последний §dцыкл §7оружия!", 20);
 			}
 		} else {
 			final int mdl = sh.getModel(gt);

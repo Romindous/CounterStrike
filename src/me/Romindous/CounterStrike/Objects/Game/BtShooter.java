@@ -2,6 +2,7 @@ package me.Romindous.CounterStrike.Objects.Game;
 
 import com.destroystokyo.paper.entity.ai.Goal;
 import me.Romindous.CounterStrike.Enums.GameState;
+import me.Romindous.CounterStrike.Enums.GameType;
 import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Enums.NadeType;
 import me.Romindous.CounterStrike.Game.Arena;
@@ -16,7 +17,7 @@ import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Skins.GunSkin;
 import me.Romindous.CounterStrike.Utils.Inventories;
-import me.Romindous.CounterStrike.Utils.PacketUtils;
+import me.Romindous.CounterStrike.Utils.Utils;
 import net.minecraft.core.BaseBlockPosition;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -25,17 +26,20 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Nullable;
+import ru.komiss77.Ostrov;
 import ru.komiss77.modules.bots.BotEntity;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.notes.Slow;
-import ru.komiss77.utils.FastMath;
+import ru.komiss77.objects.SortedList;
 import ru.komiss77.utils.ItemBuilder;
 import ru.komiss77.utils.ItemUtils;
 import ru.komiss77.utils.LocationUtil;
@@ -44,13 +48,18 @@ import ru.komiss77.version.Nms;
 import java.lang.ref.WeakReference;
 import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.TreeMap;
+import java.util.function.Predicate;
 
 public class BtShooter extends BotEntity implements Shooter {
 	
 	public Shooter tgtSh;
 	public WeakReference<LivingEntity> tgtLe;
 	public boolean willBuy;
+
+	private final Predicate<Player> isAlly = pl -> {
+		final PlShooter ps = Shooter.getPlShooter(pl.getName(), true);
+		return ps.arena() != null && ps.arena().shtrs.get(ps) == arena().shtrs.get(this);
+	};
 	
 	public BtShooter(final String name, final Arena ar) {
 		super(name, ar.w);
@@ -59,8 +68,7 @@ public class BtShooter extends BotEntity implements Shooter {
 		arena = ar; rid = -1; willBuy = false;
 		tgtSh = null; tgtLe = new WeakReference<>(null);
 		pss = new LinkedList<>();
-		final Vector vc = new Vector();
-		for (int i = 0; i != MAX_DST; i++) pss.add(vc);
+		setTagVis(isAlly);
 	}
 
 	@Override
@@ -89,11 +97,28 @@ public class BtShooter extends BotEntity implements Shooter {
 	
 	@Override
 	public void onDamage(final EntityDamageEvent e) {}
-	
+
 	@Override
-	public boolean isTagVisFor(final Player p) {
-		final Team tm = arena.shtrs.get(Shooter.getPlShooter(p.getName(), true));
-		return tm != null && arena.shtrs.get(this) == tm;
+	public void onInteract(final PlayerInteractAtEntityEvent e) {
+		final Player p = e.getPlayer();
+		if (isAlly.test(p) && p.isSneaking()
+			&& e.getHand() == EquipmentSlot.HAND) {
+			final PlayerInventory pinv = p.getInventory();
+			final int slt = pinv.getHeldItemSlot();
+			switch (slt) {
+				case 0, 1, 3, 4:
+					final ItemStack bit = item(slt);
+					final ItemStack pit = pinv.getItem(slt);
+					if (ItemUtils.compareItem(bit, pit, false)) break;
+					world.playSound(p.getEyeLocation(), Sound.ITEM_ARMOR_EQUIP_IRON, 1f, 1.2f);
+					world.playSound(getLoc().toLocation(world), Sound.ITEM_ARMOR_EQUIP_IRON, 1f, 1.2f);
+					item(pit, slt);
+					pinv.setItem(slt, bit);
+					willBuy = true;
+					tryBuy();
+				default: break;
+			}
+		}
 	}
 	
 	public boolean tryReload(final LivingEntity le, final Location loc) {
@@ -120,7 +145,7 @@ public class BtShooter extends BotEntity implements Shooter {
 		return false;
 	}
 
-	public boolean tryShoot(final LivingEntity le, final Location loc) {
+	public boolean tryShoot(final LivingEntity le) {
 		final ItemStack it = item(EquipmentSlot.HAND);
 		final GunType gt = GunType.getGnTp(it);
 		if (gt != null) {
@@ -145,7 +170,7 @@ public class BtShooter extends BotEntity implements Shooter {
 				for (byte i = gt.brst == 0 ? 1 : gt.brst; i > 0; i--) {
 					shoot(gt, !iw, tr);
 				}
-				Main.plyWrldSnd(le.getLocation(), gt.snd);
+				Main.plyWrldSnd(le, gt.snd, 1f);
 				return true;
 			}
 		}
@@ -178,13 +203,17 @@ public class BtShooter extends BotEntity implements Shooter {
 	public void teleport(final LivingEntity le, final Location to) {
 		super.telespawn(to, le);
 		tag(true);
+		pss.clear();
+		pss.add(to.toVector());
 	}
 
 	public final LinkedList<Vector> pss;
 	public void rotPss() {
 		final LivingEntity le = getEntity();
 		if (le == null || !le.isValid()) return;
-		pss.poll(); pss.add(le.getLocation().toVector());
+		final Vector vc = le.getLocation().toVector();
+		if (pss.size() < MAX_DST) pss.add(vc);
+		pss.poll(); pss.add(vc);
 	}
 	public Vector getLoc() {return pss.getLast().clone();}
 	public Vector getLoc(final int dst) {
@@ -243,26 +272,29 @@ public class BtShooter extends BotEntity implements Shooter {
 	}
 
 	@Override
+	public Predicate<Player> allyTest() {
+		return isAlly;
+	}
+
+	@Override
 	@Slow(priority = 4)
 	public void shoot(final GunType gt, final boolean dff, final int tr) {
 		final LivingEntity ent = getEntity();
 		if (ent == null) return;
 		final Location loc = ent.getEyeLocation();
 		if (tgtSh != null) {
-			loc.setDirection(tgtSh.getLoc().subtract(ent.getLocation().toVector()));
+			loc.setDirection(tgtSh.getLoc().subtract(getLoc()));
 		} else {
 			final LivingEntity le = tgtLe.get();
 			if (le != null) {
-				loc.setDirection(le.getLocation().toVector().subtract(ent.getLocation().toVector()));
+				loc.setDirection(le.getLocation().toVector().subtract(getLoc()));
 			}
 		}
-		//Bukkit.broadcast(Component.text("tgt-" + tgt.getPos().toString() + "\n\nent-" + ent.getLocation().toVector().toString()));
 		if (dff) {
 			loc.setPitch(loc.getPitch() + ((float) ent.getVelocity().getY() + (ent.isInWater() ? 0.005f : 0.0784f)) * 40f + Main.srnd.nextFloat() * 8f);
 			if (gt.brst == 0) {
 				loc.setYaw((Main.srnd.nextFloat() - 0.5f) * gt.xsprd * tr * 4f + loc.getYaw());
 			} else {
-				//loc.setPitch((Main.srnd.nextFloat() - 0.5f) * gt.xsprd * rclTm() + loc.getPitch() - tr * 0.1F + ((float) ent.getVelocity().getY() + (ent.isInWater() ? 0.005f : 0.0784f)) * 40f);
 				loc.setYaw((Main.srnd.nextFloat() - 0.5f) * gt.xsprd * rclTm + loc.getYaw());
 			}
 		} else {
@@ -271,196 +303,166 @@ public class BtShooter extends BotEntity implements Shooter {
 		}
 		final double lkx = -Math.sin(Math.toRadians((180f - loc.getYaw())));
 		final double lkz = -Math.cos(Math.toRadians((180f - loc.getYaw())));
-		final TreeMap<Integer, LivingEntity> shot = new TreeMap<Integer, LivingEntity>();
-		for (final LivingEntity e : Main.getWLnts(loc.getWorld().getUID())) {
-			final BoundingBox ebx;
-			final double dx;
-			final double dz;
-			switch (e.getType()) {
-			case ARMOR_STAND:
-			case TURTLE:
-				continue;
-			default:
-				if (e.getEntityId() == ent.getEntityId()) continue;
-				final Shooter sh = Shooter.getShooter(e, false);
-				if (sh == null) {
-					ebx = e.getBoundingBox();
-					dx = ebx.getCenterX() - loc.getX();
-					dz = ebx.getCenterZ() - loc.getZ();
-					break;
-				}
-				if (sh.isDead()) continue;
-				final Vector lc = sh.getLoc(sh instanceof PlShooter || gt.snp ? 4 : 2);
-				ebx = new BoundingBox(lc.getX(), lc.getY(), lc.getZ(), lc.getX(), lc.getY() +
-					(sh instanceof PlShooter && e.isSneaking() ? 1.5d : 1.9d), lc.getZ());
-				dx = lc.getX() - loc.getX();
-				dz = lc.getZ() - loc.getZ();
-				break;
-			}
+		final Vector vec = loc.getDirection().normalize().multiply(TRC_STEP);
+		final SortedList<TargetLe> shot = new SortedList<>();
+		for (final LivingEntity e : Main.getLEs(loc.getWorld())) {
+			if (!e.getType().isAlive() ||
+				e.getEntityId() == ent.getEntityId()) continue;
+			final Shooter sh = Shooter.getShooter(e, false);
+//				final Vector lc = sh.getLoc(sh instanceof PlShooter || gt.snp ? 4 : 2);
+			if (sh != null && sh.isDead()) continue;
+			final BoundingBox ebx = e.getBoundingBox();
+			final double dx = ebx.getCenterX() - loc.getX();
+			final double dz = ebx.getCenterZ() - loc.getZ();
 			final double ln = Math.sqrt(dx * dx + dz * dz);
 			if (Math.sqrt(Math.pow(lkx - dx / ln, 2d) + Math.pow(lkz - dz / ln, 2d)) * ln < 0.4d) {
 				final double pty = loc.getY() + Math.tan(Math.toRadians(-loc.getPitch())) * ln;
 				if (pty < ebx.getMaxY() && pty > ebx.getMinY()) {
-					shot.put(FastMath.square((int) dx) + FastMath.square((int) dz), e);
+					shot.add(new TargetLe(e, (int) (ln * TRC_FCT)));
 				}
 			}
 		}
-		
-		final Vector vec = loc.getDirection().normalize().multiply(0.05d);
+
 		float dmg = gt.dmg;
-		/*new BukkitRunnable() {
-			public void run() {*/
-		int i = gt.snp ? 1600 : 1200;
 		final boolean brkBlks = arena() != null && arena().gst == GameState.ROUND;
 		final HashSet<BaseBlockPosition> wls = new HashSet<>();
 		final World w = ent.getWorld();
-		double x = 20d * vec.getX() + loc.getX();
-		double y = 20d * vec.getY() + loc.getY();
-		double z = 20d * vec.getZ() + loc.getZ();
+		double x = TRC_FCT * vec.getX() + loc.getX();
+		double y = TRC_FCT * vec.getY() + loc.getY();
+		double z = TRC_FCT * vec.getZ() + loc.getZ();
 		LivingEntity tgt;
 		BoundingBox ebx;
-		
-		lp : while(true) {
+
+		int tit = shot.size() - 1;
+		final int ln = gt.snp ? 2000 : 1400;
+		for (int i = (int) TRC_FCT; i != ln; i++) {
 			//ent.sendMessage("route" + i);
 			x += vec.getX();
 			y += vec.getY();
 			z += vec.getZ();
 			if ((i & 63) == 0) {
-				world.spawnParticle(Particle.ASH, x, y, z, 1);
-			}
-			
-			final Material mat = Nms.getFastMat(w, (int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
-			final Block b;
-			switch(mat) {
-			case OAK_LEAVES, ACACIA_LEAVES, BIRCH_LEAVES, JUNGLE_LEAVES, 
-			SPRUCE_LEAVES, DARK_OAK_LEAVES, MANGROVE_LEAVES, AZALEA_LEAVES,
-			FLOWERING_AZALEA_LEAVES, 
-			
-			GLASS, WHITE_STAINED_GLASS, GLASS_PANE, 
-			WHITE_STAINED_GLASS_PANE, DIAMOND_ORE, 
-			COAL_ORE, IRON_ORE, EMERALD_ORE:
-				if (brkBlks) {
-					b = world.getBlockAt((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
-					arena().brkn.add(new BrknBlck(b));
-					world.playSound(b.getLocation(), Sound.BLOCK_SHROOMLIGHT_FALL, 2f, 0.8f);
-					world.spawnParticle(Particle.BLOCK_CRACK, b.getLocation().add(0.5d, 0.5d, 0.5d), 40, 0.4d, 0.4d, 0.4d, b.getType().createBlockData());
-					b.setType(Material.AIR, false);
-					wls.add(new BaseBlockPosition(b.getX(), b.getY(), b.getZ()));
-					dmg *= 0.5f;
-				}
-				break;
-			case ACACIA_SLAB, BIRCH_SLAB, CRIMSON_SLAB, SPRUCE_SLAB, WARPED_SLAB, 
-			DARK_OAK_SLAB, OAK_SLAB, JUNGLE_SLAB, PETRIFIED_OAK_SLAB, MANGROVE_SLAB, 
-			
-			ACACIA_STAIRS, BIRCH_STAIRS, CRIMSON_STAIRS, SPRUCE_STAIRS, 
-			WARPED_STAIRS, DARK_OAK_STAIRS, OAK_STAIRS, JUNGLE_STAIRS, MANGROVE_STAIRS, 
-			
-			ACACIA_PLANKS, BIRCH_PLANKS, CRIMSON_PLANKS, SPRUCE_PLANKS, 
-			WARPED_PLANKS, DARK_OAK_PLANKS, OAK_PLANKS, JUNGLE_PLANKS, MANGROVE_PLANKS, 
-			
-			ACACIA_TRAPDOOR, BIRCH_TRAPDOOR, CRIMSON_TRAPDOOR, DARK_OAK_TRAPDOOR, 
-			JUNGLE_TRAPDOOR, MANGROVE_TRAPDOOR, OAK_TRAPDOOR, SPRUCE_TRAPDOOR, WARPED_TRAPDOOR, 
-			
-			ACACIA_WOOD, BIRCH_WOOD, CRIMSON_HYPHAE, SPRUCE_WOOD, 
-			WARPED_HYPHAE, DARK_OAK_WOOD, OAK_WOOD, JUNGLE_WOOD, MANGROVE_WOOD, 
-			
-			ACACIA_LOG, BIRCH_LOG, CRIMSON_STEM, SPRUCE_LOG, 
-			WARPED_STEM, DARK_OAK_LOG, OAK_LOG, JUNGLE_LOG, MANGROVE_LOG, 
-			
-			ACACIA_SIGN, ACACIA_WALL_SIGN, BIRCH_SIGN, BIRCH_WALL_SIGN, CRIMSON_SIGN, 
-			CRIMSON_WALL_SIGN, SPRUCE_SIGN, SPRUCE_WALL_SIGN, WARPED_SIGN, 
-			WARPED_WALL_SIGN, DARK_OAK_SIGN, DARK_OAK_WALL_SIGN, OAK_SIGN, 
-			OAK_WALL_SIGN, JUNGLE_SIGN, JUNGLE_WALL_SIGN, MANGROVE_SIGN, MANGROVE_WALL_SIGN, 
-			
-			STRIPPED_ACACIA_WOOD, STRIPPED_BIRCH_WOOD, STRIPPED_CRIMSON_HYPHAE, STRIPPED_SPRUCE_WOOD, 
-			STRIPPED_WARPED_HYPHAE, STRIPPED_DARK_OAK_WOOD, STRIPPED_OAK_WOOD, STRIPPED_JUNGLE_WOOD, 
-			STRIPPED_MANGROVE_WOOD, 
-			
-			STRIPPED_ACACIA_LOG, STRIPPED_BIRCH_LOG, STRIPPED_CRIMSON_STEM, STRIPPED_SPRUCE_LOG, 
-			STRIPPED_WARPED_STEM, STRIPPED_DARK_OAK_LOG, STRIPPED_OAK_LOG, STRIPPED_JUNGLE_LOG, 
-			STRIPPED_MANGROVE_LOG, 
-			
-			ACACIA_FENCE, BIRCH_FENCE, CRIMSON_FENCE, SPRUCE_FENCE, WARPED_FENCE, DARK_OAK_FENCE, 
-			OAK_FENCE, JUNGLE_FENCE, MANGROVE_FENCE, ACACIA_FENCE_GATE, BIRCH_FENCE_GATE, CRIMSON_FENCE_GATE, 
-			SPRUCE_FENCE_GATE, WARPED_FENCE_GATE, DARK_OAK_FENCE_GATE, OAK_FENCE_GATE, JUNGLE_FENCE_GATE, MANGROVE_FENCE_GATE,
-			
-			OAK_DOOR, ACACIA_DOOR, BIRCH_DOOR, CRIMSON_DOOR, DARK_OAK_DOOR, 
-			JUNGLE_DOOR, MANGROVE_DOOR, WARPED_DOOR, SPRUCE_DOOR, 
-			
-			BARREL, BEEHIVE, BEE_NEST, NOTE_BLOCK, JUKEBOX, CRAFTING_TABLE:
-				b = world.getBlockAt((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
-				if (b.getBoundingBox().contains(x, y, z) && wls.add(new BaseBlockPosition(b.getX(), b.getY(), b.getZ()))) {
-					PacketUtils.blkCrckClnt(new WXYZ(b, 640));
-					dmg *= 0.5f;
-				}
-			case AIR, CAVE_AIR, VOID_AIR,
-			
-			SEAGRASS, TALL_SEAGRASS, WEEPING_VINES, TWISTING_VINES, 
-			
-			BLACK_CARPET, BLUE_CARPET, BROWN_CARPET, CYAN_CARPET, GRAY_CARPET, 
-			GREEN_CARPET, LIGHT_BLUE_CARPET, LIGHT_GRAY_CARPET, LIME_CARPET, 
-			MAGENTA_CARPET, MOSS_CARPET, ORANGE_CARPET, PINK_CARPET, 
-			PURPLE_CARPET, RED_CARPET, WHITE_CARPET, YELLOW_CARPET, 
-			
-			WATER, IRON_BARS, CHAIN, STRUCTURE_VOID, COBWEB, SNOW, 
-			POWDER_SNOW, BARRIER, TRIPWIRE, LADDER, RAIL, POWERED_RAIL, 
-			DETECTOR_RAIL, ACTIVATOR_RAIL, CAMPFIRE, SOUL_CAMPFIRE:
-				break;
-			default:
-				if (mat.isCollidable()) {
-					b = world.getBlockAt((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
-					if (b.getBoundingBox().contains(x, y, z)) {
-						b.getWorld().spawnParticle(Particle.BLOCK_CRACK, new Location(b.getWorld(), x, y, z), 10, 0.1d, 0.1d, 0.1d, b.getBlockData());
-						PacketUtils.blkCrckClnt(new WXYZ(b, 640));
-						break lp;
-					}
-				}
-			}
-			
-			while (shot.size() != 0 && dmg > 0f) {
-				tgt = shot.firstEntry().getValue();
-				ebx = tgt.getBoundingBox();
-				final Shooter sh = Shooter.getShooter(tgt, false);
-				final boolean nr; 
-				if (sh == null) {
-					nr = Math.pow(x - ebx.getCenterX(), 2d) + Math.pow(z - ebx.getCenterZ(), 2d) < 0.2d;
-				} else {
-					final Vector vc = sh.getLoc(sh instanceof PlShooter || gt.snp ? 4 : 2);
-					nr = Math.pow(x - vc.getX(), 2d) + Math.pow(z - vc.getZ(), 2d) < 0.2d;
-				}
-				
-				if (nr) {
-					shot.pollFirstEntry();
-					if (tgt.getNoDamageTicks() == 0) {
-						final String nm;
-						final boolean hst = y - ebx.getMinY() > ebx.getHeight() * 0.75d;
-						final EntityShootAtEntityEvent ese;
-						if (hst) {
-							dmg *= 2f * (tgt.getEquipment().getHelmet() == null ? 1f : 0.5f);
-							ese = new EntityShootAtEntityEvent(ent, tgt, dmg,
-								true, wls.size() > 0, dff && gt.snp);
-							ese.callEvent();
-							nm = "§c銑" + FastMath.absInt((int) ((dmg - ese.getDamage()) * 5.0d));
-						} else {
-							dmg *= tgt.getEquipment().getChestplate() == null ? 1f : 0.6f;
-							ese = new EntityShootAtEntityEvent(ent, tgt, dmg,
-								false, wls.size() > 0, dff && gt.snp);
-							ese.callEvent();
-							nm = "§6" + FastMath.absInt((int) ((dmg - ese.getDamage()) * 5.0d));
-						}
-						dmg = (float) ese.getDamage();
-						
-						if (ent instanceof final Player pl) {
-                            if (hst) pl.playSound(loc, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 2f);
-							pl.playSound(loc, Sound.BLOCK_END_PORTAL_FRAME_FILL, 2f, 2f);
-							Main.dmgInd(pl, tgt.getEyeLocation(), nm);
-						}
-					}
-				} else break;
+				w.spawnParticle(Particle.ASH, x, y, z, 1);
 			}
 
-			if ((i--) < 0) {
-				break;
+			final Material mat = Nms.getFastMat(w, (int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
+			final Block b;
+			switch (mat) {
+				case OAK_LEAVES, ACACIA_LEAVES, BIRCH_LEAVES, JUNGLE_LEAVES, CHERRY_LEAVES,
+				SPRUCE_LEAVES, DARK_OAK_LEAVES, MANGROVE_LEAVES, AZALEA_LEAVES,
+				FLOWERING_AZALEA_LEAVES,
+
+				GLASS, WHITE_STAINED_GLASS, GLASS_PANE,
+				WHITE_STAINED_GLASS_PANE, FLOWER_POT, DECORATED_POT,
+
+				DIAMOND_ORE, COAL_ORE, IRON_ORE, EMERALD_ORE:
+					if (brkBlks) {
+						b = w.getBlockAt((int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
+						arena().brkn.add(new BrknBlck(b));
+						w.playSound(b.getLocation(), Sound.BLOCK_SHROOMLIGHT_FALL, 2f, 0.8f);
+						w.spawnParticle(Particle.BLOCK_CRACK, b.getLocation().add(0.5d, 0.5d, 0.5d),
+								40, 0.4d, 0.4d, 0.4d, b.getType().createBlockData());
+						b.setType(Material.AIR, false);
+						wls.add(new BaseBlockPosition(b.getX(), b.getY(), b.getZ()));
+						dmg *= 0.5f;
+					}
+					break;
+				case ACACIA_SLAB, BIRCH_SLAB, CRIMSON_SLAB, SPRUCE_SLAB, WARPED_SLAB, CHERRY_SLAB, BAMBOO_SLAB,
+				DARK_OAK_SLAB, OAK_SLAB, JUNGLE_SLAB, PETRIFIED_OAK_SLAB, MANGROVE_SLAB, BAMBOO_MOSAIC_SLAB,
+
+				ACACIA_STAIRS, BIRCH_STAIRS, CRIMSON_STAIRS, SPRUCE_STAIRS, CHERRY_STAIRS, BAMBOO_STAIRS,
+				WARPED_STAIRS, DARK_OAK_STAIRS, OAK_STAIRS, JUNGLE_STAIRS, MANGROVE_STAIRS, BAMBOO_MOSAIC_STAIRS,
+
+				ACACIA_PLANKS, BIRCH_PLANKS, CRIMSON_PLANKS, SPRUCE_PLANKS, CHERRY_PLANKS, BAMBOO_PLANKS,
+				WARPED_PLANKS, DARK_OAK_PLANKS, OAK_PLANKS, JUNGLE_PLANKS, MANGROVE_PLANKS, BAMBOO_MOSAIC,
+
+				ACACIA_TRAPDOOR, BIRCH_TRAPDOOR, CRIMSON_TRAPDOOR, DARK_OAK_TRAPDOOR, CHERRY_TRAPDOOR, BAMBOO_TRAPDOOR,
+				JUNGLE_TRAPDOOR, MANGROVE_TRAPDOOR, OAK_TRAPDOOR, SPRUCE_TRAPDOOR, WARPED_TRAPDOOR,
+
+				ACACIA_WOOD, BIRCH_WOOD, CRIMSON_HYPHAE, SPRUCE_WOOD, CHERRY_WOOD, BAMBOO_BLOCK,
+				WARPED_HYPHAE, DARK_OAK_WOOD, OAK_WOOD, JUNGLE_WOOD, MANGROVE_WOOD,
+
+				ACACIA_LOG, BIRCH_LOG, CRIMSON_STEM, SPRUCE_LOG, CHERRY_LOG, BAMBOO,
+				WARPED_STEM, DARK_OAK_LOG, OAK_LOG, JUNGLE_LOG, MANGROVE_LOG,
+
+				ACACIA_SIGN, ACACIA_WALL_SIGN, BIRCH_SIGN, BIRCH_WALL_SIGN, CRIMSON_SIGN, BAMBOO_SIGN,
+				CRIMSON_WALL_SIGN, SPRUCE_SIGN, SPRUCE_WALL_SIGN, WARPED_SIGN, WARPED_WALL_SIGN,
+				DARK_OAK_SIGN, DARK_OAK_WALL_SIGN, OAK_SIGN, CHERRY_SIGN, CHERRY_WALL_SIGN, BAMBOO_WALL_SIGN,
+				OAK_WALL_SIGN, JUNGLE_SIGN, JUNGLE_WALL_SIGN, MANGROVE_SIGN, MANGROVE_WALL_SIGN,
+
+				STRIPPED_ACACIA_WOOD, STRIPPED_BIRCH_WOOD, STRIPPED_CRIMSON_HYPHAE, STRIPPED_SPRUCE_WOOD,
+				STRIPPED_WARPED_HYPHAE, STRIPPED_DARK_OAK_WOOD, STRIPPED_OAK_WOOD, STRIPPED_JUNGLE_WOOD,
+				STRIPPED_MANGROVE_WOOD, STRIPPED_CHERRY_WOOD, STRIPPED_BAMBOO_BLOCK,
+
+				STRIPPED_ACACIA_LOG, STRIPPED_BIRCH_LOG, STRIPPED_CRIMSON_STEM, STRIPPED_SPRUCE_LOG,
+				STRIPPED_WARPED_STEM, STRIPPED_DARK_OAK_LOG, STRIPPED_OAK_LOG, STRIPPED_JUNGLE_LOG,
+				STRIPPED_MANGROVE_LOG, STRIPPED_CHERRY_LOG,
+
+				ACACIA_FENCE, BIRCH_FENCE, CRIMSON_FENCE, SPRUCE_FENCE, WARPED_FENCE, DARK_OAK_FENCE,
+				OAK_FENCE, JUNGLE_FENCE, MANGROVE_FENCE, CHERRY_FENCE, BAMBOO_FENCE,
+
+				ACACIA_FENCE_GATE, BIRCH_FENCE_GATE, CRIMSON_FENCE_GATE, CHERRY_FENCE_GATE, BAMBOO_FENCE_GATE,
+				SPRUCE_FENCE_GATE, WARPED_FENCE_GATE, DARK_OAK_FENCE_GATE, OAK_FENCE_GATE, JUNGLE_FENCE_GATE, MANGROVE_FENCE_GATE,
+
+				OAK_DOOR, ACACIA_DOOR, BIRCH_DOOR, CRIMSON_DOOR, DARK_OAK_DOOR, CHERRY_DOOR,
+				JUNGLE_DOOR, MANGROVE_DOOR, WARPED_DOOR, SPRUCE_DOOR, BAMBOO_DOOR,
+
+				OAK_HANGING_SIGN, ACACIA_HANGING_SIGN, BIRCH_HANGING_SIGN, CRIMSON_HANGING_SIGN, DARK_OAK_HANGING_SIGN, CHERRY_HANGING_SIGN,
+				JUNGLE_HANGING_SIGN, MANGROVE_HANGING_SIGN, WARPED_HANGING_SIGN, SPRUCE_HANGING_SIGN, BAMBOO_HANGING_SIGN,
+
+				OAK_WALL_HANGING_SIGN, ACACIA_WALL_HANGING_SIGN, BIRCH_WALL_HANGING_SIGN, CRIMSON_WALL_HANGING_SIGN,
+				DARK_OAK_WALL_HANGING_SIGN, CHERRY_WALL_HANGING_SIGN, JUNGLE_WALL_HANGING_SIGN, MANGROVE_WALL_HANGING_SIGN,
+				WARPED_WALL_HANGING_SIGN, SPRUCE_WALL_HANGING_SIGN, BAMBOO_WALL_HANGING_SIGN,
+
+				BARREL, BEEHIVE, BEE_NEST, NOTE_BLOCK, JUKEBOX, CRAFTING_TABLE:
+					b = w.getBlockAt((int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
+					if (b.getBoundingBox().contains(x, y, z) && wls.add(new BaseBlockPosition(b.getX(), b.getY(), b.getZ()))) {
+						Utils.blkCrckClnt(new WXYZ(b, 640));
+						dmg *= 0.5f;
+					}
+				case AIR, CAVE_AIR, VOID_AIR,
+
+				SEAGRASS, TALL_SEAGRASS, WEEPING_VINES, TWISTING_VINES,
+
+				BLACK_CARPET, BLUE_CARPET, BROWN_CARPET, CYAN_CARPET, GRAY_CARPET,
+				GREEN_CARPET, LIGHT_BLUE_CARPET, LIGHT_GRAY_CARPET, LIME_CARPET,
+				MAGENTA_CARPET, MOSS_CARPET, ORANGE_CARPET, PINK_CARPET,
+				PURPLE_CARPET, RED_CARPET, WHITE_CARPET, YELLOW_CARPET,
+
+				WATER, IRON_BARS, CHAIN, STRUCTURE_VOID, COBWEB, SNOW,
+				POWDER_SNOW, BARRIER, TRIPWIRE, LADDER, RAIL, POWERED_RAIL,
+				DETECTOR_RAIL, ACTIVATOR_RAIL, CAMPFIRE, SOUL_CAMPFIRE:
+					break;
+				default:
+					if (mat.isCollidable()) {
+						b = w.getBlockAt((int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
+						if (b.getBoundingBox().contains(x, y, z)) {
+							b.getWorld().spawnParticle(Particle.BLOCK_CRACK, new Location(b.getWorld(), x, y, z), 10, 0.1d, 0.1d, 0.1d, b.getBlockData());
+							Utils.blkCrckClnt(new WXYZ(b, 640));
+							return;
+						}
+					}
+			}
+
+			for (; tit >= 0; tit--) {
+				final TargetLe tle = shot.get(tit);
+				if (i < tle.dst()) break;
+
+				tgt = tle.le();
+				ebx = tgt.getBoundingBox();
+				if (tgt.getNoDamageTicks() != 0) continue;
+				final boolean hst = y - ebx.getMinY() > ebx.getHeight() * 0.75d;
+				final EntityShootAtEntityEvent ese;
+				if (hst) {
+					dmg *= 2f * (tgt.getEquipment().getHelmet() == null ? 1f : 0.5f);
+					ese = new EntityShootAtEntityEvent(ent, tgt, dmg, true, wls.size() > 0, dff && gt.snp);
+					ese.callEvent();
+				} else {
+					dmg *= tgt.getEquipment().getChestplate() == null ? 1f : 0.6f;
+					ese = new EntityShootAtEntityEvent(ent, tgt, dmg, false, wls.size() > 0, dff && gt.snp);
+					ese.callEvent();
+				}
+				dmg = (float) ese.getDamage();
+				if (dmg <= 0f) return;//dmg 0, end
 			}
 		}
 	}
@@ -485,10 +487,12 @@ public class BtShooter extends BotEntity implements Shooter {
 		if (arena() instanceof Defusal) {
 			it = item(0);
 			if (!ItemUtils.isBlank(it, false)) {
+				it.setAmount(1);
 				world.dropItem(loc, it);
 			}
 			it = item(1);
 			if (!ItemUtils.isBlank(it, false)) {
+				it.setAmount(1);
 				world.dropItem(loc, it);
 			}
 		}
@@ -500,9 +504,6 @@ public class BtShooter extends BotEntity implements Shooter {
                     //bomb dropped
 					if (df.getTmAmt(Team.Ts, true, true) != 1) {
 						df.dropBomb(world.dropItem(loc, Main.bmb));
-					}
-					if (df.indon) {
-						df.indSts(getPlayer());
 					}
 				}
 			} else if (it.getType() == Material.SHEARS) {
@@ -546,7 +547,7 @@ public class BtShooter extends BotEntity implements Shooter {
 					}
 					return;
 				}
-				final int slt = nt.prm ? 3 : 4;
+				final int slt = nt.prm ? NadeType.prmSlot : NadeType.scdSlot;
 				final ItemStack eqp = item(slt);
 				final NadeType own = NadeType.getNdTp(eqp);
 				if (own == null) {
@@ -575,13 +576,12 @@ public class BtShooter extends BotEntity implements Shooter {
 
 	public void tryBuy() {
 //		Bukkit.broadcast(Component.text("mon " + money));
-		if (!willBuy) return;
 		switch (arena.getType()) {
 		case INVASION:
 			if (!((Invasion) arena).isDay) return;
 			break;
 		case DEFUSAL:
-			if (arena.gst != GameState.BUYTIME) return;
+			if (!willBuy || arena.gst != GameState.BUYTIME) return;
 			willBuy = false;
 			break;
 		case GUNGAME:
@@ -589,35 +589,40 @@ public class BtShooter extends BotEntity implements Shooter {
 		}
 		
 		final Team tm = arena.shtrs.get(this);
+		final boolean chs = Main.srnd.nextBoolean();
+		if (!chs && tm == Team.CTs) buyItem(GunType.kitSlt, GunType.kitPrc, 7, tm);
 		if (money < 1000) {//save
-			buyItem(GunType.hlmtSlt, GunType.hlmtPrc, EquipmentSlot.HEAD, tm);
-			if (Main.srnd.nextBoolean()) buyItem(GunType.chstSlt, GunType.chstPrc, EquipmentSlot.CHEST, tm);
-			else if (Main.srnd.nextBoolean()) buyItem(NadeType.FLASH.slt, NadeType.FLASH.prc, NadeType.scdSlot, tm);
+			buyItem(GunType.helmSlt, GunType.helmPrc, EquipmentSlot.HEAD, tm);
+			if (chs) buyItem(GunType.chestSlt, GunType.chestPrc, EquipmentSlot.CHEST, tm);
 			
 			if (!buyItem(GunType.DGL.slt, GunType.DGL.prc, 1, tm)) {
 				if (!buyItem(GunType.TP7.slt, GunType.TP7.prc, 1, tm)) {
 					buyItem(GunType.USP.slt, GunType.USP.prc, 1, tm);
 				}
 			}
+
+		} else {//buy up
+			buyItem(GunType.helmSlt, GunType.helmPrc, EquipmentSlot.HEAD, tm);
+			buyItem(GunType.chestSlt, GunType.chestPrc, EquipmentSlot.CHEST, tm);
 			
-		} else {//not save
-			buyItem(GunType.hlmtSlt, GunType.hlmtPrc, EquipmentSlot.HEAD, tm);
-			buyItem(GunType.chstSlt, GunType.chstPrc, EquipmentSlot.CHEST, tm);
-			
-			final GunType top = Main.srnd.nextBoolean() ? GunType.AWP : GunType.SCAR;
+			final GunType top = chs ? GunType.AWP : GunType.SCAR;
 			if (!buyItem(top.slt, top.prc, 0, tm)) {
-				final GunType gud = Main.srnd.nextBoolean() ? GunType.M4 : GunType.AK47;
+				final GunType gud = chs ? GunType.M4 : GunType.AK47;
 				if (!buyItem(gud.slt, gud.prc, 0, tm)) {
-					final GunType mid = Main.srnd.nextBoolean() ? GunType.P90 : GunType.MP5;
+					final GunType mid = chs ? GunType.P90 : GunType.MP5;
 					if (!buyItem(mid.slt, mid.prc, 0, tm)) {
-						final GunType low = Main.srnd.nextBoolean() ? GunType.SG13 : GunType.NOVA;
+						final GunType low = chs ? GunType.SG13 : GunType.NOVA;
 						buyItem(low.slt, low.prc, 0, tm);
 					}
 				}
 			}
 			
-			if (buyItem(NadeType.FRAG.slt, NadeType.FRAG.prc, NadeType.prmSlot, tm))
-				buyItem(NadeType.FLASH.slt, NadeType.FLASH.prc, NadeType.scdSlot, tm);
+			if (arena.getType() != GameType.INVASION) {
+				if (chs) {
+					buyItem(NadeType.FRAG.slt, NadeType.FRAG.prc, NadeType.prmSlot, tm);
+					buyItem(NadeType.FLASH.slt, NadeType.FLASH.prc, NadeType.scdSlot, tm);
+				} else buyItem(NadeType.FLAME.slt, NadeType.FLAME.prc, NadeType.prmSlot, tm);
+			}
 		}
 		
 		switchToGun();
@@ -626,48 +631,98 @@ public class BtShooter extends BotEntity implements Shooter {
 	private boolean buyItem(final byte slot, final short prc, final EquipmentSlot to, final Team tm) {
 		final ItemStack eq = item(to);
 		final Inventory inv = switch (tm) {
+            case Ts -> Inventories.TShop;
             case CTs -> Inventories.CTShop;
-            default -> Inventories.TShop;
+            case SPEC -> Inventories.LBShop;
         };
         final ItemStack it = inv.getItem(slot);
+		if (ItemUtils.isBlank(it, false)) {
+			Ostrov.log_warn("Tried to buy null item at slot " + slot);
+			return false;
+		}
 		final GunType gt = GunType.getGnTp(it);
 		if (gt == null) {
 			final NadeType nt = NadeType.getNdTp(it);
-			if (nt == null) {
-				if (ItemUtils.isBlank(eq, false) && prc <= money) {//armor?
-					money -= prc;
-					item(it.clone(), to);
-					world.playSound(getEntity().getLocation(), Sound.ITEM_ARMOR_EQUIP_IRON, 1f, 1.4f);
-					return true;
-				}
-			} else if (prc <= money) {//nades
-				final NadeType own = NadeType.getNdTp(eq);
-				money -= prc;
-				if (own != null) {
-					if (own.prc > prc) return false;
-					world.dropItem(getEntity().getLocation(), eq);
-				}
-				item(it.clone(), to);
-				world.playSound(getEntity().getLocation(), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
-				return true;
-			}
-		} else if (prc <= money) {//guns
-			final GunType own = GunType.getGnTp(eq);
+			if (nt == null) {//armor?
+                if (!ItemUtils.isBlank(eq, false) || prc > money) return false;
+                money -= prc;
+                item(it.clone(), to);
+                world.playSound(getLoc().toLocation(world), Sound.ITEM_ARMOR_EQUIP_IRON, 1f, 1.4f);
+                return true;
+            }
+			//nades
+			if (prc > money) return false;
+			final NadeType own = NadeType.getNdTp(eq);
 			if (own != null) {
-				if (own.prc > prc) return false;
-				world.dropItem(getEntity().getLocation(), eq.asOne());
+				if (own.prc >= prc) return false;
+				world.dropItem(getLoc().toLocation(world), eq);
 			}
 			money -= prc;
-			item(new ItemBuilder(it.getType()).name("§5" + gt.toString() + " " + gt.icn)
-				.setAmount(gt.amo).setModelData(GunType.defCMD).build(), to);
-			world.playSound(getEntity().getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 1.4f);
+			item(it.clone(), to);
+			world.playSound(getLoc().toLocation(world), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
 			return true;
 		}
-		return false;
-	}
+		//guns
+		if (prc > money) return false;
+		final GunType own = GunType.getGnTp(eq);
+		if (own != null) {
+			if (own.prc >= prc) return false;
+			world.dropItem(getLoc().toLocation(world), eq.asOne());
+		}
+		money -= prc;
+		item(new ItemBuilder(it.getType()).name("§5" + gt.name() + " " + gt.icn)
+			.setAmount(gt.amo).setModelData(GunType.defCMD).build(), to);
+		world.playSound(getLoc().toLocation(world), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 1.4f);
+		return true;
+    }
 	
 	private boolean buyItem(final byte slot, final short prc, final int to, final Team tm) {
 		final ItemStack eq = item(to);
+		final Inventory inv = switch (tm) {
+			case Ts -> Inventories.TShop;
+			case CTs -> Inventories.CTShop;
+			case SPEC -> Inventories.LBShop;
+		};
+		final ItemStack it = inv.getItem(slot);
+		if (ItemUtils.isBlank(it, false)) {
+			Ostrov.log_warn("Tried to buy null item at slot " + slot);
+			return false;
+		}
+		final GunType gt = GunType.getGnTp(it);
+		if (gt == null) {
+			final NadeType nt = NadeType.getNdTp(it);
+			if (nt == null) {//armor?
+				if (!ItemUtils.isBlank(eq, false) || prc > money) return false;
+				money -= prc;
+				item(it.clone(), to);
+				world.playSound(getLoc().toLocation(world), Sound.ITEM_ARMOR_EQUIP_IRON, 1f, 1.4f);
+				return true;
+			}
+			//nades
+			if (prc > money) return false;
+			final NadeType own = NadeType.getNdTp(eq);
+			if (own != null) {
+				if (own.prc >= prc) return false;
+				world.dropItem(getLoc().toLocation(world), eq);
+			}
+			money -= prc;
+			item(it.clone(), to);
+			world.playSound(getLoc().toLocation(world), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
+			return true;
+		}
+		//guns
+		if (prc > money) return false;
+		final GunType own = GunType.getGnTp(eq);
+		if (own != null) {
+			if (own.prc >= prc) return false;
+			world.dropItem(getLoc().toLocation(world), eq.asOne());
+		}
+		money -= prc;
+		item(new ItemBuilder(it.getType()).name("§5" + gt.name() + " " + gt.icn)
+				.setAmount(gt.amo).setModelData(GunType.defCMD).build(), to);
+		world.playSound(getLoc().toLocation(world), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 1.4f);
+		return true;
+		/*final ItemStack eq = item(to);
 		final GunType gt = GunType.getGnTp(eq);
 		final ItemStack it;
 		if (gt == null) {
@@ -685,7 +740,7 @@ public class BtShooter extends BotEntity implements Shooter {
 				it = null;
 			} else {
 				money -= prc;
-				world.dropItem(getEntity().getLocation(), eq);
+				world.dropItem(getLoc().toLocation(world), eq);
                 it = switch (tm) {
                     case CTs -> Inventories.CTShop.getItem(slot);
                     default -> Inventories.TShop.getItem(slot);
@@ -694,18 +749,41 @@ public class BtShooter extends BotEntity implements Shooter {
 		} else {
 			it = null;
 		}
-		
+
 		if (ItemUtils.isBlank(it, false)) return false;
 		final GunType ngt = GunType.getGnTp(it);
 		if (ngt == null) {
 			item(it.clone(), to);
-			world.playSound(getEntity().getLocation(), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
+			world.playSound(getLoc().toLocation(world), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
 		} else {
 			item(new ItemBuilder(it.getType()).name("§5" + ngt.toString() + " " + ngt.icn)
 				.setAmount(ngt.amo).setModelData(GunType.defCMD).build(), to);
-			world.playSound(getEntity().getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 1.4f);
+			world.playSound(getLoc().toLocation(world), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 1.4f);
 		}
+		return true;*/
+	}
+
+	public boolean tryNade(final LivingEntity tgt) {
+		final NadeType pnt = NadeType.getNdTp(item(NadeType.prmSlot));
+		if (pnt == null) {
+			final NadeType snt = NadeType.getNdTp(item(NadeType.scdSlot));
+			if (snt == null) return false;
+			final Vector dir = getNadeVec(tgt.getLocation()
+				.toVector().subtract(getLoc()), 1d);
+			dir.setY(dir.getY() * 1.25d);
+			Nade.launch(getEntity(), this, dir, snt.time << 1, NadeType.scdSlot);
+			return true;
+		}
+
+		Nade.launch(getEntity(), this, getNadeVec(tgt.getLocation()
+			.toVector().subtract(getLoc()), 1.25d), pnt.time << 1, NadeType.prmSlot);
 		return true;
+	}
+
+	private Vector getNadeVec(final Vector dst, final double spd) {
+		final double DlnSq = dst.lengthSquared() * 0.01d / spd;
+		if (dst.getY() > -DlnSq) dst.setY((dst.getY() + 1d) * DlnSq);
+		return dst.normalize().multiply(spd);
 	}
 
 	/*@Override

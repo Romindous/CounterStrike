@@ -2,6 +2,7 @@ package me.Romindous.CounterStrike.Menus;
 
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Game.Invasion;
+import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -23,7 +24,7 @@ public class TeamMenu implements InventoryProvider {
 
     @Override
     public void init(final Player p, final InventoryContent its) {
-		final Shooter sh = Shooter.getPlShooter(p.getName(), false);
+		final PlShooter sh = Shooter.getPlShooter(p.getName(), false);
 		if (sh.arena() == null || !sh.arena().name.equals(ar.name)) {
 			p.closeInventory();
 			return;
@@ -36,9 +37,9 @@ public class TeamMenu implements InventoryProvider {
 		final ArrayList<String> slrs = new ArrayList<>();
 		for (final Map.Entry<Shooter, Arena.Team> en : ar.shtrs.entrySet()) {
 			switch (en.getValue()) {
-                case Ts -> tlrs.add(Arena.Team.Ts.clr + "✦ §7" + sh.name());
-                case CTs -> clrs.add(Arena.Team.CTs.clr + "✦ §7" + sh.name());
-                case SPEC -> slrs.add(Arena.Team.SPEC.clr + "✦ §7" + sh.name());
+                case Ts -> tlrs.add(Arena.Team.Ts.clr + "✦ §7" + en.getKey().name());
+                case CTs -> clrs.add(Arena.Team.CTs.clr + "✦ §7" + en.getKey().name());
+                case SPEC -> slrs.add(Arena.Team.SPEC.clr + "✦ §7" + en.getKey().name());
             }
 		}
 
@@ -60,18 +61,36 @@ public class TeamMenu implements InventoryProvider {
 		}
     }
 
-	private void select(final Player p, final Shooter sh, final Arena.Team team, final InventoryContent its) {
+	private void select(final Player p, final PlShooter sh, final Arena.Team team, final InventoryContent its) {
 		p.playSound(p.getLocation(), Sound.BLOCK_NETHER_GOLD_ORE_FALL, 2f, 2f);
-		if (sh.arena().chngTm(sh, team)) {
-			for (final Shooter s : ar.shtrs.keySet()) {
-				final Player pl = s.getPlayer();
-				if (pl == null) continue;
-				final SmartInventory si = InventoryManager.getInventory(pl).orElse(null);
-				if (si != null && si.getProvider() instanceof final TeamMenu bm) {
-					pl.closeInventory();
-					bm.reopen(pl, its);
+		switch (ar.gst) {
+			case WAITING, BEGINING, FINISH:
+				if (ar.chngTeam(sh, team)) {
+					for (final Shooter s : ar.shtrs.keySet()) {
+						final Player pl = s.getPlayer();
+						if (pl == null) continue;
+						final SmartInventory si = InventoryManager.getInventory(pl).orElse(null);
+						if (si != null && si.getProvider() instanceof final TeamMenu bm) {
+							pl.closeInventory();
+							bm.reopen(pl, its);
+						}
+					}
 				}
-			}
-		}
+                break;
+            case BUYTIME, ROUND, ENDRND:
+				if (ar.chngTeam(sh, team)) {
+					ar.addToTm(p, sh, team);
+					for (final Shooter s : ar.shtrs.keySet()) {
+						final Player pl = s.getPlayer();
+						if (pl == null) continue;
+						final SmartInventory si = InventoryManager.getInventory(pl).orElse(null);
+						if (si != null && si.getProvider() instanceof final TeamMenu bm) {
+							pl.closeInventory();
+							bm.reopen(pl, its);
+						}
+					}
+				}
+                break;
+        }
 	}
 }

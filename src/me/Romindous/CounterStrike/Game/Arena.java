@@ -4,6 +4,8 @@ import me.Romindous.CounterStrike.Enums.GameState;
 import me.Romindous.CounterStrike.Enums.GameType;
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Menus.BotMenu;
+import me.Romindous.CounterStrike.Menus.GameMenu;
+import me.Romindous.CounterStrike.Menus.TeamMenu;
 import me.Romindous.CounterStrike.Objects.Game.BtShooter;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Game.TripWire;
@@ -11,8 +13,8 @@ import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
 import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
-import me.Romindous.CounterStrike.Utils.Inventories;
-import me.Romindous.CounterStrike.Utils.PacketUtils;
+import me.Romindous.CounterStrike.Utils.Utils;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -28,6 +30,7 @@ import ru.komiss77.modules.player.PM;
 import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.notes.Slow;
 import ru.komiss77.utils.TCUtils;
+import ru.komiss77.utils.inventory.InventoryManager;
 import ru.komiss77.utils.inventory.SmartInventory;
 
 import java.util.HashMap;
@@ -39,6 +42,8 @@ import java.util.stream.Collectors;
 
 public class Arena {
 
+	public static SmartInventory gameInv = SmartInventory.builder().id("Arenas")
+		.title("           §5§lВыбор Игры").provider(new GameMenu()).size(6, 9).build();
 	public final static HashMap<XYZ, TripWire> tblks = new HashMap<>();
 	public final static String T_AMT = "tamt", CT_AMT = "ctamt", LIMIT = "rem",
 		MONEY = "mn", STAGE = "gst", SCORE = "scr", RED_IND = "ind";
@@ -69,6 +74,7 @@ public class Arena {
 		final World w, final boolean rnd, final boolean bots) {
 		this.w = w;
 		w.setTime(6000L);
+		Main.addLEWorld(w);
 		w.setDifficulty(Difficulty.EASY);
 		w.setGameRule(GameRule.DO_MOB_SPAWNING, false);
 		w.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
@@ -88,7 +94,7 @@ public class Arena {
 		botInv = bots ? SmartInventory.builder().id(name + " Bots").title("         §чИграть с Ботами?")
 			.provider(new BotMenu(this)).size(1, 9).build() : null;
 		teamInv = SmartInventory.builder().id(name + " Team").title("         §eВыбор Комманды")
-			.provider(new BotMenu(this)).type(InventoryType.HOPPER).build();
+			.provider(new TeamMenu(this)).type(InventoryType.HOPPER).build();
 		this.bots = botInv != null;
 		Ostrov.async(() -> ApiOstrov.shuffle(spots));
 	}
@@ -130,12 +136,20 @@ public class Arena {
                 case SPEC -> SPEC;
             };
         }
+
+		public NamedTextColor color() {
+			return switch (this) {
+				case Ts -> NamedTextColor.DARK_RED;
+				case CTs -> NamedTextColor.DARK_AQUA;
+				case SPEC -> NamedTextColor.GRAY;
+			};
+		}
 	}
 
 	public void end() {
 		gst = GameState.WAITING;
-		ApiOstrov.sendArenaData(name, ru.komiss77.enums.GameState.ОЖИДАНИЕ, "§7[§5CS§7]",
-			"§8Не Выбрано", " ", "§7Игроков: §50§7/§5" + min, "", 0);
+		updateData();
+		Main.delLEWorld(w);
 		Main.actvarns.remove(name);
 		for (final Shooter sh : shtrs.keySet()) {
 			if (sh instanceof PlShooter) {
@@ -143,7 +157,6 @@ public class Arena {
 			}
 		}
 		shtrs.clear();
-		Inventories.updtGm(this);
 		for (final Entity e : w.getEntities()) {
 			if (e.getType() != EntityType.PLAYER) {
 				e.remove();
@@ -154,10 +167,9 @@ public class Arena {
 			Bukkit.getConsoleSender().sendMessage("removing arena");
 			Main.mapBlds.remove(name).remove(w, 3);
 		}
-		Ostrov.async(() -> Inventories.fillGmInv());
     }
 
-	public boolean addPl(final Shooter sh) {
+	public boolean addPl(final PlShooter sh) {
 		final Player p = sh.getPlayer();
 		if (p != null) {
 			p.sendMessage(Main.prf() + "Что то пошло не так...");
@@ -165,13 +177,15 @@ public class Arena {
 		return false;
 	}
 
-	public boolean rmvPl(final Shooter sh) {
+	public boolean rmvPl(final PlShooter sh) {
 		final Player p = sh.getPlayer();
 		if (p != null) {
 			p.sendMessage(Main.prf() + "Что то пошло не так...");
 		}
 		return false;
 	}
+
+	public void addToTm(final Player p, final PlShooter sh, final Team tm) {}
 
 	public void killSh(final Shooter sh) {
 		final Player p = sh.getPlayer();
@@ -185,7 +199,7 @@ public class Arena {
 		final Player p = sh.getPlayer();
 		if (p == null) return;
 		SkinQuest.tryCompleteQuest(sh, Quest.ЛАТУНЬ, sh.money());
-		PacketUtils.sendAcBr(p, (n < 0 ? "§5" : "§d+") + n + " §6⛃");
+		Utils.sendAcBr(p, (n < 0 ? "§5" : "§d+") + n + " §6⛃");
 		PM.getOplayer(p).score.getSideBar().update(MONEY, "§7Монет: §d" + sh.money() + " §6⛃");
 	}
 
@@ -251,7 +265,7 @@ public class Arena {
 		return false;
 	}
 
-	public boolean chngTm(final Shooter sh, final Team nv) {
+	public boolean chngTeam(final Shooter sh, final Team nv) {
 		final int nta = getTmAmt(nv, true, true), ota = getTmAmt(nv.getOpst(), true, true);
 		final Team ptm = shtrs.get(sh);
 		if (ptm != null && ptm == nv) {
@@ -271,14 +285,15 @@ public class Arena {
 		}
 
 		shtrs.put(sh, nv);
+		if (sh instanceof PlShooter) PM.getOplayer(sh.getPlayer()).color(nv.color());
 		for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
 			final Player p = e.getKey().getPlayer();
 			if (p != null) {
 				PM.getOplayer(p).score.getSideBar()
 					.update(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
-						+ (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."))
+						+ (e.getValue() == Team.Ts ? " §7чел. §8✦ Ты" : " §7чел."))
 					.update(CT_AMT, Team.CTs.icn + " §7: " + getTmAmt(Team.CTs, true, true)
-						+ (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
+						+ (e.getValue() == Team.CTs ? " §7чел. §8✦ Ты" : " §7чел."));
 			}
 		}
 		switch (gst) {
@@ -286,7 +301,7 @@ public class Arena {
 				sh.setTabTag("§7<§d" + name + "§7> ", " §7[-.-]", nv.clr);
 				break;
 			case BUYTIME, ROUND, ENDRND:
-				sh.setTabTag(shtrs.get(sh).icn + " ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", nv.clr);
+				sh.setTabTag(nv.icn + " ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", nv.clr);
 				break;
 		}
 		return true;
@@ -299,12 +314,6 @@ public class Arena {
 	}
 
 	public void blncTms() {
-		for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
-			if (e.getValue() == Team.SPEC) {
-				e.setValue(getMinTm());
-			}
-		}
-
 		if (botInv != null && bots) {
 			int tmMx = max >> 1;
 
@@ -352,15 +361,47 @@ public class Arena {
 			if (p != null) {
 				PM.getOplayer(p).score.getSideBar()
 					.update(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
-						+ (e.getValue() == Team.Ts ? " §7чел. §8✦ Вы" : " §7чел."))
+						+ (e.getValue() == Team.Ts ? " §7чел. §8✦ Ты" : " §7чел."))
 					.update(CT_AMT, Team.CTs.icn + " §7: " + getTmAmt(Team.CTs, true, true)
-						+ (e.getValue() == Team.CTs ? " §7чел. §8✦ Вы" : " §7чел."));
+						+ (e.getValue() == Team.CTs ? " §7чел. §8✦ Ты" : " §7чел."));
 			}
 		}
 	}
 	
 	public GameType getType() {
 		return null;
+	}
+
+	public void updateData() {
+		switch (gst) {
+			case WAITING:
+				ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ОЖИДАНИЕ, "§7Тип: §d" + getType().name,
+					"§5=-=-=-=-=-=-", "§7Нужно: §d" + (min - shtrs.size()) + " §7чел.",
+					"§7Боты: " + (bots ? "§aДа" : "§cНет"), "", shtrs.size());
+				break;
+			case BEGINING:
+				ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.СТАРТ, "§7Тип: §d" + getType().name, "§7Боты: "
+						+ (bots ? "§aДа" : "§cНет"), "§5=-=-=-=-=-=-", "§7Макс. §d" + max + " §7чел.", "", shtrs.size());
+				break;
+			case BUYTIME, ROUND, ENDRND:
+				ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ЭКИПИРОВКА, "§7Тип: §d" + getType().name, "§7Боты: "
+					+ (bots ? "§aДа" : "§cНет"), "§5=-=-=-=-=-=-", "§7Макс. §d" + max + " §7чел.", "", getPlaying(true, false));
+				break;
+			case FINISH:
+				ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ФИНИШ, "§7Тип: §d" + getType().name, "§7Боты: "
+						+ (bots ? "§aДа" : "§cНет"), "§5=-=-=-=-=-=-", "§7Макс. §d" + max + " §7чел.", "", shtrs.size());
+				break;
+		}
+
+		for (final Shooter sh : shtrs.keySet()) {
+			final Player pl = sh.getPlayer();
+			if (pl == null) continue;
+			final SmartInventory si = InventoryManager.getInventory(pl).orElse(null);
+			if (si != null && si.getProvider() instanceof final GameMenu bm) {
+				pl.closeInventory();
+				gameInv.open(pl);
+			}
+		}
 	}
 	
 	@Slow(priority = 2)
