@@ -18,8 +18,8 @@ import org.joml.Vector3f;
 import ru.komiss77.Ostrov;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.modules.world.XYZ;
-import ru.komiss77.utils.ItemUtils;
-import ru.komiss77.utils.TCUtils;
+import ru.komiss77.utils.ItemUtil;
+import ru.komiss77.utils.TCUtil;
 import ru.komiss77.version.Nms;
 
 import java.util.HashMap;
@@ -31,8 +31,8 @@ public class Bomb extends WXYZ {
 	public final TextDisplay title;
 	public Shooter defusing;
 	
-	private static final Component bnm = TCUtils.format("§l§кБiмба Поставлена!")
-		.appendNewline().append(TCUtils.format("§7Обезвредьте §eкусачками §7или §3спец. набором§7!"));
+	private static final Component bnm = TCUtil.form("§l§кБiмба Поставлена!")
+		.appendNewline().append(TCUtil.form("§7Обезвредьте §eкусачками §7или §3спец. набором§7!"));
 	
 	public Bomb(final Block b) {
 		super(b.getWorld(), b.getX(), b.getY(), b.getZ());
@@ -57,7 +57,7 @@ public class Bomb extends WXYZ {
 		final int Y = b.getY();
 		final int Z = b.getZ();
 		final HashSet<XYZ> cls = new HashSet<>();
-		b.getWorld().spawnParticle(Particle.EXPLOSION_HUGE, b.getLocation(), 20, 5d, 5d, 5d);
+		b.getWorld().spawnParticle(Particle.EXPLOSION, b.getLocation(), 20, 5d, 5d, 5d);
 		b.getWorld().playSound(b.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 5f, 0.8f);
 
 		for (int x = -5; x < 6; x++) {
@@ -86,16 +86,16 @@ public class Bomb extends WXYZ {
 			final int dx = loc.getBlockX() - X;
 			final int dz = loc.getBlockZ() - Z;
 			final double d = Math.max(200 - (dx * dx + dz * dz), 0) * 0.4d * 
-			(ItemUtils.isBlank(sh.item(EquipmentSlot.CHEST), false) ? 1d : 0.4d);
+			(ItemUtil.isBlank(sh.item(EquipmentSlot.CHEST), false) ? 1d : 0.4d);
 			if (le.getHealth() - d <= 0) {
 				ar.addDth(sh);
-				sh.dropIts(le.getLocation());
+				sh.drop(le.getLocation());
 				if (sh instanceof PlShooter) {
 					final Player p = sh.getPlayer();
 					p.closeInventory();
 					p.setGameMode(GameMode.SPECTATOR);
 				} else {
-					((BtShooter) sh).die(le);
+					((BtShooter) sh).own().hide(le);
 				}
 				for (final Player p : w.getPlayers()) {
 					p.sendMessage("§c\u926e\u9299 " + ar.getShtrNm(sh));

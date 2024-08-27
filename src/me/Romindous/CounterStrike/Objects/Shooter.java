@@ -1,8 +1,10 @@
 package me.Romindous.CounterStrike.Objects;
 
+import java.util.function.Predicate;
 import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.Game.BtShooter;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Skins.GunSkin;
 import org.bukkit.Bukkit;
@@ -14,12 +16,10 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
-import ru.komiss77.modules.bots.BotEntity;
 import ru.komiss77.modules.bots.BotManager;
+import ru.komiss77.modules.bots.Botter;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.notes.Slow;
-
-import java.util.function.Predicate;
 
 public interface Shooter {
 
@@ -69,11 +69,11 @@ public interface Shooter {
 
 	ItemStack item(final EquipmentSlot slot);
 	ItemStack item(final int slot);
-	void item(final ItemStack it, final EquipmentSlot slot);
-	void item(final ItemStack it, final int slot);
+	void item(final EquipmentSlot slot, final ItemStack it);
+	void item(final int slot, final ItemStack it);
 	Inventory inv();
 	void clearInv();
-	void dropIts(final Location loc);
+	void drop(final Location loc);
 
 	int getModel(final GunType gt);
 	GunSkin getSkin(final GunType gt);
@@ -81,7 +81,7 @@ public interface Shooter {
 	void giveModel(final GunType gt, final int cmd);
 	void setModel(final GunType gt, final int cmd);
 
-	void setTabTag(final String pfx, final String sfx, final String afx);
+	void taq(final String pfx, final String sfx, final String afx);
 
 	Predicate<Player> allyTest();
 	
@@ -110,8 +110,8 @@ public interface Shooter {
 		if (le.getType() == EntityType.PLAYER) {
 			return getPlShooter(le.getName(), crt);
 		} else {
-			final BotEntity bh = BotManager.getBot(le.getEntityId(), BotEntity.class);
-			return bh instanceof Shooter ? (Shooter) bh : null;
+			final Botter bh = BotManager.getBot(le.getEntityId());
+            return bh == null ? null : bh.extent(BtShooter.class);
 		}
 	}
 

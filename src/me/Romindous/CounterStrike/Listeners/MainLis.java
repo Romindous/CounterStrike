@@ -32,8 +32,8 @@ import ru.komiss77.Ostrov;
 import ru.komiss77.enums.Data;
 import ru.komiss77.events.LocalDataLoadEvent;
 import ru.komiss77.modules.player.PM;
-import ru.komiss77.utils.ItemUtils;
-import ru.komiss77.utils.TCUtils;
+import ru.komiss77.utils.ItemUtil;
+import ru.komiss77.utils.TCUtil;
 
 import java.util.Random;
 
@@ -51,8 +51,8 @@ public class MainLis implements Listener {
 			default -> "";
 		};
 
-		p.sendPlayerListHeaderAndFooter(TCUtils.format("§7<§5Counter Strike§7>\n" + title),
-				TCUtils.format("§7Сейчас в игре: §d" + getPlaying() + "§7 человек!"));
+		p.sendPlayerListHeaderAndFooter(TCUtil.form("§7<§5Counter Strike§7>\n" + title),
+			TCUtil.form("§7Сейчас в игре: §d" + getPlaying() + "§7 человек!"));
 		final String wa = PM.getOplayer(p).getDataString(Data.WANT_ARENA_JOIN);
 //		p.sendMessage(" " + wa);
 		if (!wa.isEmpty()) {
@@ -193,7 +193,7 @@ public class MainLis implements Listener {
 				case GOLDEN_APPLE:
 					final Defusal ar = (Defusal) pr.arena();
 					if (ar != null && ar.shtrs.get(pr) == Team.Ts) {
-						pr.item(it, 7);
+						pr.item(7, it);
 						e.getItem().remove();
 						ar.pickBomb();
 						if (!ar.indon && ((Player) e.getEntity()).getInventory().getHeldItemSlot() == 7) {
@@ -271,7 +271,7 @@ public class MainLis implements Listener {
 		final GunType gt = GunType.getGnTp(p.getInventory().getItemInMainHand());
 		if (gt != null && gt.snp && !e.isSneaking()) {
 			Shooter.getPlShooter(p.getName(), true).scope(false);
-			if (!ItemUtils.isBlank(p.getInventory().getItemInOffHand(), false))
+			if (!ItemUtil.isBlank(p.getInventory().getItemInOffHand(), false))
 				p.getInventory().setItemInOffHand(Main.air);
 		}
 	}

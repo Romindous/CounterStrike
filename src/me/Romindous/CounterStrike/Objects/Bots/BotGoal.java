@@ -1,5 +1,8 @@
 package me.Romindous.CounterStrike.Objects.Bots;
 
+import java.lang.ref.WeakReference;
+import java.util.EnumSet;
+import java.util.Map.Entry;
 import com.destroystokyo.paper.entity.Pathfinder;
 import com.destroystokyo.paper.entity.ai.Goal;
 import com.destroystokyo.paper.entity.ai.GoalKey;
@@ -16,7 +19,6 @@ import me.Romindous.CounterStrike.Objects.Game.Bomb;
 import me.Romindous.CounterStrike.Objects.Game.BtShooter;
 import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
 import me.Romindous.CounterStrike.Objects.Shooter;
-import net.minecraft.network.protocol.game.PacketPlayOutAnimation;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
@@ -29,16 +31,12 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 import org.joml.Math;
+import ru.komiss77.modules.bots.Botter;
 import ru.komiss77.modules.world.AStarPath;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.modules.world.XYZ;
-import ru.komiss77.utils.ItemUtils;
-import ru.komiss77.utils.LocationUtil;
-import ru.komiss77.version.Nms;
-
-import java.lang.ref.WeakReference;
-import java.util.EnumSet;
-import java.util.Map.Entry;
+import ru.komiss77.utils.ItemUtil;
+import ru.komiss77.utils.LocUtil;
 
 import static me.Romindous.CounterStrike.Objects.Bots.BotGoal.ActType.*;
 
@@ -60,8 +58,8 @@ public class BotGoal implements Goal<Mob> {
 	private static final BlockData bdt = crtBtnDt();
 	private static final WeakReference<LivingEntity> nrf = new WeakReference<>(null);
     private static final GoalKey<Mob> key = GoalKey.of(Mob.class, new NamespacedKey(Main.plug, "bot"));
-    
-    private final BtShooter bot;
+
+    private final BtShooter bsh;
     private final Mob rplc;
 	private final Pathfinder pth;
 	private final AStarPath arp;
@@ -76,8 +74,8 @@ public class BotGoal implements Goal<Mob> {
 	private int agro;
 	private int acttm;
     
-    public BotGoal(final BtShooter bot, final Mob hs) {
-        this.bot = bot;
+    public BotGoal(final BtShooter bsh, final Mob hs) {
+        this.bsh = bsh;
         this.rplc = hs;
         this.arp = new AStarPath(rplc, 2000, 1f);
 		this.pth = rplc.getPathfinder();
@@ -117,40 +115,40 @@ public class BotGoal implements Goal<Mob> {
 		
 		tick++;
 
-		bot.rotPss();
+		bsh.rotPss();
 		
 		final Location loc = rplc.getLocation();
 		final Location eyel = rplc.getEyeLocation();
 		final Vector vc;
 		
-		bot.tryReload(rplc, eyel);
-		final boolean rld = bot.tryReload(rplc, eyel);
+		bsh.tryReload(rplc, eyel);
+		final boolean rld = bsh.tryReload(rplc, eyel);
 		
-		if (rplc.hasPotionEffect(PotionEffectType.SLOW) || //blind or buy
+		if (rplc.hasPotionEffect(PotionEffectType.SLOWNESS) || //blind or buy
 			rplc.hasPotionEffect(PotionEffectType.BLINDNESS)) {
 			vc = eyel.getDirection();
 			changeTLoc(null);
 			
 			if ((tick & DEL_TGT) == 0) {
-				bot.tryBuy();
+				bsh.tryBuy();
 			}
 		} else {
-			final Team tm = bot.arena().shtrs.get(bot);
+			final Team tm = bsh.arena().shtrs.get(bsh);
 			if ((tick & DEL_TGT) == 0 && acttm == 0) {
 				final LivingEntity tle;
-				switch (bot.arena().getType()) {
+				switch (bsh.arena().getType()) {
 				case DEFUSAL:
-					if (bot.tgtSh == null || bot.tgtSh.isDead()) {//look for tgt
-						bot.tgtLe = nrf; bot.tgtSh = null;
+					if (bsh.tgtSh == null || bsh.tgtSh.isDead()) {//look for tgt
+						bsh.tgtLe = nrf; bsh.tgtSh = null;
 //						Bukkit.broadcast(Component.text("scaning for sh"));
-						for (final Entry<Shooter, Team> en : bot.arena().shtrs.entrySet()) {
+						for (final Entry<Shooter, Team> en : bsh.arena().shtrs.entrySet()) {
 							if (!en.getKey().isDead() && en.getValue() != tm) {
 								final LivingEntity le = en.getKey().getEntity();
-								if (le != null && le.getEntityId() != rplc.getEntityId() && LocationUtil.rayThruAir(eyel,
+								if (le != null && le.getEntityId() != rplc.getEntityId() && LocUtil.rayThruAir(eyel,
 									le.getEyeLocation().add(0d, le.getHeight() / 2d, 0d).toVector(), 0.1d)) {
-									if (Main.srnd.nextBoolean()) bot.tryNade(le);
-									bot.tgtLe = new WeakReference<>(le);
-									bot.tgtSh = en.getKey();
+									if (Main.srnd.nextBoolean()) bsh.tryNade(le);
+									bsh.tgtLe = new WeakReference<>(le);
+									bsh.tgtSh = en.getKey();
 									agro = 0;
 									break;
 								}
@@ -158,27 +156,27 @@ public class BotGoal implements Goal<Mob> {
 						}
 					} else {//track tgt
 						agro+=SHIFT_TGT;
-						tle = bot.tgtSh.getEntity();
-						if (tle == null || !tle.isValid() || !LocationUtil.rayThruAir(eyel, tle.getEyeLocation()
+						tle = bsh.tgtSh.getEntity();
+						if (tle == null || !tle.isValid() || !LocUtil.rayThruAir(eyel, tle.getEyeLocation()
 								.add(0d, tle.getHeight() / 2d, 0d).toVector(), 0.1F)) {
-							changeTLoc(bot.tgtSh.getPos());
-							bot.tgtLe = nrf;
-							bot.tgtSh = null;
+							changeTLoc(bsh.tgtSh.getPos());
+							bsh.tgtLe = nrf;
+							bsh.tgtSh = null;
 						}
 					}
 					break;
 				case GUNGAME:
-					if (bot.tgtSh == null || bot.tgtSh.isDead()) {//look for tgt
-						bot.tgtSh = null; bot.tgtLe = nrf;
+					if (bsh.tgtSh == null || bsh.tgtSh.isDead()) {//look for tgt
+						bsh.tgtSh = null; bsh.tgtLe = nrf;
 //						Bukkit.broadcast(Component.text("scaning for sh"));
-						for (final Entry<Shooter, Team> en : bot.arena().shtrs.entrySet()) {
+						for (final Entry<Shooter, Team> en : bsh.arena().shtrs.entrySet()) {
 							if (!en.getKey().isDead()) {
 								final LivingEntity le = en.getKey().getEntity();
-								if (le != null && le.getEntityId() != rplc.getEntityId() && LocationUtil.rayThruAir(eyel,
+								if (le != null && le.getEntityId() != rplc.getEntityId() && LocUtil.rayThruAir(eyel,
 									le.getEyeLocation().add(0d, le.getHeight() / 2d, 0d).toVector(), 0.1d)) {
-									if (Main.srnd.nextBoolean()) bot.tryNade(le);
-									bot.tgtLe = new WeakReference<>(le);
-									bot.tgtSh = en.getKey();
+									if (Main.srnd.nextBoolean()) bsh.tryNade(le);
+									bsh.tgtLe = new WeakReference<>(le);
+									bsh.tgtSh = en.getKey();
 									agro = 0;
 									break;
 								}
@@ -186,52 +184,52 @@ public class BotGoal implements Goal<Mob> {
 						}
 					} else {//track tgt
 						agro+=SHIFT_TGT;
-						tle = bot.tgtSh.getEntity();
-						if (tle == null || !tle.isValid() || !LocationUtil.rayThruAir(eyel, tle.getEyeLocation()
+						tle = bsh.tgtSh.getEntity();
+						if (tle == null || !tle.isValid() || !LocUtil.rayThruAir(eyel, tle.getEyeLocation()
 								.add(0d, tle.getHeight() / 2d, 0d).toVector(), 0.1F)) {
 							changeTLoc(null);
-							bot.tgtLe = nrf;
-							bot.tgtSh = null;
+							bsh.tgtLe = nrf;
+							bsh.tgtSh = null;
 						}
 					}
 					break;
 				case INVASION:
-					if (bot.tgtLe.get() == null || !bot.tgtLe.get().isValid()) {//look for tgt
-						bot.tgtLe = nrf;
+					if (bsh.tgtLe.get() == null || !bsh.tgtLe.get().isValid()) {//look for tgt
+						bsh.tgtLe = nrf;
 //						Bukkit.broadcast(Component.text("scaning for mobs"));
-						tle = LocationUtil.getClsChEnt(bot.getPos(), SPOT_DST_SQ, Monster.class, le ->
-							le.getType() != rplc.getType() && LocationUtil.rayThruAir(eyel, le.getEyeLocation()
+						tle = LocUtil.getClsChEnt(bsh.getPos(), SPOT_DST_SQ, Monster.class, le ->
+							le.getType() != rplc.getType() && LocUtil.rayThruAir(eyel, le.getEyeLocation()
 								.add(0d, le.getHeight() / 2d, 0d).toVector(), 0.1d));
 						if (tle != null && acttm == 0) {
-							bot.tgtLe = new WeakReference<>(tle);
-							bot.tgtSh = null;
+							bsh.tgtLe = new WeakReference<>(tle);
+							bsh.tgtSh = null;
 							agro = 0;
 						}
 					} else {//track tgt
 						agro+=SHIFT_TGT;
-						tle = bot.tgtLe.get();
-						if (tle == null || !tle.isValid() || !LocationUtil.rayThruAir(eyel, tle.getEyeLocation()
+						tle = bsh.tgtLe.get();
+						if (tle == null || !tle.isValid() || !LocUtil.rayThruAir(eyel, tle.getEyeLocation()
 								.add(0d, tle.getHeight() / 2d, 0d).toVector(), 0.1F)) {
 							changeTLoc(null);
-							bot.tgtLe = nrf;
-							bot.tgtSh = null;
+							bsh.tgtLe = nrf;
+							bsh.tgtSh = null;
 						}
 					}
 					break;
 				}
 			}
 
-			final LivingEntity le = bot.tgtLe.get();
+			final LivingEntity le = bsh.tgtLe.get();
 			if (le != null && le.isValid()) {//attack
-				final Vector tgt = bot.tgtSh == null ? le.getLocation().toVector() : bot.tgtSh.getLoc();
+				final Vector tgt = bsh.tgtSh == null ? le.getLocation().toVector() : bsh.tgtSh.getLoc();
 				vc = tgt.subtract(loc.toVector());
-				switch (bot.getHandSlot()) {
+				switch (bsh.own().getHandSlot()) {
 				case 2:
 					if (vc.lengthSquared() < NEAR_DST_SQ) {
 						if ((tick & DEL_TGT) == 0) changeTLoc(getStrfLoc(loc, vc, -2));
 						if (tick % KNIFE_KD == 0) {
-							Nms.sendWorldPacket(bot.world, new PacketPlayOutAnimation(bot, 0));
-							DmgLis.prcDmg(le, bot.tgtSh, bot, le.getEquipment().getChestplate() == null ? 3d : 2d,
+							bsh.own().swingHand(true);
+							DmgLis.prcDmg(le, bsh.tgtSh, bsh, le.getEquipment().getChestplate() == null ? 3d : 2d,
 									"§f\u9298", 5, GunType.knifRwd, false, false, false, false, false);
 						}
 					} else {
@@ -240,51 +238,51 @@ public class BotGoal implements Goal<Mob> {
 					break;
 				case 0, 1:
 					if (!rld && agro > reactTime) {
-						bot.tryShoot(rplc);
-						bot.tryShoot(rplc);
+						bsh.tryShoot(rplc);
+						bsh.tryShoot(rplc);
 					}
 
 					if ((tick & DEL_TGT) == 0) changeTLoc(getStrfLoc(loc, vc, 8));
 					break;
 				case 7:
 					acttm = 0;
-					bot.switchToGun();
+					bsh.switchToGun();
 					break;
 				default:
-					bot.switchToGun();
+					bsh.switchToGun();
 					break;
                 }
 			} else {//go places
 				final Location dir = arp.getNextLoc();
-				switch (bot.getHandSlot()) {
+				switch (bsh.own().getHandSlot()) {
 				default://nades, knif
-					bot.switchToGun();
+					bsh.switchToGun();
 					vc = dir == null ? eyel.getDirection() : dir.subtract(loc).toVector().setY(0d);
-					if ((tick & DEL_TGT) == 0) bot.tryBuy();
+					if ((tick & DEL_TGT) == 0) bsh.tryBuy();
 					break;
 				case 0, 1:
-					if (ItemUtils.isBlank(bot.item(EquipmentSlot.HAND), false))
-						bot.switchToGun();
+					if (ItemUtil.isBlank(bsh.item(EquipmentSlot.HAND), false))
+						bsh.switchToGun();
 					vc = dir == null ? eyel.getDirection() : dir.subtract(loc).toVector().setY(0d);
-					if ((tick & DEL_TGT) == 0) bot.tryBuy();
+					if ((tick & DEL_TGT) == 0) bsh.tryBuy();
 					break;
 				case 7:
 					vc = site == null ? (dir == null ? eyel.getDirection() : dir.subtract(loc).toVector().setY(0d))
 						: new Vector(site.x - eyel.getX() + 0.5d, site.y - eyel.getY() + 0.5d, site.z - eyel.getZ() + 0.5d);
 					if (acttm == 0) {
-						bot.switchToGun();
+						bsh.switchToGun();
 					} else if ((tick & DEL_TGT) == 0) {
-						bot.world.playSound(eyel, tm == Team.Ts ? Sound.ENTITY_GENERIC_EAT : Sound.BLOCK_TRIPWIRE_CLICK_ON, 2f, 1f);
-						bot.world.spawnParticle(Particle.ITEM_CRACK, eyel.clone().add(vc.multiply(0.4d)),
-							12, 0d, 0d, 0d, 0.1d, bot.item(EquipmentSlot.HAND));
-						Nms.sendWorldPacket(bot.world, new PacketPlayOutAnimation(bot, 0));
+						bsh.own().world().playSound(eyel, tm == Team.Ts ? Sound.ENTITY_GENERIC_EAT : Sound.BLOCK_TRIPWIRE_CLICK_ON, 2f, 1f);
+						bsh.own().world().spawnParticle(Particle.ITEM, eyel.clone().add(vc.multiply(0.4d)),
+							12, 0d, 0d, 0d, 0.1d, bsh.item(EquipmentSlot.HAND));
+						bsh.own().swingHand(true);
 					}
 					break;
 				}
 
-				switch (bot.arena().getType()) {
+				switch (bsh.arena().getType()) {
 				case DEFUSAL:
-					final Defusal df = (Defusal) bot.arena();
+					final Defusal df = (Defusal) bsh.arena();
 					if (df.isBmbOn()) {
 						if (site == null || act == NEAR_SITE) {
 							site = df.getBomb();
@@ -294,22 +292,22 @@ public class BotGoal implements Goal<Mob> {
 							if (!arp.hasTgt() || tLoc == null || act == DIRECT || tAct) {
 								if (tm == Team.CTs && site instanceof final Bomb bmb) {//cts go defuse
 									if (df.gst == GameState.ROUND && act == SITE_ACT
-										&& site.distSq(bot.getPos()) < SPOT_DST_SQ) {
+										&& site.distSq(bsh.getPos()) < SPOT_DST_SQ) {
 										if (acttm == 0) {
 											if (bmb.defusing == null) {//can defuse
-												bot.swapToSlot(7);
+												bsh.own().swapToSlot(7);
 												acttm += DEL_ACT;
-												bmb.defusing = bot;
+												bmb.defusing = bsh;
 											} else {//defend defuser
 												changeTLoc(site, SITE_ACT, false);
 											}
 										} else if (tAct) {
-											if (acttm > ACT_TIME << (bot.item(EquipmentSlot.HAND)
+											if (acttm > ACT_TIME << (bsh.item(EquipmentSlot.HAND)
 												.getType() == Material.SHEARS ? 0 : 1)) {//defused
 												df.w.playSound(eyel, Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, 2f, 2f);
 												df.w.playSound(eyel, Sound.BLOCK_IRON_TRAPDOOR_CLOSE, 2f, 2f);
-												bot.switchToGun();
-												df.chngMn(bot, 250);
+												bsh.switchToGun();
+												df.chngMn(bsh, 250);
 												df.defuse();
 												acttm = 0;
 											} else acttm += DEL_ACT;
@@ -318,7 +316,7 @@ public class BotGoal implements Goal<Mob> {
 										acttm = 0;
 										changeTLoc(site, SITE_ACT, false);
 										final Shooter ds = bmb.defusing;
-										if (bot.equals(ds)) bmb.defusing = null;
+										if (bsh.equals(ds)) bmb.defusing = null;
 									}
 								} else {//set go defend
 									site = null;
@@ -335,22 +333,22 @@ public class BotGoal implements Goal<Mob> {
 								final boolean tAct = (tick & DEL_ACT) == 0;
 								if (!arp.hasTgt() || tLoc == null || act == DIRECT || tAct) {
 									if (tm == Team.Ts) {//set go plant
-										if (ItemUtils.isBlank(bot.item(7), false)) {
-											changeTLoc(site, NEAR_SITE, bot.arena(), 10);
+										if (ItemUtil.isBlank(bsh.item(7), false)) {
+											changeTLoc(site, NEAR_SITE, bsh.arena(), 10);
 										} else {//has bomb
 											if (df.gst == GameState.ROUND && act == SITE_ACT
-												&& site.distSq(bot.getPos()) < SPOT_DST_SQ) {
+												&& site.distSq(bsh.getPos()) < SPOT_DST_SQ) {
 												if (acttm == 0) {//start plant
-													bot.swapToSlot(7);
+													bsh.own().swapToSlot(7);
 													acttm += DEL_ACT;
 												} else if (tAct) {
 													if (acttm > ACT_TIME) {//planted
 														final Block b = rplc.getLocation().getBlock();
 														if (b.getType().isAir()) {
-															bot.switchToGun();
+															bsh.switchToGun();
 															b.setBlockData(bdt, false);
-															bot.item(Main.air.clone(), 7);
-															df.chngMn(bot, 250);
+															bsh.item(7, Main.air.clone());
+															df.chngMn(bsh, 250);
 															df.plant(b);
 															changeTLoc(site, NEAR_SITE, df, 10);
 															acttm = 0;
@@ -383,14 +381,14 @@ public class BotGoal implements Goal<Mob> {
 						case GO_SPOT:
 							if (arp.hasTgt()) break;
 						case DIRECT:
-							changeTLoc(bot.getPos(), GO_SPOT, bot.arena(), 20);
+							changeTLoc(bsh.getPos(), GO_SPOT, bsh.arena(), 20);
 							break;
 						default:
 							break;
 					}
 					break;
 				case INVASION:
-					final Invasion in = (Invasion) bot.arena();
+					final Invasion in = (Invasion) bsh.arena();
 					if (site == null) {
 						if (in.isDay) {
 							final Mobber mb = in.getRndMbbr(true);
@@ -407,25 +405,25 @@ public class BotGoal implements Goal<Mob> {
 						if (site instanceof final Mobber mb) {
 							if ((in.isDay || act == SITE_ACT) && mb.isAlive()) {
 								final boolean tAct = (tick & DEL_ACT) == 0;
-//								Bukkit.broadcast(TCUtils.format("ac-" + act.name() + ", t-" + tAct));
+//								Bukkit.broadcast(TCUtil.form("ac-" + act.name() + ", t-" + tAct));
 								if (!arp.hasTgt() || tLoc == null || act == DIRECT || tAct) {
-									if (in.gst == GameState.ROUND && site.distSq(bot.getPos()) < SPOT_DST_SQ) {
+									if (in.gst == GameState.ROUND && site.distSq(bsh.getPos()) < SPOT_DST_SQ) {
 										if (acttm == 0) {
 											if (mb.defusing == null) {//can defuse
-												bot.swapToSlot(7);
+												bsh.own().swapToSlot(7);
 												acttm += DEL_ACT;
-												mb.defusing = bot;
+												mb.defusing = bsh;
 												act = SITE_ACT;
 											}
 										} else if (tAct) {
-//											Bukkit.broadcast(TCUtils.format("a-" + acttm));
-											if (acttm > ACT_TIME << (bot.item(EquipmentSlot.HAND)
+//											Bukkit.broadcast(TCUtil.form("a-" + acttm));
+											if (acttm > ACT_TIME << (bsh.item(EquipmentSlot.HAND)
 													.getType() == Material.SHEARS ? 0 : 1)) {//defused
 												in.w.playSound(eyel, Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, 2f, 2f);
 												in.w.playSound(eyel, Sound.BLOCK_IRON_TRAPDOOR_CLOSE, 2f, 2f);
-												bot.switchToGun();
-												in.addSpDfs(bot);
-												in.chngMn(bot, 150);
+												bsh.switchToGun();
+												in.addSpDfs(bsh);
+												in.chngMn(bsh, 150);
 												in.dieSpnr(mb);
 												site = null;
 												acttm = 0;
@@ -435,11 +433,11 @@ public class BotGoal implements Goal<Mob> {
 										acttm = 0;
 										changeTLoc(site, GO_SPOT, true);
 										final Shooter ds = mb.defusing;
-										if (bot.equals(ds)) mb.defusing = null;
+										if (bsh.equals(ds)) mb.defusing = null;
 									}
 								}
 							} else {
-								bot.switchToGun();
+								bsh.switchToGun();
 								acttm = 0;
 								site = null;
 							}
@@ -457,24 +455,17 @@ public class BotGoal implements Goal<Mob> {
 			}
 		}
 		
-//		vc.normalize();
-		
-		bot.pickupIts(loc);
-		
-//		vc.setY(0d);
-//		if (rplc.isInWater()) {
-//			rplc.setVelocity(rplc.getVelocity().setY(0.1d).add(vc.multiply(0.05d)));
-//		}
+		bsh.own().pickup(loc);
 
 		if (tLoc != null) {
 			if (act == DIRECT) {
-				pth.moveTo(tLoc.getCenterLoc(bot.world), 1.4d);
+				pth.moveTo(tLoc.getCenterLoc(bsh.own().world()), Botter.SPEED_WALK);
 			} else {
-                arp.tickGo(1.5d);
+                arp.tickGo(Botter.SPEED_RUN);
             }
 		}
 
-		bot.move(loc, vc, true);
+		bsh.own().move(loc, vc, true);
     }
 
 	private void changeTLoc(final XYZ nlc) {
@@ -504,7 +495,7 @@ public class BotGoal implements Goal<Mob> {
 		}
 
 		if (at == act && arp.hasTgt() && tLoc != null && (limit || (tick & DEL_ACT) != 0)) return;
-		arp.setTgt(new WXYZ(bot.world, Main.getNrPos(nlc)));
+		arp.setTgt(new WXYZ(bsh.own().world(), Main.getNrPos(nlc)));
 		tLoc = nlc;
 		act = at;
 	}
@@ -524,7 +515,7 @@ public class BotGoal implements Goal<Mob> {
 		}
 
 		if (at == act && arp.hasTgt() && tLoc != null) return;
-        arp.setTgt(new WXYZ(bot.world, ar.getClosestPos(nlc, dst)));
+        arp.setTgt(new WXYZ(bsh.own().world(), ar.getClosestPos(nlc, dst)));
 		tLoc = nlc;
 		act = at;
 	}

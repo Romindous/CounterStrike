@@ -1,5 +1,6 @@
 package me.Romindous.CounterStrike.Listeners;
 
+import javax.annotation.Nullable;
 import me.Romindous.CounterStrike.Enums.GameState;
 import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Enums.NadeType;
@@ -30,9 +31,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
-import ru.komiss77.version.Nms;
-
-import javax.annotation.Nullable;
+import ru.komiss77.utils.EntityUtil;
 
 public class DmgLis implements Listener {
 	
@@ -50,7 +49,8 @@ public class DmgLis implements Listener {
 						if (sh.arena() == null) {
 							if (!(ee instanceof EntityShootAtEntityEvent) && dmgr.getType() == EntityType.PLAYER) {
 								e.setCancelled(((HumanEntity) dmgr).getGameMode() != GameMode.CREATIVE);
-								Main.dmgInd((Player) dmgr, ent.getEyeLocation(), "§6" + (ent.getEquipment().getChestplate() == null ? 4 : 2) * 5);
+								EntityUtil.indicate(ent.getEyeLocation(), "§6"
+									+ (ent.getEquipment().getChestplate() == null ? 4 : 2) * 5, (Player) dmgr);
 							}
 						} else {
 							if (ee instanceof final EntityShootAtEntityEvent eee) {
@@ -60,12 +60,10 @@ public class DmgLis implements Listener {
 								if (eee.isCritical() && dmgr.getType() == EntityType.PLAYER) {
 									ApiOstrov.addStat((Player) dmgr, Stat.CS_hshot);
 								}
-								
-								final Location loc = ent.getLocation();
+
 								eee.setDamage(prcDmg(ent, Shooter.getShooter(ent, false), 
-								sh, e.getDamage(), gt.icn, 0, gt.rwd, dmgr.hasPotionEffect(PotionEffectType.BLINDNESS), 
-								Nms.getFastMat(loc.getWorld(), loc.getBlockX(), loc.getBlockY() + 1, loc.getBlockZ()) == Material.POWDER_SNOW,
-								eee.nscp, eee.isCritical(), eee.wb));
+								sh, e.getDamage(), gt.icn, 0, gt.rwd, dmgr.hasPotionEffect(PotionEffectType.BLINDNESS),
+									eee.smoked, eee.noscope, eee.isCritical(), eee.wallbang));
 							} else {
 								e.setCancelled(true);
 								//if player hits living
@@ -78,7 +76,7 @@ public class DmgLis implements Listener {
 										prcDmg(ent, Shooter.getShooter(ent, false), sh, e.getDamage(), 
 										"§f\u9298", 5, GunType.knifRwd, false, false, false, false, false);
 										if (dmgr.getType() == EntityType.PLAYER) {
-											Main.dmgInd((Player) dmgr, ent.getEyeLocation(), "§6" + (int) e.getDamage() * 5);
+											EntityUtil.indicate(ent.getEyeLocation(), "§6" + (int) e.getDamage() * 5, (Player) dmgr);
 										}
 									}
 									break;
@@ -166,7 +164,7 @@ public class DmgLis implements Listener {
 						target.setHealth(health);
 						target.setNoDamageTicks(ndts);
 						if (tgtsh instanceof BtShooter) {
-							((BtShooter) tgtsh).hurt(target);
+							((BtShooter) tgtsh).own().hurt(target);
 						} else {
 							target.playHurtAnimation(target.getYaw());
 							((Player) target).playSound(target, Sound.BLOCK_MUDDY_MANGROVE_ROOTS_FALL, 2f, 2f);
@@ -182,7 +180,7 @@ public class DmgLis implements Listener {
 							target.setHealth(health);
 							target.setNoDamageTicks(ndts);
 							if (tgtsh instanceof BtShooter) {
-								((BtShooter) tgtsh).hurt(target);
+								((BtShooter) tgtsh).own().hurt(target);
 							} else {
 								target.playHurtAnimation(target.getYaw());
 								((Player) target).playSound(target, Sound.BLOCK_MUDDY_MANGROVE_ROOTS_FALL, 2f, 2f);

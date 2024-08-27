@@ -16,6 +16,7 @@ import org.bukkit.event.inventory.InventoryType;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.modules.world.XYZ;
+import ru.komiss77.utils.ClassUtil;
 import ru.komiss77.utils.inventory.SmartInventory;
 
 import java.io.File;
@@ -79,7 +80,7 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 						} else if (mm.stp.nm.equals(args[1])) {
 							SmartInventory.builder().size(3, 9)
 	                        .id("Map "+p.getName()).title("§dРедактор Карты " + args[1])
-	                        .provider(mm == null ? new MapManager(args[1]) : mm)
+	                        .provider(mm)
 	                        .build().open(p);
 						} else {
 							p.sendMessage(Main.prf() + "§cВы уже редактируете карту §5" + mm.stp.nm);
@@ -158,7 +159,7 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 									SmartInventory.builder()
 									.type(InventoryType.HOPPER)
 			                        .id("Game "+p.getName())
-			                        .provider(new TypeChoose(ApiOstrov.rndElmt(Main.nnactvarns.values().toArray(new Setup[0]))))
+			                        .provider(new TypeChoose(ClassUtil.rndElmt(Main.nnactvarns.values().toArray(new Setup[0]))))
 			                        .title("§d§l      Выбор Типа Игры")
 			                        .build().open(p);
 									return true;

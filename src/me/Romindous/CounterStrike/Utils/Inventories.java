@@ -9,7 +9,7 @@ import org.bukkit.Color;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
-import ru.komiss77.utils.TCUtils;
+import ru.komiss77.utils.TCUtil;
 
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -23,126 +23,6 @@ public class Inventories {
 	public static Inventory TShop;
 	public static Inventory CTShop;
 	public static Inventory LBShop;
-//	public static Inventory GmInv;
-
-	/*public static void fillGmInv() {
-		GmInv = Bukkit.createInventory(null, 54, Component.text("§5§lВыбор Игры"));
-		Bukkit.getConsoleSender().sendMessage(Main.nnactvarns.size() + " maps");
-		final ItemStack[] its = new ItemStack[54];
-		for (byte i = 0; i < 54; i++) {
-			its[i] = Main.mkItm(LIGHT_GRAY_STAINED_GLASS_PANE, "§8-=-=-=-", 10);
-		}
-		its[4] = Main.mkItm(ENDER_EYE, "§5Быстрый Поиск", 10);
-		int dfs = 9;
-		for (final Setup stp : Main.nnactvarns.values()) {
-			//Bukkit.getConsoleSender().sendMessage("Looking at " + stp.nm);
-			if (stp.fin) {
-				final Arena ar = Main.actvarns.get(stp.nm);
-				if (ar == null) {
-					its[dfs++] = Main.mkItm(GREEN_CONCRETE_POWDER, "§d" + stp.nm, 1, "§2Ожидание", "§7Игроков: §20§7/§2" + stp.min);
-				} else {
-					switch (ar.getType()) {
-					case DEFUSAL:
-						switch (ar.gst) {
-						case WAITING:
-							its[dfs++] = Main.mkItm(GREEN_CONCRETE_POWDER, "§d" + stp.nm, 1, "§2Ожидание", "§7Игроков: §2" + ar.shtrs.size() + "§7/§2" + ar.min, " ", "§7Режим: §dКлассика");
-							break;
-						case BEGINING:
-							its[dfs++] = Main.mkItm(YELLOW_CONCRETE_POWDER, "§d" + stp.nm, 1, "§eНачало", "§7Игроков: §e" + ar.shtrs.size() + "§7/§e" + ar.max, " ", "§7Режим: §dКлассика");
-							break;
-						case BUYTIME:
-							its[dfs++] = Main.mkItm(ORANGE_CONCRETE_POWDER, "§d" + stp.nm, 1, "§6Закупка", "§7Игроков: §6" + ar.shtrs.size() + "§7/§6" + ar.max, " ", "§7Режим: §dКлассика");
-							break;
-						case ROUND:
-						case ENDRND:
-							its[dfs++] = Main.mkItm(ORANGE_CONCRETE_POWDER, "§d" + stp.nm, 1, "§6Бой", "§7Игроков: §6" + ar.shtrs.size() + "§7/§6" + ar.max, " ", "§7Режим: §dКлассика");
-							break;
-						case FINISH:
-							its[dfs++] = Main.mkItm(PURPLE_CONCRETE_POWDER, "§d" + stp.nm, 1, "§5Финиш", "§7Игроков: §5" + ar.shtrs.size() + "§7/§5" + ar.max, " ", "§7Режим: §dКлассика");
-							break;
-						}
-						break;
-					case GUNGAME:
-						switch (ar.gst) {
-						case WAITING:
-							its[dfs++] = Main.mkItm(GREEN_CONCRETE_POWDER, "§d" + stp.nm, 1, "§2Ожидание", "§7Игроков: §2" + ar.shtrs.size() + "§7/§2" + ar.min, " ", "§7Режим: §dЭстафета");
-							break;
-						case BEGINING:
-							its[dfs++] = Main.mkItm(YELLOW_CONCRETE_POWDER, "§d" + stp.nm, 1, "§eНачало", "§7Игроков: §e" + ar.shtrs.size() + "§7/§e" + ar.max, " ", "§7Режим: §dЭстафета");
-							break;
-						case BUYTIME:
-							its[dfs++] = Main.mkItm(ORANGE_CONCRETE_POWDER, "§d" + stp.nm, 1, "§6Подготовка", "§7Игроков: §6" + ar.shtrs.size() + "§7/§6" + ar.max, " ", "§7Режим: §dЭстафета");
-							break;
-						case ROUND:
-						case ENDRND:
-							its[dfs++] = Main.mkItm(ORANGE_CONCRETE_POWDER, "§d" + stp.nm, 1, "§6Бой", "§7Игроков: §6" + ar.shtrs.size() + "§7/§6" + ar.max, " ", "§7Режим: §dЭстафета");
-							break;
-						case FINISH:
-							its[dfs++] = Main.mkItm(PURPLE_CONCRETE_POWDER, "§d" + stp.nm, 1, "§5Финиш", "§7Игроков: §5" + ar.shtrs.size() + "§7/§5" + ar.max, " ", "§7Режим: §dЭстафета");
-							break;
-						}
-						break;
-					case INVASION:
-						switch (ar.gst) {
-						case WAITING:
-							its[dfs++] = Main.mkItm(GREEN_CONCRETE_POWDER, "§d" + stp.nm, 1, "§2Ожидание", "§7Игроков: §2" + ar.shtrs.size() + "§7/§2" + ar.min, " ", "§7Режим: §dВторжение");
-							break;
-						case BEGINING:
-							its[dfs++] = Main.mkItm(YELLOW_CONCRETE_POWDER, "§d" + stp.nm, 1, "§eНачало", "§7Игроков: §e" + ar.shtrs.size() + "§7/§e" + ar.max, " ", "§7Режим: §dВторжение");
-							break;
-						case BUYTIME:
-							its[dfs++] = Main.mkItm(ORANGE_CONCRETE_POWDER, "§d" + stp.nm, 1, "§6Закупка", "§7Игроков: §6" + ar.shtrs.size() + "§7/§6" + ar.max, " ", "§7Режим: §dВторжение");
-							break;
-						case ROUND:
-						case ENDRND:
-							its[dfs++] = Main.mkItm(ORANGE_CONCRETE_POWDER, "§d" + stp.nm, 1, "§6Бой", "§7Игроков: §6" + ar.shtrs.size() + "§7/§6" + ar.max, " ", "§7Режим: §dВторжение");
-							break;
-						case FINISH:
-							its[dfs++] = Main.mkItm(PURPLE_CONCRETE_POWDER, "§d" + stp.nm, 1, "§5Финиш", "§7Игроков: §5" + ar.shtrs.size() + "§7/§5" + ar.max, " ", "§7Режим: §dВторжение");
-							break;
-						}
-						break;
-					default:
-						break;
-					}
-				}
-			}
-		}
-		GmInv.setContents(its);
-	}
-
-	public static void updtGm(final Arena ar) {
-		byte n = 0;
-		for (final ItemStack it : GmInv.getContents()) {
-			if (it != null && it.hasItemMeta() && TCUtils.toString(it.getItemMeta().displayName()).substring(2).equals(ar.name)) {
-				final String md = switch (ar.getType()) {
-					case INVASION -> "Вторжение";
-					case GUNGAME -> "Эстафета";
-                    default -> "Классика";
-                };
-
-                switch (ar.gst) {
-				case WAITING:
-					GmInv.setItem(n, Main.mkItm(GREEN_CONCRETE_POWDER, "§d" + ar.name, 1, "§2Ожидание", "§7Игроков: §2" + ar.getPlaying(true, false) + "§7/§2" + ar.min, " ", "§7Режим: §d" + md));
-					break;
-				case BEGINING:
-					GmInv.setItem(n, Main.mkItm(YELLOW_CONCRETE_POWDER, "§d" + ar.name, 1, "§eНачало", "§7Игроков: §e" + ar.getPlaying(true, false) + "§7/§e" + ar.max, " ", "§7Режим: §d" + md));
-					break;
-				case BUYTIME:
-					GmInv.setItem(n, Main.mkItm(ORANGE_CONCRETE_POWDER, "§d" + ar.name, 1, "§6Закупка", "§7Игроков: §6" + ar.getPlaying(true, false) + "§7/§6" + ar.max, " ", "§7Режим: §d" + md));
-					break;
-				case ROUND:
-				case ENDRND:
-					GmInv.setItem(n, Main.mkItm(ORANGE_CONCRETE_POWDER, "§d" + ar.name, 1, "§6Бой", "§7Игроков: §6" + ar.getPlaying(true, false) + "§7/§6" + ar.max, " ", "§7Режим: §d" + md));
-					break;
-				case FINISH:
-					GmInv.setItem(n, Main.mkItm(PURPLE_CONCRETE_POWDER, "§d" + ar.name, 1, "§5Финиш", "§7Игроков: §5" + ar.getPlaying(true, false) + "§7/§5" + ar.max, " ", "§7Режим: §d" + md));
-					break;
-				}
-			}
-			n++;
-		}
-	}*/
 	
 	public static ItemStack[] fillDfsInv(final byte size) {
 		final ItemStack[] its = new ItemStack[size];
@@ -264,8 +144,8 @@ public class Inventories {
 		its[GunType.chestSlt] = new ItemStack(LEATHER_CHESTPLATE);
 		final LeatherArmorMeta cm = (LeatherArmorMeta) its[49].getItemMeta();
 		cm.setColor(Color.RED);
-		cm.displayName(TCUtils.format("§cКуртка Террориста §f\u9266"));
-		cm.lore(Arrays.asList(TCUtils.format("§7Цена: §d" + GunType.chestPrc + " §6⛃")));
+		cm.displayName(TCUtil.form("§cКуртка Террориста §f\u9266"));
+		cm.lore(Arrays.asList(TCUtil.form("§7Цена: §d" + GunType.chestPrc + " §6⛃")));
 		its[GunType.chestSlt].setItemMeta(cm);
 		its[TP7.slt] = Main.mkItm(STONE_HOE, "§dTP-7 " + TP7.icn, 10, "§7Цена: §d" + TP7.prc + " §6⛃");
 		its[SMOKE.slt] = Main.mkItm(DARK_OAK_SAPLING, "§7Дымовая Граната " + SMOKE.icn, 10, "§7Цена: §d" + SMOKE.prc + " §6⛃");
@@ -296,8 +176,8 @@ public class Inventories {
 		its[GunType.chestSlt] = new ItemStack(LEATHER_CHESTPLATE);
 		final LeatherArmorMeta cm = (LeatherArmorMeta) its[49].getItemMeta();
 		cm.setColor(Color.TEAL);
-		cm.displayName(TCUtils.format("§3Жилет Спецназа §f\u9266"));
-		cm.lore(Arrays.asList(TCUtils.format("§7Цена: §d" + GunType.chestPrc + " §6⛃")));
+		cm.displayName(TCUtil.form("§3Жилет Спецназа §f\u9266"));
+		cm.lore(Arrays.asList(TCUtil.form("§7Цена: §d" + GunType.chestPrc + " §6⛃")));
 		its[GunType.chestSlt].setItemMeta(cm);
 		its[TP7.slt] = Main.mkItm(STONE_HOE, "§dTP-7 " + TP7.icn, 10, "§7Цена: §d" + TP7.prc + " §6⛃");
 		its[SMOKE.slt] = Main.mkItm(DARK_OAK_SAPLING, "§7Дымовая Граната " + SMOKE.icn, 10, "§7Цена: §d" + SMOKE.prc + " §6⛃");

@@ -9,7 +9,7 @@ import me.Romindous.CounterStrike.Objects.Shooter;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryType;
-import ru.komiss77.ApiOstrov;
+import ru.komiss77.utils.ClassUtil;
 import ru.komiss77.utils.ItemBuilder;
 import ru.komiss77.utils.inventory.ClickableItem;
 import ru.komiss77.utils.inventory.InventoryContent;
@@ -40,7 +40,7 @@ public class GameMenu implements InventoryProvider {
 					SmartInventory.builder()
 						.type(InventoryType.HOPPER)
 						.id("Game "+p.getName())
-						.provider(new TypeChoose(ApiOstrov.rndElmt(Main.nnactvarns.values().toArray(new Setup[0]))))
+						.provider(new TypeChoose(ClassUtil.rndElmt(Main.nnactvarns.values().toArray(new Setup[0]))))
 						.title("§d§l      Выбор Типа Игры")
 						.build().open(p);
 				} else {

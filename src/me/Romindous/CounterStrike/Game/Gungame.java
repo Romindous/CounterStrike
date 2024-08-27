@@ -1,5 +1,10 @@
 package me.Romindous.CounterStrike.Game;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map.Entry;
 import me.Romindous.CounterStrike.Enums.GameState;
 import me.Romindous.CounterStrike.Enums.GameType;
 import me.Romindous.CounterStrike.Enums.GunType;
@@ -31,14 +36,9 @@ import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.modules.player.PM;
 import ru.komiss77.modules.world.XYZ;
+import ru.komiss77.utils.ClassUtil;
 import ru.komiss77.utils.ItemBuilder;
-import ru.komiss77.utils.TCUtils;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map.Entry;
+import ru.komiss77.utils.TCUtil;
 
 public class Gungame extends Arena {
 
@@ -75,10 +75,10 @@ public class Gungame extends Arena {
 		switch (gst) {
 			case WAITING:
 				chngTeam(sh, Team.SPEC);
-				sh.item(Main.mkItm(Material.NETHER_STAR, "§eВыбор Комманды", 10), 2);
-				sh.item(Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10), 5);
-				sh.item(Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10), 6);
-				sh.item(Main.mkItm(Material.SLIME_BALL, "§cВыход", 10), 8);
+				sh.item(2, Main.mkItm(Material.NETHER_STAR, "§eВыбор Комманды", 10));
+				sh.item(5, Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10));
+				sh.item(6, Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10));
+				sh.item(8, Main.mkItm(Material.SLIME_BALL, "§cВыход", 10));
 				if (shtrs.size() == min) {
 					for (final Entry<Shooter, Team> en : shtrs.entrySet()) {
 						final Player pl = en.getKey().getPlayer();
@@ -87,7 +87,7 @@ public class Gungame extends Arena {
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел на карту!");
 							Utils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
 							if (!rnd) {
-								pl.teleport(ApiOstrov.rndElmt(spots).getCenterLoc(w));
+								pl.teleport(ClassUtil.rndElmt(spots).getCenterLoc(w));
 							}
 							pl.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 600, 1));
 						}
@@ -108,12 +108,12 @@ public class Gungame extends Arena {
 				}
 				break;
 			case BEGINING:
-				sh.item(Main.mkItm(Material.NETHER_STAR, "§eВыбор Комманды", 10), 2);
-				sh.item(Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10), 5);
-				sh.item(Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10), 6);
-				sh.item(Main.mkItm(Material.SLIME_BALL, "§cВыход", 10), 8);
+				sh.item(2, Main.mkItm(Material.NETHER_STAR, "§eВыбор Комманды", 10));
+				sh.item(5, Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10));
+				sh.item(6, Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10));
+				sh.item(8, Main.mkItm(Material.SLIME_BALL, "§cВыход", 10));
 				if (!rnd) {
-					p.teleport(ApiOstrov.rndElmt(spots).getCenterLoc(w));
+					p.teleport(ClassUtil.rndElmt(spots).getCenterLoc(w));
 				}
 				p.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, time * 20, 1));
 				beginScore(p, Team.SPEC);
@@ -132,9 +132,9 @@ public class Gungame extends Arena {
 					gameScore(sh, p);
 					chngTeam(sh, Team.SPEC);
 					p.setGameMode(GameMode.SPECTATOR);
-					p.teleport(Main.getNrLoc(Main.srnd.nextBoolean() ? ApiOstrov.rndElmt(TSpawns) : ApiOstrov.rndElmt(CTSawns), w));
-					sh.item(Main.mkItm(Material.NETHER_STAR, "§eВыбор Комманды", 10), 2);
-					sh.item(Main.mkItm(Material.SLIME_BALL, "§cВыход", 10), 8);
+					p.teleport(Main.getNrLoc(Main.srnd.nextBoolean() ? ClassUtil.rndElmt(TSpawns) : ClassUtil.rndElmt(CTSawns), w));
+					sh.item(2, Main.mkItm(Material.NETHER_STAR, "§eВыбор Комманды", 10));
+					sh.item(8, Main.mkItm(Material.SLIME_BALL, "§cВыход", 10));
 					for (final Shooter s : shtrs.keySet()) {
 						final Player pl = s.getPlayer();
 						if (pl != null) {
@@ -152,7 +152,7 @@ public class Gungame extends Arena {
 				return false;
 		}
 		updateData();
-		final Component tpl = TCUtils.format("§7Сейчас в игре: §d" + MainLis.getPlaying() + "§7 человек!");
+		final Component tpl = TCUtil.form("§7Сейчас в игре: §d" + MainLis.getPlaying() + "§7 человек!");
 		for (final Player pl : Bukkit.getOnlinePlayers()) {
 			pl.sendPlayerListFooter(tpl);
 		}
@@ -161,7 +161,7 @@ public class Gungame extends Arena {
 
 	public void addToTm(final Player p, final PlShooter sh, final Team tm) {
 		p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1, 1);
-		p.teleport(ApiOstrov.rndElmt(spots).getCenterLoc(w));
+		p.teleport(ClassUtil.rndElmt(spots).getCenterLoc(w));
 		final PlayerInventory pinv = p.getInventory();
 		p.setGameMode(GameMode.SURVIVAL);
 		pinv.setItem(2, Main.mkItm(Material.BLAZE_ROD, "§fНож \u9298", 10));
@@ -172,7 +172,7 @@ public class Gungame extends Arena {
 			pinv.setHelmet(Inventories.CTShop.getItem(GunType.helmSlt).clone());
 			pinv.setChestplate(Inventories.CTShop.getItem(GunType.chestSlt).clone());
 		}
-		p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 250, 250, true, false, false));
+		p.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 240, 240, true, false, false));
 		p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 40, 2, true, false, false));
 
 		gameScore(sh, p);
@@ -381,12 +381,12 @@ public class Gungame extends Arena {
 				Utils.sendTtlSbTtl(p, "", "§l§eПодготовка Оружейни...", 30);
 			}
 			
-			sh.teleport(sh.getEntity(), ApiOstrov.rndElmt(spots).getCenterLoc(w));
+			sh.teleport(sh.getEntity(), ClassUtil.rndElmt(spots).getCenterLoc(w));
 			
 			updateWeapon(sh);
-			sh.setTabTag(e.getValue().icn + " ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", e.getValue().clr);
-			sh.getEntity().addPotionEffect(new PotionEffect(PotionEffectType.SLOW,
-				250, 250, true, false, false));
+			sh.taq(e.getValue().icn + " ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", e.getValue().clr);
+			sh.getEntity().addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS,
+				240, 240, true, false, false));
 			sh.getEntity().addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING,
 				40, 2, true, false, false));
 		}
@@ -436,7 +436,7 @@ public class Gungame extends Arena {
 		for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
 			final LivingEntity le = e.getKey().getEntity();
 			if (le == null) continue;
-			le.removePotionEffect(PotionEffectType.SLOW);
+			le.removePotionEffect(PotionEffectType.SLOWNESS);
 			if (le instanceof final Player p) {
 				Utils.sendSbTtl(p, e.getValue().icn.substring(0, 2) + "§lВперед", 30);
 				PM.getOplayer(p).score.getSideBar().update(STAGE, "§7Cтадия: §5Бой");
@@ -564,7 +564,7 @@ public class Gungame extends Arena {
 				p.playSound(p, "cs.info." + e.getValue().finSnd, 10f, 1f);
 				p.sendMessage(msg);
 				Utils.sendTtlSbTtl(p, "§5Финиш", st, 40);
-				sh.setTabTag("§7<§d" + name + "§7> ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", Team.SPEC.clr);
+				sh.taq("§7<§d" + name + "§7> ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", Team.SPEC.clr);
 				winScore(sh, p, wn == Team.CTs);
 				if (e.getValue() == Team.SPEC) continue;
 				
@@ -578,7 +578,7 @@ public class Gungame extends Arena {
 				SkinQuest.tryCompleteQuest(sh, Quest.ДУША, ApiOstrov.getStat(p, Stat.CS_game));
 				sh.clearInv();
 			} else {
-				((BtShooter) sh).remove();
+				((BtShooter) sh).own().remove();
 			}
 		}
 
@@ -606,7 +606,7 @@ public class Gungame extends Arena {
 						if (p != null) {
 							PM.getOplayer(p).score.getSideBar().update(LIMIT, rtm);
 							if (e.getValue() == wn) {
-								final Firework fw = (Firework) p.getWorld().spawnEntity(p.getEyeLocation(), EntityType.FIREWORK);
+								final Firework fw = (Firework) p.getWorld().spawnEntity(p.getEyeLocation(), EntityType.FIREWORK_ROCKET);
 								final FireworkMeta fm = fw.getFireworkMeta();
 								fm.addEffect(fe);
 								fw.setFireworkMeta(fm);
@@ -713,10 +713,10 @@ public class Gungame extends Arena {
 		//Bukkit.broadcast(Component.text("ent-" + sh.getEntity().getEntityId() + ", sh-" + sh.name()));
 		final LivingEntity le = sh.getEntity();
 		if (gst == GameState.ROUND) {
-			sh.dropIts(le.getLocation());
+			sh.drop(le.getLocation());
 			addDth(sh);
 			if (sh instanceof BtShooter) {
-				((BtShooter) sh).die(le);
+				((BtShooter) sh).own().hide(le);
 			}
 		} else if (sh instanceof PlShooter) {
 			if (le.hasPotionEffect(PotionEffectType.GLOWING)) {
@@ -728,7 +728,7 @@ public class Gungame extends Arena {
 		}
 		if (gst != GameState.FINISH) {
 			final Location loc = rnd && gst != GameState.ROUND ?
-				Main.lobby.getCenterLoc() : Main.getNrLoc(ApiOstrov.rndElmt(spots), w);
+				Main.lobby.getCenterLoc() : Main.getNrLoc(ClassUtil.rndElmt(spots), w);
 			loc.getWorld().spawnParticle(Particle.PORTAL, loc, 200, 0.2D, 0.4D, 0.2D, 0.4D, null, false);
 			sh.teleport(le, loc);
 		}
@@ -740,18 +740,18 @@ public class Gungame extends Arena {
 			return;
 		}
 		
-		sh.item(Main.air.clone(), 0); sh.item(Main.air.clone(), 1);
-		sh.item(Main.mkItm(Material.BLAZE_ROD, "§fНож \u9298", 10), 2);
-		sh.item(Main.air.clone(), 3); sh.item(Main.air.clone(), 4);
+		sh.item(0, Main.air.clone()); sh.item(1, Main.air.clone());
+		sh.item(2, Main.mkItm(Material.BLAZE_ROD, "§fНож \u9298", 10));
+		sh.item(3, Main.air.clone()); sh.item(4, Main.air.clone());
 		
 		switch (shtrs.get(sh)) {
 		case Ts:
-			sh.item(Inventories.TShop.getItem(GunType.helmSlt).clone(), EquipmentSlot.HEAD);
-			sh.item(Inventories.TShop.getItem(GunType.chestSlt).clone(), EquipmentSlot.CHEST);
+			sh.item(EquipmentSlot.HEAD, Inventories.TShop.getItem(GunType.helmSlt).clone());
+			sh.item(EquipmentSlot.CHEST, Inventories.TShop.getItem(GunType.chestSlt).clone());
 			break;
 		case CTs:
-			sh.item(Inventories.CTShop.getItem(GunType.helmSlt).clone(), EquipmentSlot.HEAD);
-			sh.item(Inventories.CTShop.getItem(GunType.chestSlt).clone(), EquipmentSlot.CHEST);
+			sh.item(EquipmentSlot.HEAD, Inventories.CTShop.getItem(GunType.helmSlt).clone());
+			sh.item(EquipmentSlot.CHEST, Inventories.CTShop.getItem(GunType.chestSlt).clone());
 			break;
 		default:
 			break;
@@ -766,11 +766,11 @@ public class Gungame extends Arena {
 		} else {
 			final int mdl = sh.getModel(gt);
 			final NadeType nt = nadeFromPts(sh.money());
-			sh.item(Main.mkItm(Material.BLAZE_ROD, "§fНож \u9298", 10), 2);
-			sh.item(new ItemBuilder(gt.getMat()).name((mdl == GunType.defCMD ? "§5" + gt.toString() : 
+			sh.item(2, Main.mkItm(Material.BLAZE_ROD, "§fНож \u9298", 10));
+			sh.item(gt.prm ? 0 : 1, new ItemBuilder(gt.getMat()).name((mdl == GunType.defCMD ? "§5" + gt.toString() :
 				"§5" + gt.toString() + " '" + Main.nrmlzStr(Quest.getQuest(gt, mdl).toString()) + "'") + " " + gt.icn)
-			.setAmount(gt.amo).setModelData(mdl).build(), gt.prm ? 0 : 1);
-			sh.item(Inventories.CTShop.getItem(nt.slt).clone(), nt.prm ? NadeType.prmSlot : NadeType.scdSlot);
+			.amount(gt.amo).modelData(mdl).build());
+			sh.item(nt.prm ? NadeType.prmSlot : NadeType.scdSlot, Inventories.CTShop.getItem(nt.slt).clone());
 			//Bukkit.broadcast(Component.text("guns-" + sh.getEntity().getEntityId()));
 		}
 		
@@ -803,7 +803,7 @@ public class Gungame extends Arena {
 	public void addKll(final Shooter sh) {
 		sh.killsI();
 		sh.money(sh.money() + 1);
-		sh.setTabTag(shtrs.get(sh).icn + " ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", shtrs.get(sh).clr);
+		sh.taq(shtrs.get(sh).icn + " ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", shtrs.get(sh).clr);
 		updateWeapon(sh);
 		final Player p = sh.getPlayer();
 		if (p != null) {
@@ -817,7 +817,7 @@ public class Gungame extends Arena {
 	public void addDth(final Shooter sh) {
 		sh.deathsI();
 		sh.money(Math.max(sh.money() - 1, 0));
-		sh.setTabTag(shtrs.get(sh).icn + " ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", shtrs.get(sh).clr);
+		sh.taq(shtrs.get(sh).icn + " ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", shtrs.get(sh).clr);
 		updateWeapon(sh);
 		final Player p = sh.getPlayer();
 		if (p != null) {

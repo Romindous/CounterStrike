@@ -1,99 +1,79 @@
 package me.Romindous.CounterStrike.Listeners;
 
 import java.util.Map.Entry;
-
+import me.Romindous.CounterStrike.Game.Arena;
+import me.Romindous.CounterStrike.Game.Arena.Team;
+import me.Romindous.CounterStrike.Objects.Shooter;
+import net.kyori.adventure.audience.Audience;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-
-import io.papermc.paper.event.player.AsyncChatEvent;
-import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Game.Arena;
-import me.Romindous.CounterStrike.Game.Arena.Team;
-import me.Romindous.CounterStrike.Objects.Shooter;
-import me.Romindous.CounterStrike.Objects.Game.PlShooter;
-import net.kyori.adventure.audience.Audience;
-import net.kyori.adventure.text.Component;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.events.ChatPrepareEvent;
-import ru.komiss77.utils.TCUtils;
+import ru.komiss77.listener.ChatLst;
+import ru.komiss77.modules.player.Perm;
+import ru.komiss77.utils.StringUtil;
+import ru.komiss77.utils.TCUtil;
 
 public class ChatLis implements Listener {
 	
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onChat(final ChatPrepareEvent e) {
-        final Player p = e.getPlayer();
-        final PlShooter sh = Shooter.getPlShooter(p.getName(), true);
-		e.showLocal(false);
-    	if (sh.arena() == null) {
-            final Component c = TCUtils.format("§7(§5" + ApiOstrov.toSigFigs(
-        		(float) ApiOstrov.getStat(p, Stat.CS_kill) / (float) ApiOstrov.getStat(p, Stat.CS_death), (byte) 2) + "§7) ");
-            e.setSenderGameInfo(c);
-            e.setViewerGameInfo(c);
-    	} else {
-			switch (sh.arena().gst) {
-			case BUYTIME:
-			case ENDRND:
-			case ROUND:
-	    		e.sendProxy(false);
-	    		return;
-			case WAITING:
-			case BEGINING:
-			case FINISH:
-	            final Component c = TCUtils.format("§7[§5" + sh.arena().name + "§7] ");
-                e.setSenderGameInfo(c);
-                e.setViewerGameInfo(c);
-				break;
-			}
-		}
-    }
-	
-	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = false)
-	public void onAChat(final AsyncChatEvent e) {
-		final Player snd = e.getPlayer();
-		final Shooter pr = Shooter.getPlShooter(snd.getName(), true);
-		final String msg = TCUtils.toString(e.message());
+		final Player p = e.getPlayer();
+		final Shooter pr = Shooter.getPlShooter(p.getName(), true);
 		final Arena ar = pr.arena();
-		//если на арене
-		if (ar == null) {
+
+		final String msg = Perm.canColorChat(e.getOplayer())
+			? e.getMessage().replace('&', '§') : e.getMessage();
+		e.showLocal(true);
+		e.showSelf(false);
+    	if (ar == null) {
+			final Component modMsg = TCUtil.form("§7{§5" + StringUtil.toSigFigs(
+				(double) ApiOstrov.getStat(p, Stat.CS_kill) / (double) ApiOstrov.getStat(p, Stat.CS_death), (byte) 2) + "§7} "
+				+ ChatLst.NIK_COLOR + p.getName() + " §7[§5ЛОББИ§7] <gray><i>≫</i> " + msg);
 			for (final Audience au : e.viewers()) {
-				au.sendMessage(TCUtils.format(Main.prf().replace('[', '<').replace(']', '>') + snd.getName() + " §7[§5ЛОББИ§7] §o≫ §7" + msg));
+				au.sendMessage(modMsg);
 			}
-		} else {
+			p.sendMessage(modMsg);
+    	} else {
+			final Component modMsg;
 			final Team tm = ar.shtrs.get(pr);
 			switch (ar.gst) {
 			case WAITING:
 			case BEGINING:
 			case FINISH:
+				modMsg = TCUtil.form(tm.clr + p.getName() + " §7[§d" + ar.name + "§7] <gray><i>≫</i> " + msg);
 				for (final Audience au : e.viewers()) {
-					au.sendMessage(TCUtils.format(Main.prf().replace('[', '<').replace(']', '>') + snd.getName() + " §7[§d" + ar.name + "§7] §o≫ §7" + msg));
+					au.sendMessage(modMsg);
 				}
+				p.sendMessage(modMsg);
 				break;
 			case BUYTIME:
 			case ROUND:
 			case ENDRND:
 				if (msg.startsWith("!")) {
 					if (msg.length() > 1) {
+						modMsg = TCUtil.form("§7[Всем] " + tm.clr + p.getName() + " <gray><i>≫</i> " + msg.substring(1));
 						for (final Shooter sh : ar.shtrs.keySet()) {
-							final Player p = sh.getPlayer();
-							if (p != null) {
-								p.sendMessage(TCUtils.format("§7[Всем] " + tm.clr + 
-									snd.getName() + " §7§o≫ §7" + msg.substring(1)));
-								p.playSound(p.getLocation(), Sound.BLOCK_GRINDSTONE_USE, 1f, 1.4f);
+							final Player pl = sh.getPlayer();
+							if (pl != null) {
+								pl.sendMessage(modMsg);
+								pl.playSound(pl.getLocation(), Sound.BLOCK_GRINDSTONE_USE, 1f, 1.4f);
 							}
 						}
 					}
 				} else {
+					modMsg = TCUtil.form("§7[" + tm.icn + "§7] " + p.getName() + " <gray><i>≫</i> " + msg);
 					for (final Entry<Shooter, Team> n : ar.shtrs.entrySet()) {
 						if (n.getValue() == tm) {
-							final Player p = n.getKey().getPlayer();
-							if (p != null) {
-								p.sendMessage(TCUtils.format("§7[" + tm.icn + "§7] " + 
-									snd.getName() + " §7§o≫ §7" + msg));
-								p.playSound(p.getLocation(), Sound.BLOCK_GRINDSTONE_USE, 1f, 2f);
+							final Player pl = n.getKey().getPlayer();
+							if (pl != null) {
+								pl.sendMessage(modMsg);
+								pl.playSound(pl.getLocation(), Sound.BLOCK_GRINDSTONE_USE, 1f, 2f);
 							}
 						}
 					}
@@ -101,6 +81,6 @@ public class ChatLis implements Listener {
 				break;
 			}
 		}
-        e.viewers().clear();
+		e.viewers().clear();
     }
 }

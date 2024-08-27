@@ -1,6 +1,7 @@
 package me.Romindous.CounterStrike.Listeners;
 
 import io.papermc.paper.event.player.PlayerStopUsingItemEvent;
+import io.papermc.paper.math.Position;
 import me.Romindous.CounterStrike.Enums.GameState;
 import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Enums.NadeType;
@@ -20,7 +21,6 @@ import me.Romindous.CounterStrike.Objects.Skins.Quest;
 import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
 import me.Romindous.CounterStrike.Utils.Inventories;
 import me.Romindous.CounterStrike.Utils.Utils;
-import net.minecraft.core.BaseBlockPosition;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -41,8 +41,9 @@ import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.modules.world.XYZ;
-import ru.komiss77.utils.ItemUtils;
-import ru.komiss77.utils.TCUtils;
+import ru.komiss77.utils.ItemUtil;
+import ru.komiss77.utils.ScreenUtil;
+import ru.komiss77.utils.TCUtil;
 import ru.komiss77.utils.inventory.SmartInventory;
 
 public class InterrLis implements Listener {
@@ -152,7 +153,7 @@ public class InterrLis implements Listener {
 				e.setUseItemInHand(Result.DENY);
 				sh = Shooter.getPlShooter(p.getName(), true);
 				if (gt.snp && p.isSneaking()) {
-					if (ItemUtils.isBlank(p.getInventory().getItemInOffHand(), false))
+					if (ItemUtil.isBlank(p.getInventory().getItemInOffHand(), false))
 						p.getInventory().setItemInOffHand(Main.spy);
 					e.setUseItemInHand(Result.ALLOW);
 					sh.scope(true);
@@ -244,20 +245,20 @@ public class InterrLis implements Listener {
 								switch (tm) {
 								case Ts:
 									inv = Inventories.TShop;
-									if (ItemUtils.isBlank(inv.getItem(4), false)) {
+									if (ItemUtil.isBlank(inv.getItem(4), false)) {
 										Inventories.fillTsInv();
 									}
 									break;
 								case CTs:
 									inv = Inventories.CTShop;
-									if (ItemUtils.isBlank(inv.getItem(4), false)) {
+									if (ItemUtil.isBlank(inv.getItem(4), false)) {
 										Inventories.fillCTsInv();
 									}
 									break;
 								case SPEC:
 								default:
 									inv = Inventories.LBShop;
-									if (ItemUtils.isBlank(inv.getItem(4), false)) {
+									if (ItemUtil.isBlank(inv.getItem(4), false)) {
 										Inventories.fillLbbInv();
 									}
 									break;
@@ -271,20 +272,20 @@ public class InterrLis implements Listener {
 									switch (tm) {
 									case Ts:
 										inv = Inventories.TShop;
-										if (ItemUtils.isBlank(inv.getItem(4), false)) {
+										if (ItemUtil.isBlank(inv.getItem(4), false)) {
 											Inventories.fillTsInv();
 										}
 										break;
 									case CTs:
 										inv = Inventories.CTShop;
-										if (ItemUtils.isBlank(inv.getItem(4), false)) {
+										if (ItemUtil.isBlank(inv.getItem(4), false)) {
 											Inventories.fillCTsInv();
 										}
 										break;
 									case SPEC:
 									default:
 										inv = Inventories.LBShop;
-										if (ItemUtils.isBlank(inv.getItem(4), false)) {
+										if (ItemUtil.isBlank(inv.getItem(4), false)) {
 											Inventories.fillLbbInv();
 										}
 										break;
@@ -322,13 +323,13 @@ public class InterrLis implements Listener {
 									final Bomb bmb = df.getBomb();
 									if (bmb != null) {
 										if (bmb.defusing == null) {
-											final Inventory def = Bukkit.createInventory(null, bg ? 54 : 27, TCUtils.format("§3§lРазминировка Бомбы"));
+											final Inventory def = Bukkit.createInventory(null, bg ? 54 : 27, TCUtil.form("§3§lРазминировка Бомбы"));
 											p.getWorld().playSound(b.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 0.5f);
 											def.setContents(Inventories.fillDfsInv((byte) (bg ? 54 : 27)));
 											p.openInventory(def);
 											bmb.defusing = sh;
 										} else {
-											ApiOstrov.sendActionBarDirect(p, "§c§lЭту бомбу уже обезвреживают!");
+											ScreenUtil.sendActionBarDirect(p, "§c§lЭту бомбу уже обезвреживают!");
 										}
 									}
 								}
@@ -337,13 +338,13 @@ public class InterrLis implements Listener {
 									final Mobber m = in.mbbrs.get(new WXYZ(b).getSLoc());
 									if (m != null && m.isAlive()) {
 										if (m.defusing == null) {
-											final Inventory def = Bukkit.createInventory(null, 54, TCUtils.format("§3§lОбезвреживание Спавнера"));
+											final Inventory def = Bukkit.createInventory(null, 54, TCUtil.form("§3§lОбезвреживание Спавнера"));
 											p.getWorld().playSound(b.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 0.5f);
 											def.setContents(Inventories.fillDfSpInv(m, (byte) 54, bg));
 											p.openInventory(def);
 											m.defusing = sh;
 										} else {
-											ApiOstrov.sendActionBarDirect(p, "§c§lЭтот спавнер уже обезвреживают!");
+											ScreenUtil.sendActionBarDirect(p, "§c§lЭтот спавнер уже обезвреживают!");
 										}
 									}
 								}
@@ -379,12 +380,12 @@ public class InterrLis implements Listener {
 						}
 						break;
 					case CAMPFIRE:
-						if (it.hasItemMeta() && TCUtils.stripColor(it.getItemMeta().displayName()).equals("Выбор Игры")) {
+						if (it.hasItemMeta() && TCUtil.strip(it.getItemMeta().displayName()).equals("Выбор Игры")) {
 							Arena.gameInv.open(p);
 						}
 						break;
 					case TOTEM_OF_UNDYING:
-						if (it.hasItemMeta() && TCUtils.stripColor(it.getItemMeta().displayName()).equals("Выбор Обшивки")) {
+						if (it.hasItemMeta() && TCUtil.strip(it.getItemMeta().displayName()).equals("Выбор Обшивки")) {
 							SmartInventory.builder().size(6, 9)
                             .id("Skins "+p.getName())
                             .title("§6Выберите Обшивку")
@@ -393,7 +394,7 @@ public class InterrLis implements Listener {
 						}
 						break;
 					case NETHER_STAR:
-						if (it.hasItemMeta() && TCUtils.stripColor(it.getItemMeta().displayName()).equals("Выбор Комманды")) {
+						if (it.hasItemMeta() && TCUtil.strip(it.getItemMeta().displayName()).equals("Выбор Комманды")) {
 							sh = Shooter.getPlShooter(p.getName(), true);
 							p.playSound(p.getLocation(), Sound.BLOCK_CONDUIT_ATTACK_TARGET, 1f, 2f);
 							if (sh.arena() != null) {
@@ -410,7 +411,7 @@ public class InterrLis implements Listener {
 						}
 						break;
 					case HEART_OF_THE_SEA:
-						if (it.hasItemMeta() && TCUtils.stripColor(it.getItemMeta().displayName()).equals("Боторейка")) {
+						if (it.hasItemMeta() && TCUtil.strip(it.getItemMeta().displayName()).equals("Боторейка")) {
 							sh = Shooter.getPlShooter(p.getName(), true);
 							if (sh.arena() != null && sh.arena().botInv != null) {
 								p.playSound(p.getLocation(), Sound.BLOCK_BREWING_STAND_BREW, 1f, 1.6f);
@@ -419,12 +420,12 @@ public class InterrLis implements Listener {
 						}
 						break;
 					case MAGMA_CREAM:
-						if (it.hasItemMeta() && TCUtils.stripColor(it.getItemMeta().displayName()).equals("Выход в Лобби")) {
+						if (it.hasItemMeta() && TCUtil.strip(it.getItemMeta().displayName()).equals("Выход в Лобби")) {
 							ApiOstrov.sendToServer(p, "lobby1", "");
 						}
 						break;
 					case SLIME_BALL:
-						if (it.hasItemMeta() && TCUtils.stripColor(it.getItemMeta().displayName()).equals("Выход")) {
+						if (it.hasItemMeta() && TCUtil.strip(it.getItemMeta().displayName()).equals("Выход")) {
 							final Arena ar = Shooter.getPlShooter(p.getName(), true).arena();
 							if (ar == null) {
 								p.sendMessage(Main.prf() + "§cВы не находитесь в игре!");
@@ -499,7 +500,7 @@ public class InterrLis implements Listener {
 		if (e.getItem().getType() == Material.GOLDEN_APPLE && ar != null && ar instanceof Defusal && ar.gst == GameState.ROUND) {
 			if (canPlcBmb(p.getLocation(), (Defusal) ar)) {
 				p.getInventory().setItemInMainHand(new ItemStack(Material.CRIMSON_BUTTON));
-				Main.plnts.put(p, new BaseBlockPosition(p.getLocation().getBlockX(), p.getLocation().getBlockY(), p.getLocation().getBlockZ()));
+				Main.plnts.put(p, Position.block(p.getLocation().getBlockX(), p.getLocation().getBlockY(), p.getLocation().getBlockZ()));
 				Utils.sendAcBr(p, "§d§lВыбирите место для установки бомбы...");
 			} else {
             	Utils.sendAcBr(p, "§c§lБомбу можно ставить только на точках!");

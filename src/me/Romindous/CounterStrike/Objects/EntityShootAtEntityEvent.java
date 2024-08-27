@@ -12,9 +12,10 @@ import com.google.common.base.Function;
 
 public class EntityShootAtEntityEvent extends EntityDamageByEntityEvent {
 
-	private final boolean hst;
-	public final boolean wb;
-	public final boolean nscp;
+	private final boolean headshot;
+	public final boolean wallbang;
+	public final boolean noscope;
+	public final boolean smoked;
 
 	@SuppressWarnings("deprecation")
 	private static final Map<DamageModifier, Double> mods = new EnumMap<DamageModifier, Double>(DamageModifier.class);
@@ -22,13 +23,14 @@ public class EntityShootAtEntityEvent extends EntityDamageByEntityEvent {
 	private static final Map<DamageModifier, Function<Double, Double>> fnks = new EnumMap<DamageModifier, Function<Double, Double>>(DamageModifier.class);
 	
 	public EntityShootAtEntityEvent(final LivingEntity dmgr, final LivingEntity ent,
-		final double dmg, final boolean hst, final boolean wb, final boolean nscp) {
+		final double dmg, final boolean headshot, final boolean wallbang, final boolean noscope, final boolean smoked) {
 		super(dmgr, ent, DamageCause.ENTITY_ATTACK,
 			DamageSource.builder(DamageType.PLAYER_ATTACK).build(),
-			makeDmgMods(dmg), makeDmgFnks(dmg), hst);
-		this.hst = hst;
-		this.wb = wb;
-		this.nscp = nscp;
+			makeDmgMods(dmg), makeDmgFnks(dmg), headshot);
+		this.headshot = headshot;
+		this.wallbang = wallbang;
+		this.noscope = noscope;
+		this.smoked = smoked;
 	}
 
 	@SuppressWarnings("deprecation")
@@ -43,6 +45,6 @@ public class EntityShootAtEntityEvent extends EntityDamageByEntityEvent {
 	
 	@Override
 	public boolean isCritical() {
-		return hst;
+		return headshot;
 	}
 }

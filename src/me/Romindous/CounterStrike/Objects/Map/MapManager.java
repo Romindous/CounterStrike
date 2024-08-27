@@ -13,7 +13,7 @@ import org.bukkit.entity.Player;
 import me.Romindous.CounterStrike.Main;
 import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.utils.ItemBuilder;
-import ru.komiss77.utils.TCUtils;
+import ru.komiss77.utils.TCUtil;
 import ru.komiss77.utils.inventory.ClickableItem;
 import ru.komiss77.utils.inventory.InputButton;
 import ru.komiss77.utils.inventory.InputButton.InputType;
@@ -38,14 +38,14 @@ public class MapManager implements InventoryProvider {
 		edits.put(pl.getUniqueId(), this);
 		
 		its.set(4, new InputButton(InputType.ANVILL, //имя
-			new ItemBuilder(Material.GLOBE_BANNER_PATTERN).name("§5" + stp.nm).addLore(Arrays.asList("§dКлик §7- изменить имя")).build(), "Карта", nm -> {
+			new ItemBuilder(Material.GLOBE_BANNER_PATTERN).name("§5" + stp.nm).lore(Arrays.asList("§dКлик §7- изменить имя")).build(), "Карта", nm -> {
 			stp = new Setup(nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, stp.dims,
 				stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 			reopen(pl, its);
 		}));
 		
 		its.set(7, ClickableItem.of(new ItemBuilder(Material.RABBIT_HIDE).name("§7Минимум Игроков")
-			.setAmount(stp.min).addLore(Arrays.asList("§dЛКМ §7= +1", "§cПКМ §7= -1")).build(), e -> {
+			.amount(stp.min).lore(Arrays.asList("§dЛКМ §7= +1", "§cПКМ §7= -1")).build(), e -> {
 			switch (e.getClick()) {
 			case RIGHT, SHIFT_RIGHT:
 				if (stp.min == 1) return;
@@ -63,7 +63,7 @@ public class MapManager implements InventoryProvider {
 		}));
 		
 		its.set(8, ClickableItem.of(new ItemBuilder(Material.LEATHER).name("§7Максимум Игроков")
-			.setAmount(stp.max).addLore(Arrays.asList("§dЛКМ §7= +1", "§cПКМ §7= -1")).build(), e -> {
+			.amount(stp.max).lore(Arrays.asList("§dЛКМ §7= +1", "§cПКМ §7= -1")).build(), e -> {
 			switch (e.getClick()) {
 			case RIGHT, SHIFT_RIGHT:
 				if (stp.max == 1) return;
@@ -81,7 +81,7 @@ public class MapManager implements InventoryProvider {
 		}));
 		
 		if (stp.rnd) {
-			its.set(5, ClickableItem.of(new ItemBuilder(Material.POTION).name("§7Рандом: §aВкл").addLore(Arrays.asList("§dКлик §7- Выкл")).build(), e -> {
+			its.set(5, ClickableItem.of(new ItemBuilder(Material.POTION).name("§7Рандом: §aВкл").lore(Arrays.asList("§dКлик §7- Выкл")).build(), e -> {
 				stp = new Setup(stp.nm, stp.min, stp.max, false, stp.fin, stp.bots, stp.dims, 
 					stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
@@ -89,7 +89,7 @@ public class MapManager implements InventoryProvider {
 			}));
 
 			its.set(17, new InputButton(InputType.ANVILL, new ItemBuilder(Material.TARGET)
-				.name("§7Размер карты: " + stp.dims).addLore(Arrays.asList("§dКлик §7- изменить")).build(),
+				.name("§7Размер карты: " + stp.dims).lore(Arrays.asList("§dКлик §7- изменить")).build(),
 				(stp.dims == null ? MapBuilder.dftMapDims : stp.dims).toString(), nm -> {
 				final XYZ ndm = XYZ.fromString(nm);
 				stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, ndm == null ? MapBuilder.dftMapDims
@@ -99,7 +99,7 @@ public class MapManager implements InventoryProvider {
 			}));
 
 			its.set(16, ClickableItem.of(new ItemBuilder(stp.ceil).name("§7Потолок: " + stp.ceil.name())
-				.addLore(Arrays.asList("§dКлик блоком §7- изменить")).build(), e -> {
+				.lore(Arrays.asList("§dКлик блоком §7- изменить")).build(), e -> {
 				final Material crs = e.getCursor().getType();
 				stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, stp.bots, stp.dims, crs.isAir() || !crs.isBlock()
 					? Material.STONE : crs, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
@@ -108,14 +108,14 @@ public class MapManager implements InventoryProvider {
 			}));
 			
 			if (stp.bots) {
-				its.set(10, ClickableItem.of(new ItemBuilder(Material.FERMENTED_SPIDER_EYE).name("§7Боты: §aВкл").addLore(Arrays.asList("§dКлик §7- Выкл")).build(), e -> {
+				its.set(10, ClickableItem.of(new ItemBuilder(Material.FERMENTED_SPIDER_EYE).name("§7Боты: §aВкл").lore(Arrays.asList("§dКлик §7- Выкл")).build(), e -> {
 					stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, false, stp.dims,
 						stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 					reopen(pl, its);
 				}));
 			} else {
-				its.set(10, ClickableItem.of(new ItemBuilder(Material.SPIDER_EYE).name("§7Боты: §cВыкл").addLore(Arrays.asList("§dКлик §7- Вкл")).build(), e -> {
+				its.set(10, ClickableItem.of(new ItemBuilder(Material.SPIDER_EYE).name("§7Боты: §cВыкл").lore(Arrays.asList("§dКлик §7- Вкл")).build(), e -> {
 					stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, true, stp.dims,
 						stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
@@ -125,7 +125,7 @@ public class MapManager implements InventoryProvider {
 			
 			its.set(0, new InputButton(InputType.ANVILL, new ItemBuilder(Material.ENDER_EYE)
 				.name("§7Мир для §5Классики§7: " + stp.worlds.get(GameType.DEFUSAL))
-				.addLore(Arrays.asList("§dКлик §7- изменить")).build(), pl.getWorld().getName(), nm -> {
+				.lore(Arrays.asList("§dКлик §7- изменить")).build(), pl.getWorld().getName(), nm -> {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(GameType.class);
 				worlds.putAll(stp.worlds);
 				worlds.put(GameType.DEFUSAL, nm);
@@ -137,7 +137,7 @@ public class MapManager implements InventoryProvider {
 			
 			its.set(1, new InputButton(InputType.ANVILL, new ItemBuilder(Material.ENDER_PEARL)
 				.name("§7Мир для §5Эстафеты§7: " + stp.worlds.get(GameType.GUNGAME))
-				.addLore(Arrays.asList("§dКлик §7- изменить")).build(), pl.getWorld().getName(), nm -> {
+				.lore(Arrays.asList("§dКлик §7- изменить")).build(), pl.getWorld().getName(), nm -> {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(GameType.class);
 				worlds.putAll(stp.worlds);
 				worlds.put(GameType.GUNGAME, nm);
@@ -149,7 +149,7 @@ public class MapManager implements InventoryProvider {
 			
 			its.set(2, new InputButton(InputType.ANVILL, new ItemBuilder(Material.END_PORTAL_FRAME)
 				.name("§7Мир для §5Вторжения§7: " + stp.worlds.get(GameType.INVASION))
-				.addLore(Arrays.asList("§dКлик §7- изменить")).build(), pl.getWorld().getName(), nm -> {
+				.lore(Arrays.asList("§dКлик §7- изменить")).build(), pl.getWorld().getName(), nm -> {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(GameType.class);
 				worlds.putAll(stp.worlds);
 				worlds.put(GameType.INVASION, nm);
@@ -160,7 +160,7 @@ public class MapManager implements InventoryProvider {
 			}));
 
         } else {
-			its.set(5, ClickableItem.of(new ItemBuilder(Material.GLASS_BOTTLE).name("§7Рандом: §cВыкл").addLore(Arrays.asList("§dКлик §7- Вкл")).build(), e -> {
+			its.set(5, ClickableItem.of(new ItemBuilder(Material.GLASS_BOTTLE).name("§7Рандом: §cВыкл").lore(Arrays.asList("§dКлик §7- Вкл")).build(), e -> {
 				stp = new Setup(stp.nm, stp.min, stp.max, true, stp.fin, stp.bots, stp.dims, 
 					stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 				pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
@@ -181,7 +181,7 @@ public class MapManager implements InventoryProvider {
 			} else {
 				plr.add("§7Точек еще нет...");
 			}
-			its.set(15, ClickableItem.of(new ItemBuilder(Material.PURPLE_DYE).name("§7Точки Карты").addLore(plr).build(), e -> {
+			its.set(15, ClickableItem.of(new ItemBuilder(Material.PURPLE_DYE).name("§7Точки Карты").lore(plr).build(), e -> {
 				switch (e.getClick()) {
 				case SHIFT_LEFT:
 					if (sps) {
@@ -236,7 +236,7 @@ public class MapManager implements InventoryProvider {
 					tslr.add("§7" + i + ") " + stp.tSpawns[i-1].toString().substring(1));
 				}
 			}
-			its.set(16, ClickableItem.of(new ItemBuilder(Material.REDSTONE_BLOCK).name("§7Спавны §4Террористов").addLore(tslr).build(), e -> {
+			its.set(16, ClickableItem.of(new ItemBuilder(Material.REDSTONE_BLOCK).name("§7Спавны §4Террористов").lore(tslr).build(), e -> {
 				switch (e.getClick()) {
 				case SHIFT_LEFT:
 					if (stp.tSpawns != null) {
@@ -293,7 +293,7 @@ public class MapManager implements InventoryProvider {
 					ctslr.add("§7" + i + ") " + stp.ctSpawns[i-1].toString().substring(1));
 				}
 			}
-			its.set(17, ClickableItem.of(new ItemBuilder(Material.LAPIS_BLOCK).name("§7Спавны §3Спецназа").addLore(ctslr).build(), e -> {
+			its.set(17, ClickableItem.of(new ItemBuilder(Material.LAPIS_BLOCK).name("§7Спавны §3Спецназа").lore(ctslr).build(), e -> {
 				switch (e.getClick()) {
 				case SHIFT_LEFT:
 					if (stp.ctSpawns != null) {
@@ -338,7 +338,7 @@ public class MapManager implements InventoryProvider {
 			}));
 			
 			its.set(25, ClickableItem.of(new ItemBuilder(Material.DIAMOND_BLOCK).name("§7Точка §bA")
-				.addLore(Arrays.asList("§dКлик §7- поставить", "§eШифт+Клик §7- показать", stp.A == null ? 
+				.lore(Arrays.asList("§dКлик §7- поставить", "§eШифт+Клик §7- показать", stp.A == null ? 
 					"§7Не поставлена..." : "§7Точка: " + stp.A.toString().substring(1))).build(), e -> {
 				switch (e.getClick()) {
 				case SHIFT_LEFT, SHIFT_RIGHT:
@@ -359,7 +359,7 @@ public class MapManager implements InventoryProvider {
 			}));
 			
 			its.set(26, ClickableItem.of(new ItemBuilder(Material.GOLD_BLOCK).name("§7Точка §6B")
-				.addLore(Arrays.asList("§dКлик §7- поставить", "§eШифт+Клик §7- показать", stp.B == null ? 
+				.lore(Arrays.asList("§dКлик §7- поставить", "§eШифт+Клик §7- показать", stp.B == null ? 
 					"§7Не поставлена..." : "§7Точка: " + stp.B.toString().substring(1))).build(), e -> {
 				switch (e.getClick()) {
 				case SHIFT_LEFT, SHIFT_RIGHT:
@@ -380,7 +380,7 @@ public class MapManager implements InventoryProvider {
 			}));
 			
 			/*its.set(12, ClickableItem.of(new ItemBuilder(Material.RAW_IRON_BLOCK).name("§7Нижняя Точка Карты")
-				.addLore(Arrays.asList("§dКлик §7- поставить", "§eШифт+Клик §7- показать", stp.bot == null ? 
+				.lore(Arrays.asList("§dКлик §7- поставить", "§eШифт+Клик §7- показать", stp.bot == null ? 
 					"§7Не поставлена..." : "§7Точка: " + stp.bot.toString().substring(1))).build(), e -> {
 				switch (e.getClick()) {
 				case SHIFT_LEFT, SHIFT_RIGHT:
@@ -401,7 +401,7 @@ public class MapManager implements InventoryProvider {
 			}));
 			
 			its.set(13, ClickableItem.of(new ItemBuilder(Material.RAW_GOLD_BLOCK).name("§7Верхняя Точка Карты")
-				.addLore(Arrays.asList("§dКлик §7- поставить", "§eШифт+Клик §7- показать", stp.top == null ? 
+				.lore(Arrays.asList("§dКлик §7- поставить", "§eШифт+Клик §7- показать", stp.top == null ? 
 					"§7Не поставлена..." : "§7Точка: " + stp.top.toString().substring(1))).build(), e -> {
 				switch (e.getClick()) {
 				case SHIFT_LEFT, SHIFT_RIGHT:
@@ -422,14 +422,14 @@ public class MapManager implements InventoryProvider {
 			}));*/
 			
 			if (stp.bots) {
-				its.set(10, ClickableItem.of(new ItemBuilder(Material.FERMENTED_SPIDER_EYE).name("§7Боты: §aВкл").addLore(Arrays.asList("§dКлик §7- Выкл")).build(), e -> {
+				its.set(10, ClickableItem.of(new ItemBuilder(Material.FERMENTED_SPIDER_EYE).name("§7Боты: §aВкл").lore(Arrays.asList("§dКлик §7- Выкл")).build(), e -> {
 					stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, false, stp.dims,
 						stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
 					reopen(pl, its);
 				}));
 			} else {
-				its.set(10, ClickableItem.of(new ItemBuilder(Material.SPIDER_EYE).name("§7Боты: §cВыкл").addLore(Arrays.asList("§dКлик §7- Вкл")).build(), e -> {
+				its.set(10, ClickableItem.of(new ItemBuilder(Material.SPIDER_EYE).name("§7Боты: §cВыкл").lore(Arrays.asList("§dКлик §7- Вкл")).build(), e -> {
 					stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, stp.fin, true, stp.dims,
 						stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
 					pl.playSound(pl.getLocation(), Sound.BLOCK_COMPARATOR_CLICK, 1f, 1.4f);
@@ -439,7 +439,7 @@ public class MapManager implements InventoryProvider {
 			
 			its.set(0, new InputButton(InputType.ANVILL, new ItemBuilder(Material.ENDER_EYE)
 				.name("§7Мир для §5Классики§7: " + stp.worlds.get(GameType.DEFUSAL))
-				.addLore(Arrays.asList("§dКлик §7- изменить")).build(), pl.getWorld().getName(), nm -> {
+				.lore(Arrays.asList("§dКлик §7- изменить")).build(), pl.getWorld().getName(), nm -> {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(GameType.class);
 				worlds.putAll(stp.worlds);
 				worlds.put(GameType.DEFUSAL, nm);
@@ -451,7 +451,7 @@ public class MapManager implements InventoryProvider {
 			
 			its.set(1, new InputButton(InputType.ANVILL, new ItemBuilder(Material.ENDER_PEARL)
 				.name("§7Мир для §5Эстафеты§7: " + stp.worlds.get(GameType.GUNGAME))
-				.addLore(Arrays.asList("§dКлик §7- изменить")).build(), pl.getWorld().getName(), nm -> {
+				.lore(Arrays.asList("§dКлик §7- изменить")).build(), pl.getWorld().getName(), nm -> {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(GameType.class);
 				worlds.putAll(stp.worlds);
 				worlds.put(GameType.GUNGAME, nm);
@@ -463,7 +463,7 @@ public class MapManager implements InventoryProvider {
 			
 			its.set(2, new InputButton(InputType.ANVILL, new ItemBuilder(Material.END_PORTAL_FRAME)
 				.name("§7Мир для §5Вторжения§7: " + stp.worlds.get(GameType.INVASION))
-				.addLore(Arrays.asList("§dКлик §7- изменить")).build(), pl.getWorld().getName(), nm -> {
+				.lore(Arrays.asList("§dКлик §7- изменить")).build(), pl.getWorld().getName(), nm -> {
 				final EnumMap<GameType, String> worlds = new EnumMap<>(GameType.class);
 				worlds.putAll(stp.worlds);
 				worlds.put(GameType.INVASION, nm);
@@ -478,7 +478,7 @@ public class MapManager implements InventoryProvider {
         if (stp.isReady()) {
             stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, true, stp.bots, stp.dims,
 				stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
-            its.set(22, ClickableItem.of(new ItemBuilder(Material.KNOWLEDGE_BOOK).name("§aГотово").addLore(Arrays.asList("§7Закрыть редактор!")).build(), e -> {
+            its.set(22, ClickableItem.of(new ItemBuilder(Material.KNOWLEDGE_BOOK).name("§aГотово").lore(Arrays.asList("§7Закрыть редактор!")).build(), e -> {
                 pl.playSound(pl.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
                 pl.sendMessage(Main.prf() + "Карта §d" + stp.nm + " §7сохранена!");
                 Main.nnactvarns.put(stp.nm, stp);
@@ -490,11 +490,11 @@ public class MapManager implements InventoryProvider {
         } else {
             stp = new Setup(stp.nm, stp.min, stp.max, stp.rnd, false, stp.bots, stp.dims,
 				stp.ceil, stp.tSpawns, stp.ctSpawns, stp.spots, stp.A, stp.B, stp.worlds);
-            its.set(22, ClickableItem.empty(new ItemBuilder(Material.GRAY_DYE).name("§cНе Готово").addLore(Arrays.asList("§7Какие-то поля пустые!")).build()));
+            its.set(22, ClickableItem.empty(new ItemBuilder(Material.GRAY_DYE).name("§cНе Готово").lore(Arrays.asList("§7Какие-то поля пустые!")).build()));
         }
 
         its.set(18, new InputButton(InputType.ANVILL, new ItemBuilder(Material.BARRIER)
-        .name("§4Удалить").addLore(Arrays.asList("§7Невозвратимо!")).build(), stp.nm, e -> {
+        .name("§4Удалить").lore(Arrays.asList("§7Невозвратимо!")).build(), stp.nm, e -> {
 			pl.playSound(pl.getLocation(), Sound.BLOCK_BEACON_DEACTIVATE, 1f, 1f);
 			pl.sendMessage(Main.prf() + "Карта §5" + stp.nm + " §7удалена!");
 			edits.remove(pl.getUniqueId());
@@ -546,9 +546,9 @@ public class MapManager implements InventoryProvider {
 			}
 		}
 		for (final TileSet ts : tss) {
-			p.sendMessage(TCUtils.format("No schem ").append(TCUtils.format(stp.ceil.name().charAt(0) + Setup.sep + ts.name())
+			p.sendMessage(TCUtil.form("No schem ").append(TCUtil.form(stp.ceil.name().charAt(0) + Setup.sep + ts.name())
 				.clickEvent(ClickEvent.copyToClipboard(stp.ceil.name().charAt(0) + Setup.sep + ts.name()))
-				.hoverEvent(HoverEvent.showText(TCUtils.format("Клик - копировать")))));
+				.hoverEvent(HoverEvent.showText(TCUtil.form("Клик - копировать")))));
 		}
 	}
 	

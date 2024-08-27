@@ -1,5 +1,11 @@
 package me.Romindous.CounterStrike;
 
+import java.io.File;
+import java.io.IOException;
+import java.security.SecureRandom;
+import java.util.*;
+import java.util.Map.Entry;
+import io.papermc.paper.math.BlockPosition;
 import me.Romindous.CounterStrike.Enums.GameType;
 import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Game.Arena;
@@ -15,7 +21,6 @@ import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Utils.Inventories;
 import me.Romindous.CounterStrike.Utils.Utils;
 import net.kyori.adventure.text.Component;
-import net.minecraft.core.BaseBlockPosition;
 import org.bukkit.*;
 import org.bukkit.World.Environment;
 import org.bukkit.attribute.Attribute;
@@ -36,20 +41,17 @@ import org.bukkit.util.Vector;
 import org.joml.Vector3f;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.Ostrov;
+import ru.komiss77.enums.Game;
 import ru.komiss77.enums.Stat;
+import ru.komiss77.modules.games.GM;
 import ru.komiss77.modules.player.PM;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.modules.world.WorldManager;
 import ru.komiss77.modules.world.WorldManager.Generator;
 import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.utils.ItemBuilder;
-import ru.komiss77.utils.TCUtils;
-
-import java.io.File;
-import java.io.IOException;
-import java.security.SecureRandom;
-import java.util.*;
-import java.util.Map.Entry;
+import ru.komiss77.utils.StringUtil;
+import ru.komiss77.utils.TCUtil;
  
 public final class Main extends JavaPlugin implements Listener {
 	
@@ -65,9 +67,9 @@ public final class Main extends JavaPlugin implements Listener {
 		bmb = Main.mkItm(Material.GOLDEN_APPLE, "§4§lС*4 §c\u926e",
 			10, "§dПКМ §7- Заложить бомбу", "§7Можно установить на точку §5A §7или §5B"),
 		thelm = new ItemBuilder(Material.LEATHER_HELMET).name("§cШапка Террориста §f\u9267")
-			.addLore("§7Цена: §d" + GunType.helmPrc + " §6⛃").setColor(Color.RED).build(),
+			.lore("§7Цена: §d" + GunType.helmPrc + " §6⛃").color(Color.RED).build(),
 		cthelm = new ItemBuilder(Material.LEATHER_HELMET).name("§3Шлем Спецназа §f\u9267")
-			.addLore("§7Цена: §d" + GunType.helmPrc + " §6⛃").setColor(Color.TEAL).build();
+			.lore("§7Цена: §d" + GunType.helmPrc + " §6⛃").color(Color.TEAL).build();
 
 	private static final HashMap<UUID, LivingEntity[]> wlents = new HashMap<>();
 	
@@ -75,9 +77,9 @@ public final class Main extends JavaPlugin implements Listener {
 	public static final HashMap<String, Setup> nnactvarns = new HashMap<>();
 	public static final HashMap<String, PlShooter> shtrs = new HashMap<>();
 
-	public static final HashSet<WXYZ> ckracks = new HashSet<>();
+	public static final HashSet<WXYZ> cracks = new HashSet<>();
 	public static final ArrayList<WXYZ> ndBlks = new ArrayList<>();
-	public static final HashMap<Player, BaseBlockPosition> plnts = new HashMap<>();
+	public static final HashMap<Player, BlockPosition> plnts = new HashMap<>();
 	public static final HashMap<String, MapBuilder> mapBlds = new HashMap<>();
 	public static final HashMap<UUID, Nade> nades = new HashMap<>();
 	public static final ArrayList<WXYZ> decoys = new ArrayList<>();
@@ -103,24 +105,26 @@ public final class Main extends JavaPlugin implements Listener {
 		new BukkitRunnable() {
 			public void run() {
 
-                Main.ckracks.removeIf(lc -> ((lc.pitch = (lc.pitch >> 3) - 1 << 3 ^ lc.pitch & 7) >> 3) == 0);
+                Main.cracks.removeIf(lc -> lc.yaw-- == 0);
 	            
-	            final Iterator<Entry<Player, BaseBlockPosition>> pi = Main.plnts.entrySet().iterator();
+	            final Iterator<Entry<Player, BlockPosition>> pi = Main.plnts.entrySet().iterator();
 	            while (pi.hasNext()) {
-	            	final Entry<Player, BaseBlockPosition> e = pi.next();
+	            	final Entry<Player, BlockPosition> e = pi.next();
 	            	final Location loc = e.getKey().getLocation();
-	            	if (e.getKey().getInventory().getHeldItemSlot() == 7 && loc.getBlockX() == e.getValue().u() && loc.getBlockY() == e.getValue().v() && loc.getBlockZ() == e.getValue().w()) {
+	            	if (e.getKey().getInventory().getHeldItemSlot() == 7 && loc.getBlockX() == e.getValue().blockX()
+						&& loc.getBlockY() == e.getValue().blockY() && loc.getBlockZ() == e.getValue().blockZ()) {
 	            		continue;
 	            	}
 	            	Utils.sendAcBr(e.getKey(), "§c§lВы вышли из режима установки");
-	            	e.getKey().getInventory().setItem(7, Main.mkItm(Material.GOLDEN_APPLE, "§4§lС*4 §c\u926e", 10, "§dПКМ §7- Заложить бомбу", "§7Можно установить на точку §5A §7или §5B"));
+	            	e.getKey().getInventory().setItem(7, Main.mkItm(Material.GOLDEN_APPLE, "§4§lС*4 §c\u926e",
+						10, "§dПКМ §7- Заложить бомбу", "§7Можно установить на точку §5A §7или §5B"));
 	            	pi.remove();
 	            } 
 	           
 	            final Iterator<WXYZ> nbi = Main.ndBlks.iterator();
 	            while (nbi.hasNext()) {
 	            	final WXYZ bl = nbi.next();
-	            	if ((bl.pitch--) == 0) {
+	            	if (bl.pitch-- == 0) {
 	            		bl.getBlock().setType(Material.AIR, false);
 	            		nbi.remove();
                     }
@@ -130,7 +134,7 @@ public final class Main extends JavaPlugin implements Listener {
 	            while (ni.hasNext()) {
 	            	final Nade nd = ni.next();
 	            	if (nd.prj.isValid()) {
-	            		if ((nd.tm--) != 0) continue;
+	            		if (nd.tm-- != 0) continue;
 	            		nd.explode();
 	            	}
 	            	ni.remove();
@@ -197,11 +201,15 @@ public final class Main extends JavaPlugin implements Listener {
 					if (stp.fin) {
 						for (final String wn : stp.worlds.values()) {
 							if (wn != null && !wn.isEmpty()) {
-								WorldManager.load(getServer().getConsoleSender(), wn, Environment.NORMAL, Generator.Empty);
+								final World w = WorldManager.load(getServer().getConsoleSender(), wn, Environment.NORMAL, Generator.Empty);
+								if (w != null) {
+									w.setGameRule(GameRule.RANDOM_TICK_SPEED, 0);
+									w.setGameRule(GameRule.MOB_GRIEFING, false);
+								}
 							}
 						}
-						ApiOstrov.sendArenaData(stp.nm, ru.komiss77.enums.GameState.ОЖИДАНИЕ, "§7Тип: §8Не Выбран",
-							"§5=-=-=-=-=-=-", "§7Нужно: §d" + stp.min + " §7чел.", "", "", shtrs.size());
+						GM.sendArenaData(Game.CS, stp.nm, ru.komiss77.enums.GameState.ОЖИДАНИЕ, shtrs.size(), "§7Тип: §8Не Выбран",
+							"§5=-=-=-=-=-=-", "§7Нужно: §d" + stp.min + " §7чел.", "");
 						nnactvarns.put(stp.nm, stp);
 					}
 				}
@@ -240,7 +248,7 @@ public final class Main extends JavaPlugin implements Listener {
 		p.getInventory().setItem(8, Main.mkItm(Material.MAGMA_CREAM, "§4Выход в Лобби", 10));
 		p.getInventory().setHeldItemSlot(0);
 		lobbyScore(p);
-		final Component tpl = TCUtils.format("§7Сейчас в игре: §d" + MainLis.getPlaying() + "§7 человек!");
+		final Component tpl = TCUtil.form("§7Сейчас в игре: §d" + MainLis.getPlaying() + "§7 человек!");
 		for (final Player pl : Bukkit.getOnlinePlayers()) {
 			pl.sendPlayerListFooter(tpl);
 			if (p.getWorld().getUID().equals(pl.getWorld().getUID())) {
@@ -251,7 +259,7 @@ public final class Main extends JavaPlugin implements Listener {
 				p.hidePlayer(Main.plug, pl);
 			}
 		}
-		sh.setTabTag("§7<§5ЛОББИ§7> ", " §7[-.-]", Arena.Team.SPEC.clr);
+		sh.taq("§7<§5ЛОББИ§7> ", " §7[-.-]", Arena.Team.SPEC.clr);
 	}
    
 	public static void lobbyScore(final Player p) {
@@ -265,8 +273,8 @@ public final class Main extends JavaPlugin implements Listener {
 			.add(Arena.Team.CTs.clr + "Выйграно§7: " + ApiOstrov.getStat(p, Stat.CS_win))
 			.add(Arena.Team.Ts.clr + "Проиграно§7: " + ApiOstrov.getStat(p, Stat.CS_loose))
 			.add("§7=-=-=-=-=-=-=-=-")
-			.add("§7(§dК§7/§dД§7): " + ApiOstrov.toSigFigs((float) ApiOstrov.getStat(p, Stat.CS_kill)
-					/ (float) ApiOstrov.getStat(p, Stat.CS_death), (byte) 2))
+			.add("§7(§dК§7/§dД§7): " + StringUtil.toSigFigs((double) ApiOstrov.getStat(p, Stat.CS_kill)
+					/ (double) ApiOstrov.getStat(p, Stat.CS_death), (byte) 2))
 			.add(" ")
 			.add("§e   ostrov77.ru").build();
 	}
@@ -285,7 +293,7 @@ public final class Main extends JavaPlugin implements Listener {
 			td.setBackgroundColor(Color.fromARGB(0));
 			td.setBillboard(Display.Billboard.VERTICAL);
 			td.setVisibleByDefault(false);
-			td.text(TCUtils.format(nm));
+			td.text(TCUtil.form(nm));
 			td.setSeeThrough(true);
 			td.setShadowed(true);
 		});
@@ -294,7 +302,7 @@ public final class Main extends JavaPlugin implements Listener {
    }
    
    public static ItemStack mkItm(final Material mt, final String nm, final int mdl, final String... lr) {
-	   return new ItemBuilder(mt).name(nm).setModelData(mdl).addLore(Arrays.asList(lr)).build();
+	   return new ItemBuilder(mt).name(nm).modelData(mdl).lore(Arrays.asList(lr)).build();
    }
    
    public static void setDmg(final ItemStack it, final int d) {

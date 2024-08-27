@@ -27,20 +27,20 @@ import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.utils.ItemBuilder;
-import ru.komiss77.utils.ItemUtils;
-import ru.komiss77.utils.TCUtils;
+import ru.komiss77.utils.ItemUtil;
+import ru.komiss77.utils.TCUtil;
 
 import java.util.Arrays;
 
 public class InventLis implements Listener {
-   
+
 	@EventHandler
 	public void onOpen(final InventoryOpenEvent e) {
 		final InventoryHolder hld = e.getInventory().getHolder();
 		if (hld == null || hld instanceof Player) return;
 		e.setCancelled(e.getPlayer().getGameMode() != GameMode.CREATIVE);
 	}
-	
+
 	@EventHandler
 	public void onSlot(final PlayerItemHeldEvent e) {
 		final Player p = e.getPlayer();
@@ -55,13 +55,13 @@ public class InventLis implements Listener {
 				sh.count((it.getType().getMaxDurability() - ((Damageable)it.getItemMeta()).getDamage()) * gt.rtm / it.getType().getMaxDurability());
 			}
 		}
-		
+
 		if (p.isSneaking()) {
 			sh.scope(false);
-			if (!ItemUtils.isBlank(p.getInventory().getItemInOffHand(), false))
+			if (!ItemUtil.isBlank(p.getInventory().getItemInOffHand(), false))
 				p.getInventory().setItemInOffHand(Main.air);
 		}
-		
+
 		if (it != null) {
 			switch (it.getType()) {
 			case GOLDEN_APPLE:
@@ -80,7 +80,7 @@ public class InventLis implements Listener {
             }
         }
     }
-   
+
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = false)
 	public void onClick(final InventoryClickEvent e) {
 		final HumanEntity p = e.getWhoClicked();
@@ -96,7 +96,7 @@ public class InventLis implements Listener {
 			e.setCancelled(true);
 			return;
 		}
-		final String ttl = TCUtils.stripColor(e.getView().title());
+		final String ttl = TCUtil.strip(e.getView().title());
 		final Shooter sh;
 		//p.sendMessage(ttl);
 		switch (ttl) {
@@ -106,37 +106,24 @@ public class InventLis implements Listener {
 				if (e.getClickedInventory().getType() != InventoryType.PLAYER && it.getItemMeta().hasDisplayName()) {
 					p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 2f, 1.5f);
 					final int mdl;
-					final GunType gt;
-					switch (TCUtils.toString(it.getItemMeta().displayName()).charAt(1)) {
-					case '5':
+					final GunType gt = GunType.getGnTp(it);
+					if (gt != null) {
 						sh = Shooter.getPlShooter(p.getName(), true);
-						gt = GunType.getGnTp(it);
 						mdl = sh.getModel(gt);
-						p.getInventory().setItem(0, new ItemBuilder(it.getType()).name((mdl == GunType.defCMD ? "§5" + gt.toString() : 
-							"§5" + gt.toString() + " '" + Main.nrmlzStr(Quest.getQuest(gt, mdl).toString()) + "'") + " " + gt.icn)
-						.setAmount(gt.amo).setModelData(mdl).build());
-						break;
-					case 'd':
-						sh = Shooter.getPlShooter(p.getName(), true);
-						gt = GunType.getGnTp(it);
-						mdl = sh.getModel(gt);
-						p.getInventory().setItem(1, new ItemBuilder(it.getType()).name((mdl == GunType.defCMD ? "§5" + gt.toString() : 
-							"§5" + gt.toString() + " '" + Main.nrmlzStr(Quest.getQuest(gt, mdl).toString()) + "'") + " " + gt.icn)
-						.setAmount(gt.amo).setModelData(mdl).build());
-						break;
-					case '6':
-					case 'c':
-						p.getInventory().setItem(3, it);
-						break;
-					case '2':
-					case '7':
-					case '8':
-						addSetItm(p.getInventory(), 4, it);
-						break;
-					case '3':
-						p.getInventory().setItem(7, it);
+						p.getInventory().setItem(gt.prm ? 0 : 1, new ItemBuilder(it.getType()).name((mdl == GunType.defCMD ? "§5" + gt.toString() :
+								"§5" + gt.toString() + " '" + Main.nrmlzStr(Quest.getQuest(gt, mdl).toString()) + "'") + " " + gt.icn)
+							.amount(gt.amo).modelData(mdl).build());
 						break;
 					}
+					final NadeType nt = NadeType.getNdTp(it);
+					if (nt != null) {
+						if (nt.prm) p.getInventory().setItem(3, it);
+						else addSetItm(p.getInventory(), 4, it);
+						break;
+					}
+
+					p.getInventory().setItem(7, it);
+					break;
 				}
 			}
 			break;
@@ -159,10 +146,10 @@ public class InventLis implements Listener {
 							p.dropItem(false);
 							p.getInventory().setHeldItemSlot(8);
 							final int mdl = sh.getModel(gt);
-							p.getInventory().setItem(gt.prm ? 0 : 1, 
-							new ItemBuilder(it.getType()).name((mdl == GunType.defCMD ? "§5" + gt.toString() : 
+							p.getInventory().setItem(gt.prm ? 0 : 1,
+							new ItemBuilder(it.getType()).name((mdl == GunType.defCMD ? "§5" + gt.toString() :
 								"§5" + gt.toString() + " '" + Main.nrmlzStr(Quest.getQuest(gt, mdl).toString()) + "'") + " " + gt.icn)
-							.setAmount(gt.amo).setModelData(mdl).build());
+							.amount(gt.amo).modelData(mdl).build());
 							p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 1.4f);
 						}
 					} else if (nt != null) {
@@ -186,7 +173,7 @@ public class InventLis implements Listener {
 							if (sh.money() - nt.prc < 0) {
 								p.sendMessage(Main.prf() + "§cУ вас не хватает денег для покупки этого!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
-							} else if (p.getInventory().getItem(NadeType.scdSlot) != null && 
+							} else if (p.getInventory().getItem(NadeType.scdSlot) != null &&
 								p.getInventory().getItem(NadeType.scdSlot).getType() != it.getType()) {
 								p.sendMessage(Main.prf() + "§cУ вас уже есть граната в этом слоту!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
@@ -291,7 +278,7 @@ public class InventLis implements Listener {
 					final ItemStack cp = it.clone();
 					final ItemMeta im = it.getItemMeta();
 					im.setCustomModelData(10);
-					ar.w.spawnParticle(Particle.ITEM_CRACK, eye.add(eye.getDirection()),
+					ar.w.spawnParticle(Particle.ITEM, eye.add(eye.getDirection()),
 						8, 0d, 0d, 0d, 0.2d, p.getInventory().getItemInMainHand());
 					ar.w.playSound(eye, Sound.BLOCK_TRIPWIRE_CLICK_ON, 1f, 2f);
 					p.swingMainHand();
@@ -305,7 +292,7 @@ public class InventLis implements Listener {
 							ar.chngMn(sh, 250);
 							ApiOstrov.addStat((Player) p, Stat.CS_bomb);
 						}
-					} 
+					}
 				} else if (cmd != 10) {
 					if (ar instanceof Defusal) {
 						((Defusal) ar).wrngWire();
@@ -329,7 +316,7 @@ public class InventLis implements Listener {
 					final ItemStack cp = it.clone();
 					final ItemMeta im = it.getItemMeta();
 					im.setCustomModelData(10);
-					ar.w.spawnParticle(Particle.ITEM_CRACK, eye.add(eye.getDirection()),
+					ar.w.spawnParticle(Particle.ITEM, eye.add(eye.getDirection()),
 						8, 0d, 0d, 0d, 0.2d, p.getInventory().getItemInMainHand());
 					ar.w.playSound(eye, Sound.BLOCK_TRIPWIRE_CLICK_ON, 1f, 2f);
 					p.swingMainHand();
@@ -351,12 +338,12 @@ public class InventLis implements Listener {
 					ar.w.playSound(eye, Sound.BLOCK_GLASS_BREAK, 2f, 2f);
 					((Player) p).playSound(eye, Sound.BLOCK_TRIPWIRE_CLICK_ON, 1f, 2f);
 					it.setItemMeta(im);
-				} 
+				}
 			}
 			break;
 		default:
 			e.setCancelled(p.getGameMode() != GameMode.CREATIVE);
-			if (!ItemUtils.isBlank(it, true)
+			if (!ItemUtil.isBlank(it, true)
 				&& p.getGameMode() == GameMode.SPECTATOR) {
 				switch (it.getType()) {
 					case SLIME_BALL:
@@ -381,7 +368,7 @@ public class InventLis implements Listener {
 	public void oClose(final InventoryCloseEvent e) {
 		final HumanEntity p = e.getPlayer();
 		final Shooter sh;
-		switch (TCUtils.stripColor(e.getView().title())) {
+		switch (TCUtil.strip(e.getView().title())) {
 			case "Разминировка Бомбы":
 				sh = Shooter.getPlShooter(p.getName(), true);
 				if (sh.arena() instanceof final Defusal df && df.isBmbOn()) {
@@ -399,12 +386,12 @@ public class InventLis implements Listener {
 				break;
 		}
 	}
-	   
+
 	@EventHandler
 	public void onDrag(final InventoryDragEvent e) {
 		e.setCancelled(true);
 	}
-	
+
 	private boolean addSetItm(final PlayerInventory inv, final int slt, final ItemStack it) {
 		final ItemStack s = inv.getItem(slt);
 		if (s != null && s.getType() == it.getType()) {

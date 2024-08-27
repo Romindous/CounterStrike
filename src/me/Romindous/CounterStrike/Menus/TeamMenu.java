@@ -44,20 +44,20 @@ public class TeamMenu implements InventoryProvider {
 		}
 
 		its.set(4, ClickableItem.of(new ItemBuilder(Material.WARPED_NYLIUM).name(Arena.Team.CTs.clr + "§lСпецназ")
-			.addLore(clrs).build(), e -> select(p, sh, Arena.Team.CTs, its)));
+			.lore(clrs).build(), e -> select(p, sh, Arena.Team.CTs, its)));
 
 		if (ar instanceof Invasion) {
 			its.set(0, ClickableItem.of(new ItemBuilder(Material.WARPED_NYLIUM).name(Arena.Team.CTs.clr + "§lСпецназ")
-				.addLore(clrs).build(), e -> select(p, sh, Arena.Team.CTs, its)));
+				.lore(clrs).build(), e -> select(p, sh, Arena.Team.CTs, its)));
 		} else {
 			its.set(2, ClickableItem.of(new ItemBuilder(Material.ENDER_EYE).name("§5§lСлучайная")
-				.addLore(slrs).build(), e -> select(p, sh, switch (ar.gst) {
+				.lore(slrs).build(), e -> select(p, sh, switch (ar.gst) {
                 case WAITING, BEGINING, FINISH -> Arena.Team.SPEC;
                 case BUYTIME ,ROUND ,ENDRND -> ar.getMinTm();
             }, its)));
 
 			its.set(0, ClickableItem.of(new ItemBuilder(Material.CRIMSON_NYLIUM).name(Arena.Team.Ts.clr + "§lТеррористы")
-				.addLore(tlrs).build(), e -> select(p, sh, Arena.Team.Ts, its)));
+				.lore(tlrs).build(), e -> select(p, sh, Arena.Team.Ts, its)));
 		}
     }
 

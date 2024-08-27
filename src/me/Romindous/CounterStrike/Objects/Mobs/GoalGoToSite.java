@@ -1,29 +1,26 @@
 package me.Romindous.CounterStrike.Objects.Mobs;
 
-import java.util.EnumSet;
-import java.util.Map.Entry;
-
+import com.destroystokyo.paper.entity.ai.Goal;
+import com.destroystokyo.paper.entity.ai.GoalKey;
+import com.destroystokyo.paper.entity.ai.GoalType;
+import me.Romindous.CounterStrike.Enums.GameState;
+import me.Romindous.CounterStrike.Game.Arena.Team;
+import me.Romindous.CounterStrike.Game.Invasion;
+import me.Romindous.CounterStrike.Listeners.DmgLis;
+import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.Shooter;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.util.Vector;
-
-import com.destroystokyo.paper.entity.ai.Goal;
-import com.destroystokyo.paper.entity.ai.GoalKey;
-import com.destroystokyo.paper.entity.ai.GoalType;
-
-import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Game.Arena.Team;
-import me.Romindous.CounterStrike.Game.Invasion;
-import me.Romindous.CounterStrike.Listeners.DmgLis;
-import me.Romindous.CounterStrike.Objects.Shooter;
-import me.Romindous.CounterStrike.Enums.GameState;
 import ru.komiss77.modules.world.AStarPath;
 import ru.komiss77.modules.world.WXYZ;
-import ru.komiss77.utils.LocationUtil;
+import ru.komiss77.utils.LocUtil;
 import ru.komiss77.version.Nms;
+
+import java.util.EnumSet;
+import java.util.Map.Entry;
 
 public class GoalGoToSite implements Goal<Mob> {
 	
@@ -69,42 +66,39 @@ public class GoalGoToSite implements Goal<Mob> {
     @Override
     public void tick() {
     	tick++;
-    	if ((tick & 3) == 0 && ar.gst != GameState.FINISH && !mob.hasPotionEffect(PotionEffectType.BLINDNESS)) {
+    	if ((tick & 1) == 0 && ar.gst != GameState.FINISH && !mob.hasPotionEffect(PotionEffectType.BLINDNESS)) {
     		final Location eyel = mob.getEyeLocation();
     		final Location lc = mob.getEyeLocation();
-    		
+
+			LivingEntity tle;
 			if (tgt == null || tgt.isDead()) {//look for tgt
+				tle = null;
 				for (final Entry<Shooter, Team> en : ar.shtrs.entrySet()) {
 					if (en.getKey().isDead()) continue;
 					final LivingEntity le = en.getKey().getEntity();
-					if (le != null && LocationUtil.rayThruAir(eyel, le.getEyeLocation().toVector(), 0.1F)) {
+					if (le != null && LocUtil.rayThruAir(eyel, le.getEyeLocation().toVector(), 0.1F)) {
 						tgt = Shooter.getShooter(le, false);
 						Nms.setAggro(mob, true);
+						tle = le;
 						break;
 					}
 				}
 			} else {
-				final Vector pos = tgt.getLoc();
-				if (!LocationUtil.rayThruAir(eyel, pos, 0.1F)) {
+				tle = tgt.getEntity();
+				if (tle == null || !LocUtil.rayThruAir(eyel, tle.getEyeLocation().toVector(), 0.1F)) {
 					Nms.setAggro(mob, false);
 					tgt = null;
 				}
 			}
 			
 			final Location pthTo;
-			if (tgt == null || tgt.isDead()) {
+			if (tle == null || tgt == null || tgt.isDead()) {
 				ap.tickGo(mt.spd);
 			} else if ((tick & 7) == 0) {//attack
-				final LivingEntity le = tgt.getEntity();
-				if (le == null) {
-					Nms.setAggro(mob, false);
-					tgt = null;
-					return;
-				}
-				pthTo = le.getEyeLocation();
+				pthTo = tle.getEyeLocation();
 				if (lc.distanceSquared(pthTo) < 4d) {
 					mob.swingMainHand();
-					DmgLis.prcDmg(le, tgt, null, mt.pow * 0.4d + 1d,
+					DmgLis.prcDmg(tle, tgt, null, mt.pow * 0.4d + 1d,
 						Team.SPEC.clr + mob.getName() + " §f\u929a", 5);
 				}
 				

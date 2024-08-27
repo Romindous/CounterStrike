@@ -62,7 +62,7 @@ public class TripWire {
 	}
 	
 	public void trigger(final Location loc) {
-		loc.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, loc, 10, 0.4d, 0.4d, 0.4d);
+		loc.getWorld().spawnParticle(Particle.EXPLOSION, loc, 10, 0.4d, 0.4d, 0.4d);
 		loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_BREAK_BLOCK, 2f, 0.8f);
 		if (this.nt != null) {
 			final Material m = switch (this.nt) {

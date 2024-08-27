@@ -1,5 +1,11 @@
 package me.Romindous.CounterStrike.Objects.Map;
 
+import java.io.File;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Map.Entry;
 import me.Romindous.CounterStrike.Enums.GameType;
 import me.Romindous.CounterStrike.Enums.TileSet;
 import me.Romindous.CounterStrike.Enums.TileType;
@@ -12,20 +18,13 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
-import ru.komiss77.ApiOstrov;
 import ru.komiss77.Ostrov;
 import ru.komiss77.modules.world.Schematic;
 import ru.komiss77.modules.world.Schematic.Rotate;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.modules.world.XYZ;
+import ru.komiss77.utils.ClassUtil;
 import ru.komiss77.utils.FastMath;
-
-import java.io.File;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map.Entry;
 
 public class MapBuilder {
 	
@@ -209,7 +208,7 @@ public class MapBuilder {
 			final EnumSet<TileType> possible = EnumSet.copyOf(TileType.gns);
 			for (final Entry<Integer, TileType> en : tiles.entrySet()) {
 				final int enc = en.getKey(), z = enc >> encodeBits, x = enc - (z << encodeBits),
-					d = FastMath.absInt(X - x) + FastMath.absInt(Z - z);
+					d = FastMath.abs(X - x) + FastMath.abs(Z - z);
 				if (d < maxCheckDist) {
 					final TileType tileAtXZ = en.getValue();
                     possible.removeIf(pos -> !tileAtXZ.canPlaceNear(pos, d));
@@ -220,7 +219,7 @@ public class MapBuilder {
 				Bukkit.getConsoleSender().sendMessage("No possible for floor " + mapDims.y);
 				return;//fallback
 			}
-			final TileType ftp = ApiOstrov.rndElmt(possible.toArray(etl));
+			final TileType ftp = ClassUtil.rndElmt(possible.toArray(etl));
 			if (ftp == TileType.OPEN && sps != totalSpots) {
 				Bukkit.getConsoleSender().sendMessage("Add spot at " + X + ", " + Z);
 				spts.add(org.clone().add((((X << 1) + 1) * cellDims.x) >> 1,

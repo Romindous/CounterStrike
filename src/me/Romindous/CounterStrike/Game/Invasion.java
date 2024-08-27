@@ -35,7 +35,8 @@ import ru.komiss77.modules.bots.BotManager;
 import ru.komiss77.modules.player.PM;
 import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.notes.Slow;
-import ru.komiss77.utils.TCUtils;
+import ru.komiss77.utils.ClassUtil;
+import ru.komiss77.utils.TCUtil;
 import ru.komiss77.version.Nms;
 
 import java.lang.ref.WeakReference;
@@ -70,7 +71,7 @@ public class Invasion extends Arena {
 		ads = w.spawn(ast.getCenterLoc(w), TextDisplay.class);
 		ads.setPersistent(true);
 		ads.setBillboard(Billboard.CENTER);
-		ads.text(TCUtils.format("§7Точка §bA§7: §d100%"));
+		ads.text(TCUtil.form("§7Точка §bA§7: §d100%"));
 		ads.setShadowed(true);
 		ads.setSeeThrough(true);
 		ads.setViewRange(0f);
@@ -82,7 +83,7 @@ public class Invasion extends Arena {
 		bds = w.spawn(bst.getCenterLoc(w), TextDisplay.class);
 		bds.setPersistent(true);
 		bds.setBillboard(Billboard.CENTER);
-		bds.text(TCUtils.format("§7Точка §6B§7: §d100%"));
+		bds.text(TCUtil.form("§7Точка §6B§7: §d100%"));
 		bds.setShadowed(true);
 		bds.setSeeThrough(true);
 		bds.setViewRange(0f);
@@ -114,10 +115,10 @@ public class Invasion extends Arena {
 		switch (gst) {
 			case WAITING:
 			case BEGINING:
-				sh.item(Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10), 5);
-				sh.item(Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10), 6);
-				sh.item(Main.mkItm(Material.SLIME_BALL, "§cВыход", 10), 8);
-				if (!rnd) p.teleport(Main.getNrLoc(ApiOstrov.rndElmt(CTSawns), w));
+				sh.item(5, Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10));
+				sh.item(6, Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10));
+				sh.item(8, Main.mkItm(Material.SLIME_BALL, "§cВыход", 10));
+				if (!rnd) p.teleport(Main.getNrLoc(ClassUtil.rndElmt(CTSawns), w));
 				p.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, time * 20, 1));
 				beginScore(p);
 				chngTeam(sh, Team.CTs);
@@ -136,9 +137,9 @@ public class Invasion extends Arena {
 					gameScore(sh, p);
 					chngTeam(sh, Team.SPEC);
 					p.setGameMode(GameMode.SPECTATOR);
-					p.teleport(Main.getNrLoc(Main.srnd.nextBoolean() ? ApiOstrov.rndElmt(TSpawns) : ApiOstrov.rndElmt(CTSawns), w));
-					sh.item(Main.mkItm(Material.NETHER_STAR, "§eВыбор Комманды", 10), 2);
-					sh.item(Main.mkItm(Material.SLIME_BALL, "§cВыход", 10), 8);
+					p.teleport(Main.getNrLoc(Main.srnd.nextBoolean() ? ClassUtil.rndElmt(TSpawns) : ClassUtil.rndElmt(CTSawns), w));
+					sh.item(2, Main.mkItm(Material.NETHER_STAR, "§eВыбор Комманды", 10));
+					sh.item(8, Main.mkItm(Material.SLIME_BALL, "§cВыход", 10));
 					for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
 						final Shooter s = e.getKey();
 						final Player pl = s.getPlayer();
@@ -159,7 +160,7 @@ public class Invasion extends Arena {
 				return false;
 		}
 		updateData();
-		final Component tpl = TCUtils.format("§7Сейчас в игре: §d" + MainLis.getPlaying() + "§7 человек!");
+		final Component tpl = TCUtil.form("§7Сейчас в игре: §d" + MainLis.getPlaying() + "§7 человек!");
 		for (final Player pl : Bukkit.getOnlinePlayers()) {
 			pl.sendPlayerListFooter(tpl);
 		}
@@ -168,7 +169,7 @@ public class Invasion extends Arena {
 
 	public void addToTm(final Player p, final PlShooter sh, final Team tm) {
 		p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1, 1);
-		p.teleport(Main.getNrLoc(ApiOstrov.rndElmt(CTSawns), w));
+		p.teleport(Main.getNrLoc(ClassUtil.rndElmt(CTSawns), w));
 		p.getInventory().setItem(8, Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10));
 		p.getInventory().setItem(7, Main.mkItm(Material.GOLD_NUGGET, "§eКусачки §f\u9268", 10));
 		p.getInventory().setItem(2, Main.mkItm(Material.BLAZE_ROD, "§fНож \u9298", 10));
@@ -367,7 +368,11 @@ public class Invasion extends Arena {
 		
 		if (botInv != null && bots) {
 			for (int i = (max >> 1) - shtrs.size(); i > 0; i--) {
-				shtrs.put(BotManager.createBot("Bot-v" + botID++, BtShooter.class, nm -> new BtShooter(nm, this)), Team.CTs);
+				BotManager.createBot("Bot-v" + botID++, w, bt -> {
+					final BtShooter nbt = new BtShooter(bt, this);
+					shtrs.put(nbt, Team.CTs);
+					return nbt;
+				});
 			}
 		}
 		
@@ -381,10 +386,10 @@ public class Invasion extends Arena {
 				((BtShooter) sh).willBuy = true;
 			}
 			
-			sh.teleport(le, Main.getNrLoc(ApiOstrov.rndElmt(CTSawns), w));
-			sh.item(Main.mkItm(Material.GOLD_NUGGET, "§eКусачки §f\u9268", 10), 7);
-			sh.item(Main.mkItm(Material.BLAZE_ROD, "§fНож \u9298", 10), 2);
-			sh.setTabTag(Team.CTs.icn + " ", " §7[" + sh.kills() +
+			sh.teleport(le, Main.getNrLoc(ClassUtil.rndElmt(CTSawns), w));
+			sh.item(7, Main.mkItm(Material.GOLD_NUGGET, "§eКусачки §f\u9268", 10));
+			sh.item(2, Main.mkItm(Material.BLAZE_ROD, "§fНож \u9298", 10));
+			sh.taq(Team.CTs.icn + " ", " §7[" + sh.kills() +
 				"-" + sh.spwnrs() + "-" + sh.deaths() + "]", Team.CTs.clr);
 		}
 		
@@ -395,7 +400,7 @@ public class Invasion extends Arena {
 			bds.getLocation().getBlock().setType(Material.WARPED_PRESSURE_PLATE, false);
 		}
 		
-		Ostrov.async(() -> ApiOstrov.shuffle(spots));
+		Ostrov.async(() -> ClassUtil.shuffle(spots));
 		for (int i = 0; i != spots.length; i++) {
 			new Mobber(spots[i], this);
 		}
@@ -418,7 +423,7 @@ public class Invasion extends Arena {
 			cnt = Math.max((KD_NIGHT - (ccl << 1)) / pls, 1);
 //			final ArrayList<Player> pls = new ArrayList<>();
 			for (final Shooter sh : shtrs.keySet()) {
-				sh.item(Main.air, 8);
+				sh.item(8, Main.air);
 				final Player p = sh.getPlayer();
 				if (p != null) {
 					Utils.sendTtlSbTtl(p, "§4Ночь", "§7Крепитесь и защищайте точки!", 50);
@@ -427,7 +432,7 @@ public class Invasion extends Arena {
 				}
 			}
 
-			Ostrov.async(() -> ApiOstrov.shuffle(spots));
+			Ostrov.async(() -> ClassUtil.shuffle(spots));
 			for (int i = spots.length >> 2; i != spots.length; i++) {
 				final Mobber mb = mbbrs.get(spots[i].getSLoc());
 				if (mb == null) {
@@ -463,15 +468,15 @@ public class Invasion extends Arena {
 
 					if (p.getGameMode() == GameMode.SPECTATOR) {
 						p.setGameMode(GameMode.SURVIVAL);
-						p.teleport(Main.getNrLoc(ApiOstrov.rndElmt(CTSawns), w));
+						p.teleport(Main.getNrLoc(ClassUtil.rndElmt(CTSawns), w));
 					}
 				} else {
 					if (sh.isDead()) {
-						sh.teleport(le, Main.getNrLoc(ApiOstrov.rndElmt(CTSawns), w));
+						sh.teleport(le, Main.getNrLoc(ClassUtil.rndElmt(CTSawns), w));
 					}
 				}
 				chngMn(sh, 250);
-				sh.item(Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10), 8);
+				sh.item(8, Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10));
 				sh.getEntity().addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, time * 20 + 10, 1));
 			}
 			
@@ -577,7 +582,7 @@ public class Invasion extends Arena {
 				p.closeInventory();
 				p.playSound(p.getLocation(), "cs.info." + snd, 10f, 1f);
 				Utils.sendTtlSbTtl(p, ttl, sbt, 50);
-				sh.setTabTag("§7<§d" + name + "§7> ", " §7[" + sh.kills() +
+				sh.taq("§7<§d" + name + "§7> ", " §7[" + sh.kills() +
 					"-" + sh.spwnrs() + "-" + sh.deaths() + "]", Team.SPEC.clr);
 				p.sendMessage(" \n§7Финиш: " + ttl
 					+ "\n§7=-=-=-=-=-=-=-=-=-=-=-=-=-=-"
@@ -592,7 +597,7 @@ public class Invasion extends Arena {
 				sh.inv().clear();
 				winScore(sh, p, CTwn);
 			} else {
-				((BtShooter) sh).remove();
+				((BtShooter) sh).own().remove();
 			}
 		}
 		
@@ -614,7 +619,7 @@ public class Invasion extends Arena {
 						if (p != null) {
 							PM.getOplayer(p).score.getSideBar().update(LIMIT, rtm);
 							if (CTwn) {
-								final Firework fw = (Firework) p.getWorld().spawnEntity(p.getEyeLocation(), EntityType.FIREWORK);
+								final Firework fw = (Firework) p.getWorld().spawnEntity(p.getEyeLocation(), EntityType.FIREWORK_ROCKET);
 								final FireworkMeta fm = fw.getFireworkMeta();
 								fm.addEffect(fe);
 								fw.setFireworkMeta(fm);
@@ -701,7 +706,7 @@ public class Invasion extends Arena {
 				pl.setGameMode(GameMode.SPECTATOR);
 				pl.closeInventory();
 			} else if (sh instanceof BtShooter) {
-				((BtShooter) sh).die(le);
+				((BtShooter) sh).own().hide(le);
 			}
 			
 			final int rm = getTmAmt(Team.CTs, true, true);
@@ -727,14 +732,14 @@ public class Invasion extends Arena {
 				p.closeInventory();
 			}
 			final Location loc = rnd && gst != GameState.ROUND ?
-				Main.lobby.getCenterLoc() : Main.getNrLoc(ApiOstrov.rndElmt(CTSawns), w);
+				Main.lobby.getCenterLoc() : Main.getNrLoc(ClassUtil.rndElmt(CTSawns), w);
 			sh.teleport(le, loc);
 		}
 	}
 
 	public void addMbKll(final Shooter sh) {
 		sh.killsI();
-		sh.setTabTag(Team.CTs.icn + " ", " §7[" + sh.kills() +
+		sh.taq(Team.CTs.icn + " ", " §7[" + sh.kills() +
 			"-" + sh.spwnrs() + "-" + sh.deaths() + "]", Team.CTs.clr);
 		final Player p = sh.getPlayer();
 		if (p != null) {
@@ -745,7 +750,7 @@ public class Invasion extends Arena {
 
 	public void addSpDfs(final Shooter sh) {
 		sh.spwnrsI();
-		sh.setTabTag(Team.CTs.icn + " ", " §7[" + sh.kills() +
+		sh.taq(Team.CTs.icn + " ", " §7[" + sh.kills() +
 			"-" + sh.spwnrs() + "-" + sh.deaths() + "]", Team.CTs.clr);
 		final Player p = sh.getPlayer();
 		if (p != null) {
@@ -757,7 +762,7 @@ public class Invasion extends Arena {
 	@Override
 	public void addDth(final Shooter sh) {
 		sh.deathsI();
-		sh.setTabTag(Team.CTs.icn + " ", " §7[" + sh.kills() +
+		sh.taq(Team.CTs.icn + " ", " §7[" + sh.kills() +
 			"-" + sh.spwnrs() + "-" + sh.deaths() + "]", Team.CTs.clr);
 		final Player p = sh.getPlayer();
 		if (p != null) {
@@ -805,7 +810,7 @@ public class Invasion extends Arena {
 		if (isA) {
 			apc -= dmg;
 			if (apc > 0) {
-				ads.text(TCUtils.format("§7Точка §bA§7: §d" + apc + "%"));
+				ads.text(TCUtil.form("§7Точка §bA§7: §d" + apc + "%"));
 				final Location lc = ads.getLocation();
 				w.spawnParticle(Particle.SOUL_FIRE_FLAME, lc, 24, 0.2d, 0.4d, 0.2d, 0.1d);
 				for (final Shooter sh : shtrs.keySet()) {
@@ -825,7 +830,7 @@ public class Invasion extends Arena {
 				final int Y = b.getY();
 				final int Z = b.getZ();
 				final HashSet<XYZ> cls = new HashSet<>();
-				b.getWorld().spawnParticle(Particle.EXPLOSION_HUGE, b.getLocation(), 20, 5d, 5d, 5d);
+				b.getWorld().spawnParticle(Particle.EXPLOSION, b.getLocation(), 20, 5d, 5d, 5d);
 				b.getWorld().playSound(b.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 5f, 0.8f);
 				for (int x = -5; x < 6; x++) {
 					for (int y = -5; y < 6; y++) {
@@ -861,7 +866,7 @@ public class Invasion extends Arena {
 		} else {
 			bpc -= dmg;
 			if (bpc > 0) {
-				bds.text(TCUtils.format("§7Точка §6B§7: §d" + bpc + "%"));
+				bds.text(TCUtil.form("§7Точка §6B§7: §d" + bpc + "%"));
 				final Location lc = bds.getLocation();
 				w.spawnParticle(Particle.SOUL_FIRE_FLAME, lc, 24, 0.2d, 0.4d, 0.2d, 0.1d);
 				for (final Shooter sh : shtrs.keySet()) {
@@ -881,7 +886,7 @@ public class Invasion extends Arena {
 				final int Y = b.getY();
 				final int Z = b.getZ();
 				final HashSet<XYZ> cls = new HashSet<>();
-				b.getWorld().spawnParticle(Particle.EXPLOSION_HUGE, b.getLocation(), 20, 5d, 5d, 5d);
+				b.getWorld().spawnParticle(Particle.EXPLOSION, b.getLocation(), 20, 5d, 5d, 5d);
 				b.getWorld().playSound(b.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 5f, 0.8f);
 
 				for (int x = -5; x < 6; x++) {
@@ -939,7 +944,7 @@ public class Invasion extends Arena {
 	}
 	
 	public Mobber getRndMbbr(final boolean alive) {
-		final Mobber m = mbbrs.get(ApiOstrov.rndElmt(spots).getSLoc());
+		final Mobber m = mbbrs.get(ClassUtil.rndElmt(spots).getSLoc());
 		return m == null || (alive && !m.isAlive()) ? null : m;
 	}
 }

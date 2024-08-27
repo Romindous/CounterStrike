@@ -1,5 +1,9 @@
 package me.Romindous.CounterStrike.Game;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map.Entry;
 import me.Romindous.CounterStrike.Enums.GameState;
 import me.Romindous.CounterStrike.Enums.GameType;
 import me.Romindous.CounterStrike.Main;
@@ -20,33 +24,25 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryType;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitTask;
-import ru.komiss77.ApiOstrov;
 import ru.komiss77.Ostrov;
+import ru.komiss77.enums.Game;
 import ru.komiss77.modules.bots.BotManager;
+import ru.komiss77.modules.games.GM;
 import ru.komiss77.modules.player.PM;
 import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.notes.Slow;
-import ru.komiss77.utils.TCUtils;
+import ru.komiss77.utils.ClassUtil;
 import ru.komiss77.utils.inventory.InventoryManager;
 import ru.komiss77.utils.inventory.SmartInventory;
-
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
 
 public class Arena {
 
 	public static SmartInventory gameInv = SmartInventory.builder().id("Arenas")
 		.title("           §5§lВыбор Игры").provider(new GameMenu()).size(6, 9).build();
 	public final static HashMap<XYZ, TripWire> tblks = new HashMap<>();
-	public final static String T_AMT = "tamt", CT_AMT = "ctamt", LIMIT = "rem",
-		MONEY = "mn", STAGE = "gst", SCORE = "scr", RED_IND = "ind";
+	protected final static String T_AMT = "tamt", CT_AMT = "ctamt",
+		LIMIT = "rem", MONEY = "mn", STAGE = "gst", SCORE = "scr";
 
 	protected static int botID = 0;
 	
@@ -96,7 +92,7 @@ public class Arena {
 		teamInv = SmartInventory.builder().id(name + " Team").title("         §eВыбор Комманды")
 			.provider(new TeamMenu(this)).type(InventoryType.HOPPER).build();
 		this.bots = botInv != null;
-		Ostrov.async(() -> ApiOstrov.shuffle(spots));
+		Ostrov.async(() -> ClassUtil.shuffle(spots));
 	}
 
 //	public static Arena getPlArena(final Shooter pl) {
@@ -298,10 +294,10 @@ public class Arena {
 		}
 		switch (gst) {
 			case WAITING, BEGINING, FINISH:
-				sh.setTabTag("§7<§d" + name + "§7> ", " §7[-.-]", nv.clr);
+				sh.taq("§7<§d" + name + "§7> ", " §7[-.-]", nv.clr);
 				break;
 			case BUYTIME, ROUND, ENDRND:
-				sh.setTabTag(nv.icn + " ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", nv.clr);
+				sh.taq(nv.icn + " ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", nv.clr);
 				break;
 		}
 		return true;
@@ -326,7 +322,7 @@ public class Arena {
 						if (++tPls > tmMx) {
 							if (en.getKey() instanceof BtShooter) {
 								it.remove();
-								((BtShooter) en.getKey()).remove();
+								((BtShooter) en.getKey()).own().remove();
 							} else {
 								tmMx = tPls;
 							}
@@ -336,7 +332,7 @@ public class Arena {
 						if (++ctPls > tmMx) {
 							if (en.getKey() instanceof BtShooter) {
 								it.remove();
-								((BtShooter) en.getKey()).remove();
+								((BtShooter) en.getKey()).own().remove();
 							} else {
 								tmMx = ctPls;
 							}
@@ -348,11 +344,19 @@ public class Arena {
 			}
 
 			for (int i = tPls; i < tmMx; i++) {
-				shtrs.put(BotManager.createBot("Bot-v" + botID++, BtShooter.class, nm -> new BtShooter(nm, this)), Team.Ts);
+				BotManager.createBot("Bot-v" + botID++, w, bt -> {
+					final BtShooter nbt = new BtShooter(bt, this);
+					shtrs.put(nbt, Team.Ts);
+					return nbt;
+				});
 			}
 
 			for (int i = ctPls; i < tmMx; i++) {
-				shtrs.put(BotManager.createBot("Bot-v" + botID++, BtShooter.class, nm -> new BtShooter(nm, this)), Team.CTs);
+				BotManager.createBot("Bot-v" + botID++, w, bt -> {
+					final BtShooter nbt = new BtShooter(bt, this);
+					shtrs.put(nbt, Team.CTs);
+					return nbt;
+				});
 			}
 		}
 
@@ -375,21 +379,21 @@ public class Arena {
 	public void updateData() {
 		switch (gst) {
 			case WAITING:
-				ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ОЖИДАНИЕ, "§7Тип: §d" + getType().name,
-					"§5=-=-=-=-=-=-", "§7Нужно: §d" + (min - shtrs.size()) + " §7чел.",
-					"§7Боты: " + (bots ? "§aДа" : "§cНет"), "", shtrs.size());
+				GM.sendArenaData(Game.CS, this.name, ru.komiss77.enums.GameState.ОЖИДАНИЕ, shtrs.size(), "§7Тип: §d" + getType().name,
+					"§5=-=-=-=-=-=-", "§7Нужно: §d" + (min - shtrs.size()) + " §7чел.", "§7Боты: " + (bots ? "§aДа" : "§cНет"));
 				break;
 			case BEGINING:
-				ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.СТАРТ, "§7Тип: §d" + getType().name, "§7Боты: "
-						+ (bots ? "§aДа" : "§cНет"), "§5=-=-=-=-=-=-", "§7Макс. §d" + max + " §7чел.", "", shtrs.size());
+				GM.sendArenaData(Game.CS, this.name, ru.komiss77.enums.GameState.СТАРТ, shtrs.size(), "§7Тип: §d" + getType().name, "§7Боты: "
+					+ (bots ? "§aДа" : "§cНет"), "§5=-=-=-=-=-=-", "§7Макс. §d" + max + " §7чел.");
 				break;
 			case BUYTIME, ROUND, ENDRND:
-				ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ЭКИПИРОВКА, "§7Тип: §d" + getType().name, "§7Боты: "
-					+ (bots ? "§aДа" : "§cНет"), "§5=-=-=-=-=-=-", "§7Макс. §d" + max + " §7чел.", "", getPlaying(true, false));
+				GM.sendArenaData(Game.CS, this.name, ru.komiss77.enums.GameState.ЭКИПИРОВКА, getPlaying(true, false),
+					"§7Тип: §d" + getType().name, "§7Боты: " + (bots ? "§aДа" : "§cНет"),
+					"§5=-=-=-=-=-=-", "§7Макс. §d" + max + " §7чел.");
 				break;
 			case FINISH:
-				ApiOstrov.sendArenaData(this.name, ru.komiss77.enums.GameState.ФИНИШ, "§7Тип: §d" + getType().name, "§7Боты: "
-						+ (bots ? "§aДа" : "§cНет"), "§5=-=-=-=-=-=-", "§7Макс. §d" + max + " §7чел.", "", shtrs.size());
+				GM.sendArenaData(Game.CS, this.name, ru.komiss77.enums.GameState.ФИНИШ, shtrs.size(), "§7Тип: §d" + getType().name, "§7Боты: "
+					+ (bots ? "§aДа" : "§cНет"), "§5=-=-=-=-=-=-", "§7Макс. §d" + max + " §7чел.");
 				break;
 		}
 
@@ -397,7 +401,7 @@ public class Arena {
 			final Player pl = sh.getPlayer();
 			if (pl == null) continue;
 			final SmartInventory si = InventoryManager.getInventory(pl).orElse(null);
-			if (si != null && si.getProvider() instanceof final GameMenu bm) {
+			if (si != null && si.getProvider() instanceof GameMenu) {
 				pl.closeInventory();
 				gameInv.open(pl);
 			}
@@ -431,13 +435,13 @@ public class Arena {
 		return time;
 	}
 	
-	@Slow(priority = 1)
+	/*@Slow(priority = 1)
 	protected static void editLr(final ItemStack it, final boolean add, final String lmnt) {
 		final ItemMeta im = it.getItemMeta();
-		final List<String> lr = im.lore().stream().map(TCUtils::toString).collect(Collectors.toList());
+		final List<String> lr = im.lore().stream().map(TCUtil::deform).collect(Collectors.toList());
 		if (add) lr.add(lmnt);
 		else lr.remove(lmnt);
-		im.lore(lr.stream().map(TCUtils::format).collect(Collectors.toList()));
+		im.lore(lr.stream().map(TCUtil::form).collect(Collectors.toList()));
 		it.setItemMeta(im);
-	}
+	}*/
 }
