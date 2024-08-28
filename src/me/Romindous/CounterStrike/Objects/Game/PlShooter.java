@@ -497,8 +497,9 @@ public class PlShooter implements Shooter {
 				b = w.getBlockAt((int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
 				final BlockPosition bp = Position.block(b.getX(), b.getY(), b.getZ());
 				if (wls.contains(bp)) break;
-				if (b.getCollisionShape().overlaps(new BoundingBox().shift(x, y, z))) {
+				if (b.getCollisionShape().overlaps(new BoundingBox().shift(adj(x - (int) x), adj(y - (int) y), adj(z - (int) z)))) {
 					wls.add(bp);
+					b.getWorld().spawnParticle(Particle.BLOCK, new Location(b.getWorld(), x, y, z), 4, 0.1d, 0.1d, 0.1d, b.getBlockData());
 					Utils.crackBlock(new WXYZ(b));
 					dmg *= 0.5f;
 				}
@@ -517,8 +518,13 @@ public class PlShooter implements Shooter {
 				break;
 			default:
 				if (mat.isCollidable()) {
+					/*final BoundingBox shift = new BoundingBox().shift(x - (int) x, y - (int) y, z - (int) z);
+					ent.sendMessage("shift- " + shift.toString());
+					for (final BoundingBox bs : b.getCollisionShape().getBoundingBoxes()) {
+						ent.sendMessage("bs- " + bs.toString());
+					}*/
 					b = w.getBlockAt((int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
-					if (b.getCollisionShape().overlaps(new BoundingBox().shift(x, y, z))) {
+					if (b.getCollisionShape().overlaps(new BoundingBox().shift(adj(x - (int) x), adj(y - (int) y), adj(z - (int) z)))) {
 						b.getWorld().spawnParticle(Particle.BLOCK, new Location(b.getWorld(), x, y, z), 10, 0.1d, 0.1d, 0.1d, b.getBlockData());
 						Utils.crackBlock(new WXYZ(b));
 						return;
@@ -563,7 +569,10 @@ public class PlShooter implements Shooter {
         }
 	}
 
-	
+	private double adj(final double v) {
+		return v < 0 ? v + 1d : v;
+	}
+
 	@Override
 	public int hashCode() {
 		return name.hashCode();

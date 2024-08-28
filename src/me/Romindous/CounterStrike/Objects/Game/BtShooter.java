@@ -498,8 +498,9 @@ public class BtShooter implements Shooter, Botter.Extent {
 					b = w.getBlockAt((int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
 					final BlockPosition bp = Position.block(b.getX(), b.getY(), b.getZ());
 					if (wls.contains(bp)) break;
-					if (b.getCollisionShape().overlaps(new BoundingBox().shift(x, y, z))) {
+					if (b.getCollisionShape().overlaps(new BoundingBox().shift(adj(x - (int) x), adj(y - (int) y), adj(z - (int) z)))) {
 						wls.add(bp);
+						b.getWorld().spawnParticle(Particle.BLOCK, new Location(b.getWorld(), x, y, z), 4, 0.1d, 0.1d, 0.1d, b.getBlockData());
 						Utils.crackBlock(new WXYZ(b));
 						dmg *= 0.5f;
 					}
@@ -519,7 +520,7 @@ public class BtShooter implements Shooter, Botter.Extent {
 				default:
 					if (mat.isCollidable()) {
 						b = w.getBlockAt((int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
-						if (b.getCollisionShape().overlaps(new BoundingBox().shift(x, y, z))) {
+						if (b.getCollisionShape().overlaps(new BoundingBox().shift(adj(x - (int) x), adj(y - (int) y), adj(z - (int) z)))) {
 							b.getWorld().spawnParticle(Particle.BLOCK, new Location(b.getWorld(), x, y, z), 10, 0.1d, 0.1d, 0.1d, b.getBlockData());
 							Utils.crackBlock(new WXYZ(b));
 							return;
@@ -551,6 +552,10 @@ public class BtShooter implements Shooter, Botter.Extent {
 				if (dmg <= 0f) return;//dmg 0, end
 			}
 		}
+	}
+
+	private double adj(final double v) {
+		return v < 0 ? v + 1d : v;
 	}
 	
 	@Override
