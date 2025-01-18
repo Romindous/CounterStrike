@@ -8,6 +8,7 @@ import me.Romindous.CounterStrike.Game.Arena.Team;
 import me.Romindous.CounterStrike.Game.Invasion;
 import me.Romindous.CounterStrike.Listeners.DmgLis;
 import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.Game.Mobber;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;

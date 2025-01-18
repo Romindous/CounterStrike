@@ -16,7 +16,7 @@ import me.Romindous.CounterStrike.Objects.Game.TripWire;
 import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
-import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
+import me.Romindous.CounterStrike.Menus.ChosenSkinMenu;
 import me.Romindous.CounterStrike.Utils.Utils;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
@@ -194,7 +194,7 @@ public class Arena {
 		sh.money(sh.money() + n);
 		final Player p = sh.getPlayer();
 		if (p == null) return;
-		SkinQuest.tryCompleteQuest(sh, Quest.ЛАТУНЬ, sh.money());
+		ChosenSkinMenu.tryCompleteQuest(sh, Quest.ЛАТУНЬ, sh.money());
 		Utils.sendAcBr(p, (n < 0 ? "§5" : "§d+") + n + " §6⛃");
 		PM.getOplayer(p).score.getSideBar().update(MONEY, "§7Монет: §d" + sh.money() + " §6⛃");
 	}

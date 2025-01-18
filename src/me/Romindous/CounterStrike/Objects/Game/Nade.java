@@ -17,7 +17,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.utils.EntityUtil;
-import ru.komiss77.utils.FastMath;
+import ru.komiss77.utils.NumUtil;
 import ru.komiss77.utils.LocUtil;
 import ru.komiss77.version.Nms;
 
@@ -89,9 +89,9 @@ public class Nade {
 						for (int x = X - r; x <= X + r; x++) {
 							for (int y = Y - r; y <= Y + r; y++) {
 								for (int z = Z - r; z <= Z + r; z++) {
-									final int n = FastMath.square(X - x)
-										+ FastMath.square(Y - y) + FastMath.square(Z - z);
-									if (FastMath.square(r - 1) <= n && n <= r * r) {
+									final int n = NumUtil.square(X - x)
+										+ NumUtil.square(Y - y) + NumUtil.square(Z - z);
+									if (NumUtil.square(r - 1) <= n && n <= r * r) {
 										if (Nms.fastType(w, x, y, z).isAir()
 											&& Nms.fastType(w, x, y - 1, z).hasCollision()) {
 											final WXYZ bl = new WXYZ(w, x, y, z, nt.time);
@@ -118,9 +118,9 @@ public class Nade {
 						for (int x = X - r; x <= X + r; x++) {
 							for (int y = Y - r; y <= Y + r; y++) {
 								for (int z = Z - r; z <= Z + r; z++) {
-									final int n = FastMath.square(X - x)
-										+ FastMath.square(Y - y) + FastMath.square(Z - z);
-									if (FastMath.square(r - 1) <= n && n <= r * r) {
+									final int n = NumUtil.square(X - x)
+										+ NumUtil.square(Y - y) + NumUtil.square(Z - z);
+									if (NumUtil.square(r - 1) <= n && n <= r * r) {
 										final BlockType bt = Nms.fastType(w, x, y, z);
 										if (bt.isAir() || BlockType.FIRE.equals(bt)) {
 											final WXYZ bl = new WXYZ(w, x, y, z, nt.time);
@@ -178,7 +178,7 @@ public class Nade {
 				break;
 			case DECOY:
 				X = loc.getBlockX(); Y = loc.getBlockY(); Z = loc.getBlockZ();
-				final GunType gt = sh == null ? null : GunType.getGnTp(sh.item(0));
+				final GunType gt = sh == null ? null : GunType.get(sh.item(0));
 				Main.decoys.add(new WXYZ(w, X, Y, Z, 160, gt == null ? GunType.USP.ordinal() : gt.ordinal()));
 				break;
 		}
@@ -214,7 +214,7 @@ public class Nade {
 		if (sh.arena() != null) {
 			final Arena.Team tm = sh.arena().shtrs.get(sh);
 			Nms.colorGlow(sb, tm.color(), sh.allyTest());
-			Main.plyWrldSnd(le, sh.arena(), tm, nt.snd, 1f);
-		} else Main.plyWrldSnd(le, "cs.rand.nadethrow", 1f);
+			Main.plyWrldSnd(le, sh.arena(), tm, nt.snd, 1.1f - Main.srnd.nextFloat() * 0.2f);
+		} else Main.plyWrldSnd(le, "rand.nadethrow", 1.1f - Main.srnd.nextFloat() * 0.2f);
 	}
 }

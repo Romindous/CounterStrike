@@ -10,15 +10,18 @@ import me.Romindous.CounterStrike.Game.Defusal;
 import me.Romindous.CounterStrike.Game.Gungame;
 import me.Romindous.CounterStrike.Game.Invasion;
 import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Menus.ChosenSkinMenu;
 import me.Romindous.CounterStrike.Objects.EntityShootAtEntityEvent;
 import me.Romindous.CounterStrike.Objects.Game.BtShooter;
+import me.Romindous.CounterStrike.Objects.Game.Mobber;
 import me.Romindous.CounterStrike.Objects.Game.Nade;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
-import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
-import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
-import org.bukkit.*;
+import org.bukkit.GameMode;
+import org.bukkit.Material;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -30,11 +33,15 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 import ru.komiss77.ApiOstrov;
+import ru.komiss77.Ostrov;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.utils.EntityUtil;
 
 public class DmgLis implements Listener {
-	
+
+	public static final String DEATH_SND = Ostrov.registries
+		.SOUNDS.getKey(Sound.BLOCK_ENDER_CHEST_OPEN).asMinimalString();
+
 	@EventHandler
 	public void onDmg(final EntityDamageEvent e) {
 		switch (e.getCause()) {
@@ -55,7 +62,7 @@ public class DmgLis implements Listener {
 						} else {
 							if (ee instanceof final EntityShootAtEntityEvent eee) {
 								//need to deal damage
-                                final GunType gt = GunType.getGnTp(sh.item(EquipmentSlot.HAND));
+                                final GunType gt = GunType.get(sh.item(EquipmentSlot.HAND));
 								if (gt == null) return;
 								if (eee.isCritical() && dmgr.getType() == EntityType.PLAYER) {
 									ApiOstrov.addStat((Player) dmgr, Stat.CS_hshot);
@@ -74,7 +81,7 @@ public class DmgLis implements Listener {
 									if (ent.getNoDamageTicks() == 0) {
 										e.setDamage(ent.getEquipment().getChestplate() == null ? 3d : 2d);
 										prcDmg(ent, Shooter.getShooter(ent, false), sh, e.getDamage(), 
-										"§f\u9298", 5, GunType.knifRwd, false, false, false, false, false);
+										"§f\u9298", 5, Shooter.knifRwd, false, false, false, false, false);
 										if (dmgr.getType() == EntityType.PLAYER) {
 											EntityUtil.indicate(ent.getEyeLocation(), "§6" + (int) e.getDamage() * 5, (Player) dmgr);
 										}
@@ -152,7 +159,7 @@ public class DmgLis implements Listener {
 		if (health > 0d) {//if entity isnt dying
 			if (tgtsh == null) {//target is not player
 				target.setHealth(health);
-				target.playEffect(EntityEffect.THORNS_HURT);
+				target.playHurtAnimation(target.getBodyYaw());
 				target.setNoDamageTicks(ndts);
 				target.playHurtAnimation(target.getYaw());
 				if (target instanceof Mob && damager != null) {
@@ -208,7 +215,7 @@ public class DmgLis implements Listener {
 						inv.TMbs.remove(target.getEntityId());
 						target.getWorld().spawnParticle(Particle.SOUL, target.getLocation()
 							.add(0, 1d, 0), 40, 0.5D, 0.5D, 0.5D, 0.0D, null, false);
-						Main.plyWrldSnd(target, Sound.BLOCK_ENDER_CHEST_OPEN.key().value(), 2f);
+						Main.plyWrldSnd(target, DEATH_SND, 2f);
 						target.remove();
 					default:
 						break;
@@ -227,7 +234,7 @@ public class DmgLis implements Listener {
 							}
 							target.getWorld().spawnParticle(Particle.SOUL, target.getLocation()
 								.add(0, 1d, 0), 40, 0.5D, 0.5D, 0.5D, 0.0D, null, false);
-							Main.plyWrldSnd(target, Sound.BLOCK_ENDER_CHEST_OPEN.key().value(), 2f);
+							Main.plyWrldSnd(target, DEATH_SND, 2f);
 							ar.killSh(tgtsh);
 							break;
 						default:
@@ -254,11 +261,11 @@ public class DmgLis implements Listener {
 							}
 							target.getWorld().spawnParticle(Particle.SOUL, target.getLocation()
 								.add(0, 1d, 0), 40, 0.5D, 0.5D, 0.5D, 0.0D, null, false);
-							Main.plyWrldSnd(target, Sound.BLOCK_ENDER_CHEST_OPEN.key().value(), 2f);
-							SkinQuest.tryCompleteQuest(damager, Quest.АЗИМОВ, smoked && blind && head ? 1 : 0);
-							SkinQuest.tryCompleteQuest(damager, Quest.КРОВЬ, walled ? 1 : 0);
+							Main.plyWrldSnd(target, DEATH_SND, 2f);
+							ChosenSkinMenu.tryCompleteQuest(damager, Quest.АЗИМОВ, smoked && blind && head ? 1 : 0);
+							ChosenSkinMenu.tryCompleteQuest(damager, Quest.КРОВЬ, walled ? 1 : 0);
 							final LivingEntity dle = damager.getEntity();
-							if (dle != null) SkinQuest.tryCompleteQuest(damager, Quest.ПАНК, (int) dle.getHealth());
+							if (dle != null) ChosenSkinMenu.tryCompleteQuest(damager, Quest.ПАНК, (int) dle.getHealth());
 							ar.killSh(tgtsh);
 							break;
 						default:

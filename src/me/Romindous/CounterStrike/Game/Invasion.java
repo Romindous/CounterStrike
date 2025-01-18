@@ -5,14 +5,15 @@ import me.Romindous.CounterStrike.Enums.GameState;
 import me.Romindous.CounterStrike.Enums.GameType;
 import me.Romindous.CounterStrike.Listeners.MainLis;
 import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.Defusable;
 import me.Romindous.CounterStrike.Objects.Game.BtShooter;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Game.TripWire;
 import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
-import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
+import me.Romindous.CounterStrike.Objects.Game.Mobber;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
-import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
+import me.Romindous.CounterStrike.Menus.ChosenSkinMenu;
 import me.Romindous.CounterStrike.Utils.Utils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -22,6 +23,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.*;
 import org.bukkit.entity.Display.Billboard;
+import org.bukkit.inventory.ItemType;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -32,6 +34,7 @@ import ru.komiss77.ApiOstrov;
 import ru.komiss77.Ostrov;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.modules.bots.BotManager;
+import ru.komiss77.modules.items.ItemBuilder;
 import ru.komiss77.modules.player.PM;
 import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.notes.Slow;
@@ -115,9 +118,9 @@ public class Invasion extends Arena {
 		switch (gst) {
 			case WAITING:
 			case BEGINING:
-				sh.item(5, Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10));
-				sh.item(6, Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10));
-				sh.item(8, Main.mkItm(Material.SLIME_BALL, "§cВыход", 10));
+				sh.item(5, new ItemBuilder(ItemType.HEART_OF_THE_SEA).name("§чБоторейка").build());
+				sh.item(6, Main.mkItm(ItemType.GHAST_TEAR, "§5Магазин", Shooter.SHOP_MDL));
+				sh.item(8, new ItemBuilder(ItemType.SLIME_BALL).name("§cВыход").build());
 				if (!rnd) p.teleport(Main.getNrLoc(ClassUtil.rndElmt(CTSawns), w));
 				p.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, time * 20, 1));
 				beginScore(p);
@@ -138,8 +141,8 @@ public class Invasion extends Arena {
 					chngTeam(sh, Team.SPEC);
 					p.setGameMode(GameMode.SPECTATOR);
 					p.teleport(Main.getNrLoc(Main.srnd.nextBoolean() ? ClassUtil.rndElmt(TSpawns) : ClassUtil.rndElmt(CTSawns), w));
-					sh.item(2, Main.mkItm(Material.NETHER_STAR, "§eВыбор Комманды", 10));
-					sh.item(8, Main.mkItm(Material.SLIME_BALL, "§cВыход", 10));
+					sh.item(2, new ItemBuilder(ItemType.NETHER_STAR).name("§eВыбор Комманды").build());
+					sh.item(8, new ItemBuilder(ItemType.SLIME_BALL).name("§cВыход").build());
 					for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
 						final Shooter s = e.getKey();
 						final Player pl = s.getPlayer();
@@ -170,9 +173,9 @@ public class Invasion extends Arena {
 	public void addToTm(final Player p, final PlShooter sh, final Team tm) {
 		p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1, 1);
 		p.teleport(Main.getNrLoc(ClassUtil.rndElmt(CTSawns), w));
-		p.getInventory().setItem(8, Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10));
-		p.getInventory().setItem(7, Main.mkItm(Material.GOLD_NUGGET, "§eКусачки §f\u9268", 10));
-		p.getInventory().setItem(2, Main.mkItm(Material.BLAZE_ROD, "§fНож \u9298", 10));
+		p.getInventory().setItem(8, Main.mkItm(ItemType.GHAST_TEAR, "§5Магазин", Shooter.SHOP_MDL));
+		p.getInventory().setItem(7, Main.mkItm(ItemType.GOLD_NUGGET, "§eКусачки §f\u9268", Defusable.PLIERS_MDL));
+		p.getInventory().setItem(2, Main.mkItm(ItemType.BLAZE_ROD, "§fНож \u9298", Shooter.KNIFE_MDL));
 		p.setGameMode(isDay ? GameMode.SURVIVAL : GameMode.SPECTATOR);
 
 		gameScore(sh, p);
@@ -365,9 +368,10 @@ public class Invasion extends Arena {
 		for (final Entity e : w.getEntitiesByClasses(Item.class, ArmorStand.class, Turtle.class)) {
 			e.remove();
 		}
-		
+
+		final int pls = shtrs.size();
 		if (botInv != null && bots) {
-			for (int i = (max >> 1) - shtrs.size(); i > 0; i--) {
+			for (int i = (max >> 1) - pls; i > 0; i--) {
 				BotManager.createBot("Bot-v" + botID++, w, bt -> {
 					final BtShooter nbt = new BtShooter(bt, this);
 					shtrs.put(nbt, Team.CTs);
@@ -387,25 +391,23 @@ public class Invasion extends Arena {
 			}
 			
 			sh.teleport(le, Main.getNrLoc(ClassUtil.rndElmt(CTSawns), w));
-			sh.item(7, Main.mkItm(Material.GOLD_NUGGET, "§eКусачки §f\u9268", 10));
-			sh.item(2, Main.mkItm(Material.BLAZE_ROD, "§fНож \u9298", 10));
+			sh.item(7, Main.mkItm(ItemType.GOLD_NUGGET, "§eКусачки §f\u9268", Defusable.PLIERS_MDL));
+			sh.item(2, Main.mkItm(ItemType.BLAZE_ROD, "§fНож \u9298", Shooter.KNIFE_MDL));
 			sh.taq(Team.CTs.icn + " ", " §7[" + sh.kills() +
 				"-" + sh.spwnrs() + "-" + sh.deaths() + "]", Team.CTs.clr);
 		}
 		
 		ads.setViewRange(100f);
 		ads.getLocation().getBlock().setType(Material.WARPED_PRESSURE_PLATE, false);
-		if (shtrs.size() > 1) {
+		if (pls > 1) {
 			bds.setViewRange(100f);
 			bds.getLocation().getBlock().setType(Material.WARPED_PRESSURE_PLATE, false);
 		}
 		
 		Ostrov.async(() -> ClassUtil.shuffle(spots));
-		for (int i = 0; i != spots.length; i++) {
+		for (int i = Math.max(0, (spots.length >> 1) - pls); i != spots.length; i++) {
 			new Mobber(spots[i], this);
 		}
-//		Nms.colorGlow(ads, NamedTextColor.AQUA, false);
-//		Nms.colorGlow(bds, NamedTextColor.GOLD, false);
 		swpDayNght();
 		updateData();
 	}
@@ -428,7 +430,7 @@ public class Invasion extends Arena {
 				if (p != null) {
 					Utils.sendTtlSbTtl(p, "§4Ночь", "§7Крепитесь и защищайте точки!", 50);
 					PM.getOplayer(p).score.getSideBar().update(STAGE, "§7Cтадия: §5Ночь §7(" + getTime(time, "§5") + "§7)");
-					p.playSound(p.getLocation(), "cs.info.night", 10f, 1f);
+					p.playSound(p.getLocation(), "info.night", 10f, 1f);
 				}
 			}
 
@@ -444,10 +446,10 @@ public class Invasion extends Arena {
 				if (mb.getType() == Material.SPAWNER) {
 					final Mobber.MobType[] vls = Mobber.MobType.values();
 					if (mb.mt.ordinal() + 1 != vls.length)
-						mb.mt = vls[mb.mt.ordinal() + 1];
+						mb.set(vls[mb.mt.ordinal() + 1]);
 				} else {
 					mb.setSpwn();
-					mb.mt = Mobber.MobType.WEAK;
+					mb.set(Mobber.MobType.WEAK);
 				}
 			}
 		} else {
@@ -463,7 +465,7 @@ public class Invasion extends Arena {
 					final Player p = (Player) le;
 					Utils.sendTtlSbTtl(p, "§3День", "§7Закупайтесь и ломайте спавнеры!", 80);
 					PM.getOplayer(p).score.getSideBar().update(STAGE, "§7Cтадия: §dДень §7(" + getTime(time, "§d") + "§7)");
-					p.playSound(p.getLocation(), "cs.info.day", 10f, 1f);
+					p.playSound(p.getLocation(), "info.day", 10f, 1f);
 					if (e.getValue() == Team.SPEC) continue;
 
 					if (p.getGameMode() == GameMode.SPECTATOR) {
@@ -476,7 +478,7 @@ public class Invasion extends Arena {
 					}
 				}
 				chngMn(sh, 250);
-				sh.item(8, Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10));
+				sh.item(8, Main.mkItm(ItemType.GHAST_TEAR, "§5Магазин", Shooter.SHOP_MDL));
 				sh.getEntity().addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, time * 20 + 10, 1));
 			}
 			
@@ -519,7 +521,7 @@ public class Invasion extends Arena {
 						if (p != null) {
 							Utils.sendAcBr(p, "§7Осталось §d" + time + " §7секунд!");
 							PM.getOplayer(p).score.getSideBar().update(STAGE, ttrm);
-							p.playSound(p.getLocation(), "cs.info." + (isDay ? "day30sec" : "nit30sec"), 10f, 1f);
+							p.playSound(p.getLocation(), "info." + (isDay ? "day30sec" : "nit30sec"), 10f, 1f);
 						}
 					}
 					break;
@@ -580,7 +582,7 @@ public class Invasion extends Arena {
 			if (sh instanceof PlShooter) {
 				final Player p = sh.getPlayer();
 				p.closeInventory();
-				p.playSound(p.getLocation(), "cs.info." + snd, 10f, 1f);
+				p.playSound(p.getLocation(), "info." + snd, 10f, 1f);
 				Utils.sendTtlSbTtl(p, ttl, sbt, 50);
 				sh.taq("§7<§d" + name + "§7> ", " §7[" + sh.kills() +
 					"-" + sh.spwnrs() + "-" + sh.deaths() + "]", Team.SPEC.clr);
@@ -593,7 +595,7 @@ public class Invasion extends Arena {
 				if (e.getValue() == Team.SPEC) continue;
 
 				ApiOstrov.addStat(p, Stat.CS_game);
-				SkinQuest.tryCompleteQuest(sh, Quest.ДУША, ApiOstrov.getStat(p, Stat.CS_game));
+				ChosenSkinMenu.tryCompleteQuest(sh, Quest.ДУША, ApiOstrov.getStat(p, Stat.CS_game));
 				sh.inv().clear();
 				winScore(sh, p, CTwn);
 			} else {
@@ -637,11 +639,11 @@ public class Invasion extends Arena {
 			.add(" ")
 			.add("§7Карта: §5" + name)
 			.add("§7Режим: §d" + getType().name)
-			.add("§7=-=-=-=-=-=-=-=-")
+			.add("§7=-=-=-=-=-=-=-")
 			.add(T_AMT, "§7Точки: " + (shtrs.size() == 1 ? "§bA" : "§bA §7и §6B"))
 			.add(" ")
 			.add(CT_AMT, "§7Защитников: " + Team.CTs.clr + shtrs.size() + " §7чел. §8✦ Ты")
-			.add("§7=-=-=-=-=-=-=-=-")
+			.add("§7=-=-=-=-=-=-=-")
 			.add(LIMIT, "§7Начало через: §5" + String.valueOf(time))
 			.add(" ")
 			.add("§e   ostrov77.ru").build();
@@ -652,7 +654,7 @@ public class Invasion extends Arena {
 			.add(" ")
 			.add("§7Карта: §5" + name)
 			.add("§7Режим: §d" + getType().name)
-			.add("§7=-=-=-=-=-=-=-=-")
+			.add("§7=-=-=-=-=-=-=-")
 			.add(STAGE, "§7Cтадия: " + (isDay ? "§dДень §7(" + getTime(time, "§d") 
 					: "§5Ночь §7(" + getTime(time, "§5")) + "§7)")
 			.add(" ")
@@ -660,7 +662,7 @@ public class Invasion extends Arena {
 			.add(B_HP, "§7Точка §6B §7: " + (getTmAmt(Team.CTs, true, false) == 1 ? "§7Не активна!" : "§6" + String.valueOf(bpc) + "%"))
 			.add(" ")
 			.add(CT_AMT, "§7Защитников: " + Team.CTs.clr + getTmAmt(Team.CTs, true, true) + " §7чел.")
-			.add("§7=-=-=-=-=-=-=-=-")
+			.add("§7=-=-=-=-=-=-=-")
 			.add(MONEY, "§7Монет: §d" + sh.money() + " §6⛃")
 			.add(" ")
 			.add("§e   ostrov77.ru").build();
@@ -672,12 +674,12 @@ public class Invasion extends Arena {
 			.add(" ")
 			.add("§7Карта: §5" + name)
 			.add("§7Режим: §d" + getType().name)
-			.add("§7=-=-=-=-=-=-=-=-")
+			.add("§7=-=-=-=-=-=-=-")
 			.add("§7Cтадия: §dФиниш")
 			.add(LIMIT, getTime(time, "§d") + " §7до конца!")
 			.add(" ")
 			.add(CT_AMT, "§7Защитников: " + Team.CTs.clr + getTmAmt(Team.CTs, true, true) + " §7чел.")
-			.add("§7=-=-=-=-=-=-=-=-")
+			.add("§7=-=-=-=-=-=-=-")
 			.add(MONEY, "§7Монет: §d" + sh.money() + " §6⛃")
 			.add(" ")
 			.add("§e   ostrov77.ru").build();
@@ -743,7 +745,7 @@ public class Invasion extends Arena {
 			"-" + sh.spwnrs() + "-" + sh.deaths() + "]", Team.CTs.clr);
 		final Player p = sh.getPlayer();
 		if (p != null) {
-			SkinQuest.tryCompleteQuest(sh, Quest.ДЮНА, sh.kills());
+			ChosenSkinMenu.tryCompleteQuest(sh, Quest.ДЮНА, sh.kills());
 			ApiOstrov.addStat(p, Stat.CS_mobs);
 		}
 	}
@@ -754,7 +756,7 @@ public class Invasion extends Arena {
 			"-" + sh.spwnrs() + "-" + sh.deaths() + "]", Team.CTs.clr);
 		final Player p = sh.getPlayer();
 		if (p != null) {
-			SkinQuest.tryCompleteQuest(sh, Quest.ЛГБТ, sh.spwnrs());
+			ChosenSkinMenu.tryCompleteQuest(sh, Quest.ЛГБТ, sh.spwnrs());
 			ApiOstrov.addStat(p, Stat.CS_spnrs);
 		}
 	}
@@ -770,10 +772,9 @@ public class Invasion extends Arena {
 		}
 	}
 	
-	public void rmvSpnr(final Shooter sh) {
-		final Mobber mb = getClsMbbr(sh.getPos(), true);
+	public void rmvSpnr(final Mobber mb, final Shooter sh) {
 		if (mb != null) {
-			mb.defusing = null;
+			mb.defusing(null);
 			chngMn(sh, 150);
 			addSpDfs(sh);
 			dieSpnr(mb);
@@ -786,11 +787,6 @@ public class Invasion extends Arena {
 			if (m.isAlive()) return;
 		}
 		cntFnsh(true, "§7Все §4спавнеры §7обезврежены!", "despawner");
-	}
-
-	public void wrngWire(final Shooter sh) {
-		final Mobber mb = getClsMbbr(sh.getPos(), true);
-		if (mb != null) mb.spwnMb();
 	}
 	
 	public void endSps() {
@@ -836,13 +832,13 @@ public class Invasion extends Arena {
 					for (int y = -5; y < 6; y++) {
 						for (int z = -5; z < 6; z++) {
 							final int bnd = x*x + y*y + z*z;
-							if (bnd > 0 && Nms.getFastMat(w, X + x, Y + y, Z + z).isAir()
-								&& Nms.getFastMat(w, X + x, Y + y - 1, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 6) {
+							if (bnd > 0 && Nms.fastType(w, X + x, Y + y, Z + z).isAir()
+								&& Nms.fastType(w, X + x, Y + y - 1, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 6) {
 								for (final Player p : b.getWorld().getPlayers()) {
 									p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Material.FIRE.createBlockData());
 									cls.add(new XYZ("", X + x, Y + y, Z + z));
 								}
-							} else if (Nms.getFastMat(w, X + x, Y + y, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 10) {
+							} else if (Nms.fastType(w, X + x, Y + y, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 10) {
 								for (final Player p : b.getWorld().getPlayers()) {
 									p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Material.COAL_BLOCK.createBlockData());
 									cls.add(new XYZ("", X + x, Y + y, Z + z));
@@ -893,13 +889,13 @@ public class Invasion extends Arena {
 					for (int y = -5; y < 6; y++) {
 						for (int z = -5; z < 6; z++) {
 							final int bnd = x*x + y*y + z*z;
-							if (bnd > 0 && Nms.getFastMat(w, X + x, Y + y, Z + z).isAir()
-								&& Nms.getFastMat(w, X + x, Y + y - 1, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 6) {
+							if (bnd > 0 && Nms.fastType(w, X + x, Y + y, Z + z).isAir()
+								&& Nms.fastType(w, X + x, Y + y - 1, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 6) {
 								for (final Player p : b.getWorld().getPlayers()) {
 									p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Material.FIRE.createBlockData());
 									cls.add(new XYZ("", X + x, Y + y, Z + z));
 								}
-							} else if (Nms.getFastMat(w, X + x, Y + y, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 10) {
+							} else if (Nms.fastType(w, X + x, Y + y, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 10) {
 								for (final Player p : b.getWorld().getPlayers()) {
 									p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Material.COAL_BLOCK.createBlockData());
 									cls.add(new XYZ("", X + x, Y + y, Z + z));

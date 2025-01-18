@@ -19,13 +19,14 @@ import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Objects.Bots.BotGoal;
 import me.Romindous.CounterStrike.Objects.EntityShootAtEntityEvent;
 import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
-import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Skins.GunSkin;
+import me.Romindous.CounterStrike.Objects.TargetLe;
 import me.Romindous.CounterStrike.Utils.Inventories;
 import me.Romindous.CounterStrike.Utils.Utils;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockType;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
@@ -37,16 +38,15 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Nullable;
 import ru.komiss77.Ostrov;
 import ru.komiss77.modules.bots.Botter;
+import ru.komiss77.modules.items.ItemBuilder;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.notes.Slow;
 import ru.komiss77.objects.SortedList;
-import ru.komiss77.utils.ItemBuilder;
 import ru.komiss77.utils.ItemUtil;
 import ru.komiss77.utils.LocUtil;
 import ru.komiss77.version.Nms;
@@ -99,21 +99,24 @@ public class BtShooter implements Shooter, Botter.Extent {
 
 	@Override
 	public void hide(final Botter bt, final @Nullable LivingEntity mb) {
-		if (arena == null) return;
-		if (arena instanceof final Defusal df) {
-			if (df.isBmbOn()) {
-				final Shooter sh = df.getBomb().defusing;
-				if (sh != null && sh.equals(this))
-					df.getBomb().defusing = null;
-			}
-		} else if (arena instanceof final Invasion in) {
-			for (final Mobber m : in.mbbrs.values()) {
-				final Shooter sh = m.defusing;
-				if (sh != null && sh.equals(this))
-					m.defusing = null;
-			}
-		}
-	}
+        switch (arena) {
+            case final Defusal df -> {
+                if (df.isBmbOn()) {
+                    final Shooter sh = df.getBomb().defusing();
+                    if (sh != null && sh.equals(this))
+                        df.getBomb().defusing(null);
+                }
+            }
+            case final Invasion in -> {
+                for (final Mobber m : in.mbbrs.values()) {
+                    final Shooter sh = m.defusing();
+                    if (sh != null && sh.equals(this))
+                        m.defusing(null);
+                }
+            }
+            case null, default -> {}
+        }
+    }
 
 	@Override
 	public Goal<Mob> goal(final Botter bt, final Mob org) {
@@ -134,7 +137,7 @@ public class BtShooter implements Shooter, Botter.Extent {
 				case 0, 1, 3, 4:
 					final ItemStack bit = item(slt);
 					final ItemStack pit = pinv.getItem(slt);
-					if (ItemUtil.compareItem(bit, pit, false)) break;
+					if (ItemUtil.compare(bit, pit, ItemUtil.Stat.TYPE, ItemUtil.Stat.NAME)) break;
 					own.world().playSound(p.getEyeLocation(), Sound.ITEM_ARMOR_EQUIP_IRON, 1f, 1.2f);
 					own.world().playSound(getLoc().toLocation(own.world()), Sound.ITEM_ARMOR_EQUIP_IRON, 1f, 1.2f);
 					item(slt, pit);
@@ -154,43 +157,40 @@ public class BtShooter implements Shooter, Botter.Extent {
 	public boolean tryReload(final LivingEntity le, final Location loc) {
 		cldwn = Math.max(cldwn - 1, 0);
 		final ItemStack it = item(EquipmentSlot.HAND);
-		final GunType gt = GunType.getGnTp(it);
-		if (gt == null) return false;
-		if (it.hasItemMeta() && ((Damageable) it.getItemMeta()).hasDamage()) {
-			count++;
-			if ((count & 0x3) == 0) {
-				le.getWorld().playSound(loc, Sound.BLOCK_CHAIN_FALL, 0.5f, 2f);
-			}
-			if (count < gt.rtm) Main.setDmg(it, it.getType().getMaxDurability() * count / gt.rtm);
-			else {
-				Main.setDmg(it, it.getType().getMaxDurability());
-				le.getWorld().playSound(loc, Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 2f);
-				it.setAmount(gt.amo);
-				count = 0;
-				item(EquipmentSlot.HAND, it);
-				return false;
-			}
+		final GunType gt = GunType.get(it);
+		if (gt == null || !Main.hasDur(it)) return false;
+        count++;
+        if ((count & 0x3) == 0) {
+            le.getWorld().playSound(loc, Sound.BLOCK_CHAIN_FALL, 0.5f, 2f);
+        }
+        if (count < gt.rtm) {
+			Main.setDur(it, count);
 			item(EquipmentSlot.HAND, it);
 			return true;
-		} 
+		}
+		Main.setDur(it, Main.maxDur(it));
+		le.getWorld().playSound(loc, Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 2f);
+		it.setAmount(gt.amo);
+		count = 0;
+		item(EquipmentSlot.HAND, it);
 		return false;
-	}
+    }
 
 	public boolean tryShoot(final LivingEntity le) {
 		final ItemStack it = item(EquipmentSlot.HAND);
-		final GunType gt = GunType.getGnTp(it);
+		final GunType gt = GunType.get(it);
 		if (gt != null) {
-			final boolean ps = ((Damageable) it.getItemMeta()).hasDamage();
+			final boolean ps = Main.hasDur(it);
 			count = count + (ps ? 0 : 1);
 			if (count % gt.cld == 0) {
 				final int tr = count < rclTm ? count : rclTm;
 				if (it.getAmount() == 1) {
 					if (ps) return false;
-					Main.setDmg(it, 0);
+					Main.setDur(it, 0);
 					count = 0;
 				} else {
 					if (ps) {
-						Main.setDmg(it, it.getType().getMaxDurability());
+						Main.setDur(it, Main.maxDur(it));
 						count = 0;
 					}
 					it.setAmount(it.getAmount() - 1);
@@ -201,7 +201,7 @@ public class BtShooter implements Shooter, Botter.Extent {
 				for (byte i = gt.brst == 0 ? 1 : gt.brst; i > 0; i--) {
 					shoot(gt, !iw, tr);
 				}
-				Main.plyWrldSnd(le, gt.snd, 1f);
+				Main.plyWrldSnd(le, gt.snd, 1.1f - Main.srnd.nextFloat() * 0.2f);
 				return true;
 			}
 		}
@@ -209,12 +209,12 @@ public class BtShooter implements Shooter, Botter.Extent {
 	}
 	
 	public void switchToGun() {
-		final GunType gt0 = GunType.getGnTp(item(0));
+		final GunType gt0 = GunType.get(item(0));
 		if (gt0 != null) {
 			own.swapToSlot(0);
 			return;
 		}
-		final GunType gt1 = GunType.getGnTp(item(1));
+		final GunType gt1 = GunType.get(item(1));
 		if (gt1 != null) {
 			own.swapToSlot(1);
 			return;
@@ -264,15 +264,15 @@ public class BtShooter implements Shooter, Botter.Extent {
 
 	private int shtTm;
 	public int shtTm() {return shtTm;}
-	public int shtTm(final int n) {return shtTm=n;}
+	public void shtTm(final int n) {shtTm=n;}
 	
 	private int rclTm;
 	public int rclTm() {return rclTm;}
-	public int rclTm(final int n) {return rclTm=n;}
+	public void rclTm(final int n) {rclTm=n;}
 	
 	private int cldwn;
 	public int cldwn() {return cldwn;}
-	public int cldwn(final int n) {return cldwn=n;}
+	public void cldwn(final int n) {cldwn=n;}
 	
 	private int kills;
 	public int kills() {return kills;}
@@ -291,11 +291,11 @@ public class BtShooter implements Shooter, Botter.Extent {
 	
 	private int money;
 	public int money() {return money;}
-	public int money(final int n) {return money=n;}
+	public void money(final int n) {money=n;}
 	
 	private int count;
 	public int count() {return count;}
-	public int count(final int n) {return count=n;}
+	public void count(final int n) {count=n;}
 	
 	private Arena arena;
 	public Arena arena() {return arena;}
@@ -336,11 +336,11 @@ public class BtShooter implements Shooter, Botter.Extent {
 		own.drop(loc);
 	}
 
-	public int getModel(final GunType gt) {return GunType.defCMD;}
-	public GunSkin getSkin(final GunType gt) {return new GunSkin();}
-	public boolean hasModel(final GunType gt, final int mdl) {return true;}
-	public void giveModel(final GunType gt, final int cmd) {}
-	public void setModel(final GunType gt, final int cmd) {}
+	public String model(final GunType gt) {return gt.name + "_" + GunType.DEF_MDL;}
+	public GunSkin skin(final GunType gt) {return new GunSkin();}
+	public boolean has(final GunType gt, final String mdl) {return true;}
+	public void give(final GunType gt, final String mdl) {}
+	public void choose(final GunType gt, final String mdl) {}
 
 	@Override
 	public void taq(final String pfx, final String sfx, final String afx) {
@@ -422,110 +422,39 @@ public class BtShooter implements Shooter, Botter.Extent {
 				w.spawnParticle(Particle.ASH, x, y, z, 1);
 			}
 
-			final Material mat = Nms.getFastMat(w, (int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
+			final BlockType mat = Nms.fastType(w, (int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
 			final Block b;
-			switch (mat) {
-				case POWDER_SNOW:
-					smoke = true;
-					break;
-				case OAK_LEAVES, ACACIA_LEAVES, BIRCH_LEAVES, JUNGLE_LEAVES, CHERRY_LEAVES,
-				SPRUCE_LEAVES, DARK_OAK_LEAVES, MANGROVE_LEAVES, AZALEA_LEAVES,
-				FLOWERING_AZALEA_LEAVES,
-
-				GLASS, WHITE_STAINED_GLASS, GLASS_PANE,
-				WHITE_STAINED_GLASS_PANE, FLOWER_POT, DECORATED_POT,
-
-				DIAMOND_ORE, COAL_ORE, IRON_ORE, EMERALD_ORE:
-					if (brkBlks) {
-						b = w.getBlockAt((int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
-						arena().brkn.add(new BrknBlck(b));
-						w.playSound(b.getLocation(), Sound.BLOCK_SHROOMLIGHT_FALL, 2f, 0.8f);
-						w.spawnParticle(Particle.BLOCK, b.getLocation().add(0.5d, 0.5d, 0.5d),
-								40, 0.4d, 0.4d, 0.4d, b.getType().createBlockData());
-						b.setType(Material.AIR, false);
-						wls.add(Position.block(b.getX(), b.getY(), b.getZ()));
-						dmg *= 0.5f;
-					}
-					break;
-				case ACACIA_SLAB, BIRCH_SLAB, CRIMSON_SLAB, SPRUCE_SLAB, WARPED_SLAB, CHERRY_SLAB, BAMBOO_SLAB,
-				DARK_OAK_SLAB, OAK_SLAB, JUNGLE_SLAB, PETRIFIED_OAK_SLAB, MANGROVE_SLAB, BAMBOO_MOSAIC_SLAB,
-
-				ACACIA_STAIRS, BIRCH_STAIRS, CRIMSON_STAIRS, SPRUCE_STAIRS, CHERRY_STAIRS, BAMBOO_STAIRS,
-				WARPED_STAIRS, DARK_OAK_STAIRS, OAK_STAIRS, JUNGLE_STAIRS, MANGROVE_STAIRS, BAMBOO_MOSAIC_STAIRS,
-
-				ACACIA_PLANKS, BIRCH_PLANKS, CRIMSON_PLANKS, SPRUCE_PLANKS, CHERRY_PLANKS, BAMBOO_PLANKS,
-				WARPED_PLANKS, DARK_OAK_PLANKS, OAK_PLANKS, JUNGLE_PLANKS, MANGROVE_PLANKS, BAMBOO_MOSAIC,
-
-				ACACIA_TRAPDOOR, BIRCH_TRAPDOOR, CRIMSON_TRAPDOOR, DARK_OAK_TRAPDOOR, CHERRY_TRAPDOOR, BAMBOO_TRAPDOOR,
-				JUNGLE_TRAPDOOR, MANGROVE_TRAPDOOR, OAK_TRAPDOOR, SPRUCE_TRAPDOOR, WARPED_TRAPDOOR,
-
-				ACACIA_WOOD, BIRCH_WOOD, CRIMSON_HYPHAE, SPRUCE_WOOD, CHERRY_WOOD, BAMBOO_BLOCK,
-				WARPED_HYPHAE, DARK_OAK_WOOD, OAK_WOOD, JUNGLE_WOOD, MANGROVE_WOOD,
-
-				ACACIA_LOG, BIRCH_LOG, CRIMSON_STEM, SPRUCE_LOG, CHERRY_LOG, BAMBOO,
-				WARPED_STEM, DARK_OAK_LOG, OAK_LOG, JUNGLE_LOG, MANGROVE_LOG,
-
-				ACACIA_SIGN, ACACIA_WALL_SIGN, BIRCH_SIGN, BIRCH_WALL_SIGN, CRIMSON_SIGN, BAMBOO_SIGN,
-				CRIMSON_WALL_SIGN, SPRUCE_SIGN, SPRUCE_WALL_SIGN, WARPED_SIGN, WARPED_WALL_SIGN,
-				DARK_OAK_SIGN, DARK_OAK_WALL_SIGN, OAK_SIGN, CHERRY_SIGN, CHERRY_WALL_SIGN, BAMBOO_WALL_SIGN,
-				OAK_WALL_SIGN, JUNGLE_SIGN, JUNGLE_WALL_SIGN, MANGROVE_SIGN, MANGROVE_WALL_SIGN,
-
-				STRIPPED_ACACIA_WOOD, STRIPPED_BIRCH_WOOD, STRIPPED_CRIMSON_HYPHAE, STRIPPED_SPRUCE_WOOD,
-				STRIPPED_WARPED_HYPHAE, STRIPPED_DARK_OAK_WOOD, STRIPPED_OAK_WOOD, STRIPPED_JUNGLE_WOOD,
-				STRIPPED_MANGROVE_WOOD, STRIPPED_CHERRY_WOOD, STRIPPED_BAMBOO_BLOCK,
-
-				STRIPPED_ACACIA_LOG, STRIPPED_BIRCH_LOG, STRIPPED_CRIMSON_STEM, STRIPPED_SPRUCE_LOG,
-				STRIPPED_WARPED_STEM, STRIPPED_DARK_OAK_LOG, STRIPPED_OAK_LOG, STRIPPED_JUNGLE_LOG,
-				STRIPPED_MANGROVE_LOG, STRIPPED_CHERRY_LOG,
-
-				ACACIA_FENCE, BIRCH_FENCE, CRIMSON_FENCE, SPRUCE_FENCE, WARPED_FENCE, DARK_OAK_FENCE,
-				OAK_FENCE, JUNGLE_FENCE, MANGROVE_FENCE, CHERRY_FENCE, BAMBOO_FENCE,
-
-				ACACIA_FENCE_GATE, BIRCH_FENCE_GATE, CRIMSON_FENCE_GATE, CHERRY_FENCE_GATE, BAMBOO_FENCE_GATE,
-				SPRUCE_FENCE_GATE, WARPED_FENCE_GATE, DARK_OAK_FENCE_GATE, OAK_FENCE_GATE, JUNGLE_FENCE_GATE, MANGROVE_FENCE_GATE,
-
-				OAK_DOOR, ACACIA_DOOR, BIRCH_DOOR, CRIMSON_DOOR, DARK_OAK_DOOR, CHERRY_DOOR,
-				JUNGLE_DOOR, MANGROVE_DOOR, WARPED_DOOR, SPRUCE_DOOR, BAMBOO_DOOR,
-
-				OAK_HANGING_SIGN, ACACIA_HANGING_SIGN, BIRCH_HANGING_SIGN, CRIMSON_HANGING_SIGN, DARK_OAK_HANGING_SIGN, CHERRY_HANGING_SIGN,
-				JUNGLE_HANGING_SIGN, MANGROVE_HANGING_SIGN, WARPED_HANGING_SIGN, SPRUCE_HANGING_SIGN, BAMBOO_HANGING_SIGN,
-
-				OAK_WALL_HANGING_SIGN, ACACIA_WALL_HANGING_SIGN, BIRCH_WALL_HANGING_SIGN, CRIMSON_WALL_HANGING_SIGN,
-				DARK_OAK_WALL_HANGING_SIGN, CHERRY_WALL_HANGING_SIGN, JUNGLE_WALL_HANGING_SIGN, MANGROVE_WALL_HANGING_SIGN,
-				WARPED_WALL_HANGING_SIGN, SPRUCE_WALL_HANGING_SIGN, BAMBOO_WALL_HANGING_SIGN,
-
-				BARREL, BEEHIVE, BEE_NEST, NOTE_BLOCK, JUKEBOX, CRAFTING_TABLE:
+			if (BlockType.POWDER_SNOW.equals(mat)) {
+				smoke = true;
+			} else if (BREAKABLE.contains(mat)) {
+				if (brkBlks) {
 					b = w.getBlockAt((int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
+					arena().brkn.add(new BrknBlck(b));
+					w.playSound(b.getLocation(), Sound.BLOCK_SHROOMLIGHT_FALL, 2f, 0.8f);
+					w.spawnParticle(Particle.BLOCK, b.getLocation().add(0.5d, 0.5d, 0.5d),
+						40, 0.4d, 0.4d, 0.4d, b.getType().createBlockData());
+					b.setType(Material.AIR, false);
+					wls.add(Position.block(b.getX(), b.getY(), b.getZ()));
+					dmg *= 0.5f;
+				}
+			} else if (mat.hasCollision()) {
+				if (PASSABLE.contains(mat)) continue;
+				b = w.getBlockAt((int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
+				if (BANGABLE.contains(mat)) {
 					final BlockPosition bp = Position.block(b.getX(), b.getY(), b.getZ());
-					if (wls.contains(bp)) break;
+					if (wls.contains(bp)) continue;
 					if (b.getCollisionShape().overlaps(new BoundingBox().shift(adj(x - (int) x), adj(y - (int) y), adj(z - (int) z)))) {
 						wls.add(bp);
 						b.getWorld().spawnParticle(Particle.BLOCK, new Location(b.getWorld(), x, y, z), 4, 0.1d, 0.1d, 0.1d, b.getBlockData());
 						Utils.crackBlock(new WXYZ(b));
 						dmg *= 0.5f;
 					}
-				case AIR, CAVE_AIR, VOID_AIR,
-
-				SEAGRASS, TALL_SEAGRASS, WEEPING_VINES, TWISTING_VINES,
-
-				BLACK_CARPET, BLUE_CARPET, BROWN_CARPET, CYAN_CARPET, GRAY_CARPET,
-				GREEN_CARPET, LIGHT_BLUE_CARPET, LIGHT_GRAY_CARPET, LIME_CARPET,
-				MAGENTA_CARPET, MOSS_CARPET, ORANGE_CARPET, PINK_CARPET,
-				PURPLE_CARPET, RED_CARPET, WHITE_CARPET, YELLOW_CARPET,
-
-				WATER, IRON_BARS, CHAIN, STRUCTURE_VOID, COBWEB, SNOW,
-				BARRIER, TRIPWIRE, LADDER, RAIL, POWERED_RAIL,
-				DETECTOR_RAIL, ACTIVATOR_RAIL, CAMPFIRE, SOUL_CAMPFIRE:
-					break;
-				default:
-					if (mat.isCollidable()) {
-						b = w.getBlockAt((int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
-						if (b.getCollisionShape().overlaps(new BoundingBox().shift(adj(x - (int) x), adj(y - (int) y), adj(z - (int) z)))) {
-							b.getWorld().spawnParticle(Particle.BLOCK, new Location(b.getWorld(), x, y, z), 10, 0.1d, 0.1d, 0.1d, b.getBlockData());
-							Utils.crackBlock(new WXYZ(b));
-							return;
-						}
-					}
+				}
+				if (b.getCollisionShape().overlaps(new BoundingBox().shift(adj(x - (int) x), adj(y - (int) y), adj(z - (int) z)))) {
+					b.getWorld().spawnParticle(Particle.BLOCK, new Location(b.getWorld(), x, y, z), 10, 0.1d, 0.1d, 0.1d, b.getBlockData());
+					Utils.crackBlock(new WXYZ(b));
+					return;
+				}
 			}
 
 			for (; tit >= 0; tit--) {
@@ -608,7 +537,7 @@ public class BtShooter implements Shooter, Botter.Extent {
 	public void pickup(final Botter bt, final Location loc) {
 		for (final Item it : LocUtil.getChEnts(loc, 4d, Item.class, it -> {return it.getPickupDelay() == 0;})) {
 			final ItemStack is = it.getItemStack();
-			final GunType gt = GunType.getGnTp(is);
+			final GunType gt = GunType.get(is);
 			if (gt == null) {
 				final NadeType nt = NadeType.getNdTp(is);
 				if (nt == null) {
@@ -650,7 +579,7 @@ public class BtShooter implements Shooter, Botter.Extent {
 			}
 			final int slt = gt.prm ? 0 : 1;
 			final ItemStack eqp = item(slt);
-			final GunType ownGun = GunType.getGnTp(eqp);
+			final GunType ownGun = GunType.get(eqp);
 			if (ownGun == null) {
 				item(slt, is.asQuantity(gt.amo));
 				it.remove();
@@ -681,24 +610,24 @@ public class BtShooter implements Shooter, Botter.Extent {
 		
 		final Team tm = arena.shtrs.get(this);
 		final boolean chs = Main.srnd.nextBoolean();
-		if (!chs && tm == Team.CTs) buyItem(GunType.kitSlt, GunType.kitPrc, 7, tm);
+		if (!chs && tm == Team.CTs) buyItem(Shooter.kitSlt, Shooter.kitPrc, 7, tm);
 		if (money < 1000) {//save
-			buyItem(GunType.helmSlt, GunType.helmPrc, EquipmentSlot.HEAD, tm);
-			if (chs) buyItem(GunType.chestSlt, GunType.chestPrc, EquipmentSlot.CHEST, tm);
+			buyItem(Shooter.helmSlt, Shooter.helmPrc, EquipmentSlot.HEAD, tm);
+			if (chs) buyItem(Shooter.chestSlt, Shooter.chestPrc, EquipmentSlot.CHEST, tm);
 			
 			if (!buyItem(GunType.DGL.slt, GunType.DGL.prc, 1, tm)) {
-				if (!buyItem(GunType.TP7.slt, GunType.TP7.prc, 1, tm)) {
+				if (!buyItem(GunType.TP9.slt, GunType.TP9.prc, 1, tm)) {
 					buyItem(GunType.USP.slt, GunType.USP.prc, 1, tm);
 				}
 			}
 
 		} else {//buy up
-			buyItem(GunType.helmSlt, GunType.helmPrc, EquipmentSlot.HEAD, tm);
-			buyItem(GunType.chestSlt, GunType.chestPrc, EquipmentSlot.CHEST, tm);
+			buyItem(Shooter.helmSlt, Shooter.helmPrc, EquipmentSlot.HEAD, tm);
+			buyItem(Shooter.chestSlt, Shooter.chestPrc, EquipmentSlot.CHEST, tm);
 			
 			final GunType top = chs ? GunType.AWP : GunType.SCAR;
 			if (!buyItem(top.slt, top.prc, 0, tm)) {
-				final GunType gud = chs ? GunType.M4 : GunType.AK47;
+				final GunType gud = chs ? GunType.M4A1 : GunType.AK47;
 				if (!buyItem(gud.slt, gud.prc, 0, tm)) {
 					final GunType mid = chs ? GunType.P90 : GunType.MP5;
 					if (!buyItem(mid.slt, mid.prc, 0, tm)) {
@@ -731,7 +660,7 @@ public class BtShooter implements Shooter, Botter.Extent {
 			Ostrov.log_warn("Tried to buy null item at slot " + slot);
 			return false;
 		}
-		final GunType gt = GunType.getGnTp(it);
+		final GunType gt = GunType.get(it);
 		if (gt == null) {
 			final NadeType nt = NadeType.getNdTp(it);
 			if (nt == null) {//armor?
@@ -755,14 +684,14 @@ public class BtShooter implements Shooter, Botter.Extent {
 		}
 		//guns
 		if (prc > money) return false;
-		final GunType ownGun = GunType.getGnTp(eq);
+		final GunType ownGun = GunType.get(eq);
 		if (ownGun != null) {
 			if (ownGun.prc >= prc) return false;
 			own.world().dropItem(getLoc().toLocation(own.world()), eq.asOne());
 		}
 		money -= prc;
-		item(to, new ItemBuilder(it.getType()).name("§5" + gt.name() + " " + gt.icn)
-			.amount(gt.amo).modelData(GunType.defCMD).build());
+		item(to, new ItemBuilder(it.getType().asItemType()).name("§5" + gt.name() + " " + gt.icn)
+			.maxDamage(gt.rtm).amount(gt.amo).model(gt.skin(GunType.DEF_MDL)).build());
 		own.world().playSound(getLoc().toLocation(own.world()), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 1.4f);
 		return true;
     }
@@ -779,7 +708,7 @@ public class BtShooter implements Shooter, Botter.Extent {
 			Ostrov.log_warn("Tried to buy null item at slot " + slot);
 			return false;
 		}
-		final GunType gt = GunType.getGnTp(it);
+		final GunType gt = GunType.get(it);
 		if (gt == null) {
 			final NadeType nt = NadeType.getNdTp(it);
 			if (nt == null) {//armor?
@@ -803,14 +732,14 @@ public class BtShooter implements Shooter, Botter.Extent {
 		}
 		//guns
 		if (prc > money) return false;
-		final GunType ownGun = GunType.getGnTp(eq);
+		final GunType ownGun = GunType.get(eq);
 		if (ownGun != null) {
 			if (ownGun.prc >= prc) return false;
 			own.world().dropItem(getLoc().toLocation(own.world()), eq.asOne());
 		}
 		money -= prc;
-		item(to, new ItemBuilder(it.getType()).name("§5" + gt.name() + " " + gt.icn)
-				.amount(gt.amo).modelData(GunType.defCMD).build());
+		item(to, new ItemBuilder(it.getType().asItemType()).name("§5" + gt.name() + " " + gt.icn)
+			.maxDamage(gt.rtm).amount(gt.amo).model(gt.skin(GunType.DEF_MDL)).build());
 		own.world().playSound(getLoc().toLocation(own.world()), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 1.4f);
 		return true;
 		/*final ItemStack eq = item(to);
@@ -876,14 +805,4 @@ public class BtShooter implements Shooter, Botter.Extent {
 		if (dst.getY() > -DlnSq) dst.setY((dst.getY() + 1d) * DlnSq);
 		return dst.normalize().multiply(spd);
 	}
-
-	/*@Override
-	public int hashCode() {
-		return super.hashCode();
-	}
-
-	@Override
-	public boolean equals(final Object o) {
-		return o instanceof Shooter && ((Shooter) o).name().equals(fR().getName());
-	}*/
 }

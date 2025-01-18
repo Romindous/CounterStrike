@@ -1,8 +1,14 @@
 package me.Romindous.CounterStrike.Objects.Game;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import io.papermc.paper.math.Position;
 import me.Romindous.CounterStrike.Game.Defusal;
+import me.Romindous.CounterStrike.Game.Invasion;
 import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Menus.DefuseMenu;
+import me.Romindous.CounterStrike.Objects.Defusable;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
@@ -16,26 +22,25 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.util.Transformation;
 import org.joml.Vector3f;
 import ru.komiss77.Ostrov;
-import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.utils.ItemUtil;
 import ru.komiss77.utils.TCUtil;
 import ru.komiss77.version.Nms;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+public class Bomb extends Defusable {
 
-public class Bomb extends WXYZ {
-	
+	public static final int WIRE_TIME = 5;
+
+	public final DefuseMenu inv;
 	public final TextDisplay title;
-	public Shooter defusing;
+	private final Defusal ar;
+	private Shooter defusing;
 	
 	private static final Component bnm = TCUtil.form("§l§кБiмба Поставлена!")
 		.appendNewline().append(TCUtil.form("§7Обезвредьте §eкусачками §7или §3спец. набором§7!"));
 	
-	public Bomb(final Block b) {
-		super(b.getWorld(), b.getX(), b.getY(), b.getZ());
+	public Bomb(final Block b, final Defusal df) {
+		super(b);
 		title = w.spawn(getCenterLoc().add(0d, 1d, 0d), TextDisplay.class);
 		title.setPersistent(true);
 		title.setBillboard(Billboard.VERTICAL);
@@ -47,9 +52,23 @@ public class Bomb extends WXYZ {
 		title.setTransformation(new Transformation(atr.getTranslation(), 
 			atr.getLeftRotation(), new Vector3f(1.6f, 1.6f, 1.6f), atr.getRightRotation()));
 		defusing = null;
+		inv = new DefuseMenu(this).fillUp(0.4f);
+		ar = df;
+	}
+
+	public Defusal arena() {
+		return ar;
+	}
+
+	public Shooter defusing() {
+		return defusing;
+	}
+
+	public void defusing(final Shooter sh) {
+		defusing = sh;
 	}
 	   
-	public void expld(final Defusal ar) {
+	public void expld() {
 		title.remove();
 		final Block b = w.getBlockAt(x, y, z);
 		b.setType(Material.AIR,false);
@@ -64,12 +83,12 @@ public class Bomb extends WXYZ {
 			for (int y = -5; y < 6; y++) {
 				for (int z = -5; z < 6; z++) {
 					final int bnd = x*x + y*y + z*z;
-					if (bnd > 0 && Nms.getFastMat(w, X + x, Y + y, Z + z).isAir() && Nms.getFastMat(w, X + x, Y + y - 1, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 6) {
+					if (bnd > 0 && Nms.fastType(w, X + x, Y + y, Z + z).isAir() && Nms.fastType(w, X + x, Y + y - 1, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 6) {
 						for (final Player p : b.getWorld().getPlayers()) {
 							p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Material.FIRE.createBlockData());
 							cls.add(new XYZ("", X + x, Y + y, Z + z));
 						} 
-					} else if (Nms.getFastMat(w, X + x, Y + y, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 10) {
+					} else if (Nms.fastType(w, X + x, Y + y, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 10) {
 						for (final Player p : b.getWorld().getPlayers()) {
 							p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Material.COAL_BLOCK.createBlockData());
 							cls.add(new XYZ("", X + x, Y + y, Z + z));
@@ -102,7 +121,7 @@ public class Bomb extends WXYZ {
 				}
 			} else {
 				le.setHealth(le.getHealth() - d);
-				le.playEffect(EntityEffect.HURT_EXPLOSION);
+				le.playHurtAnimation(le.getBodyYaw());
 			}
 		}
 		

@@ -6,7 +6,7 @@
 
   <groupId>ru.romindous</groupId>
   <artifactId>CounterStrike</artifactId>
-  <version>2.2</version>
+  <version>2.4</version>
   <packaging>jar</packaging>
 
   <name>CounterStrike</name>
@@ -25,8 +25,8 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.8.1</version>
         <configuration>
-          <source>16</source>
-          <target>16</target>
+          <source>21</source>
+          <target>21</target>
         </configuration>
       </plugin>
       <plugin>
@@ -36,9 +36,6 @@
         <executions>
           <execution>
             <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
           </execution>
         </executions>
       </plugin>
@@ -69,19 +66,7 @@
       <dependency>
           <groupId>io.papermc.paper</groupId>
           <artifactId>paper-api</artifactId>
-          <version>1.21.1-R0.1-SNAPSHOT</version>
-          <scope>provided</scope>
-      </dependency>
-      <dependency>
-          <groupId>com.mojang</groupId>
-          <artifactId>authlib</artifactId>
-          <version>3.16.29</version>
-          <scope>provided</scope>
-      </dependency>
-      <dependency>
-          <groupId>com.mojang</groupId>
-          <artifactId>brigadier</artifactId>
-          <version>1.0.500</version>
+          <version>1.21.4-R0.1-SNAPSHOT</version>
           <scope>provided</scope>
       </dependency>
       <!--<dependency>
@@ -95,7 +80,7 @@
           <artifactId>ru.komiss77</artifactId>
           <version>1.0</version>
           <scope>system</scope>
-          <systemPath>C:/Users/Romindous/Downloads/new_test/plugins/Ostrov.jar</systemPath>
+          <systemPath>C:/Users/Rom/Downloads/new_test/plugins/Ostrov.jar</systemPath>
       </dependency>
       <!--<dependency>
           <groupId>org.bukkit</groupId>

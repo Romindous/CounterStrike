@@ -1,16 +1,17 @@
 package me.Romindous.CounterStrike.Listeners;
 
+import io.papermc.paper.datacomponent.DataComponentTypes;
 import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Enums.NadeType;
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Game.Defusal;
-import me.Romindous.CounterStrike.Game.Invasion;
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
-import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
-import org.bukkit.*;
+import org.bukkit.GameMode;
+import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -20,17 +21,11 @@ import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.ItemType;
 import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.inventory.meta.Damageable;
-import org.bukkit.inventory.meta.ItemMeta;
-import ru.komiss77.ApiOstrov;
-import ru.komiss77.enums.Stat;
-import ru.komiss77.modules.world.WXYZ;
-import ru.komiss77.utils.ItemBuilder;
+import ru.komiss77.modules.items.ItemBuilder;
 import ru.komiss77.utils.ItemUtil;
 import ru.komiss77.utils.TCUtil;
-
-import java.util.Arrays;
 
 public class InventLis implements Listener {
 
@@ -48,12 +43,11 @@ public class InventLis implements Listener {
 		sh.shtTm(0);
 		sh.count(0);
 		final ItemStack it = sh.item(e.getNewSlot());
-		final GunType gt = GunType.getGnTp(it);
+		final GunType gt = GunType.get(it);
 		if (gt != null) {
 			p.getWorld().playSound(p.getLocation(), gt.prm ? Sound.ITEM_ARMOR_EQUIP_IRON : Sound.ITEM_ARMOR_EQUIP_GOLD, 2, 2);
-			if (((Damageable)it.getItemMeta()).hasDamage()) {
-				sh.count((it.getType().getMaxDurability() - ((Damageable)it.getItemMeta()).getDamage()) * gt.rtm / it.getType().getMaxDurability());
-			}
+			final Integer dmg = it.getData(DataComponentTypes.DAMAGE);
+			if (dmg != null) sh.count(Main.maxDur(it) - dmg);
 		}
 
 		if (p.isSneaking()) {
@@ -62,23 +56,15 @@ public class InventLis implements Listener {
 				p.getInventory().setItemInOffHand(Main.air);
 		}
 
-		if (it != null) {
-			switch (it.getType()) {
-			case GOLDEN_APPLE:
-				if (sh.arena() != null && !((Defusal) sh.arena()).indon) {
-					((Defusal) sh.arena()).indSts(p);
-				}
-				return;
-			default:
-				break;
-			}
+		if (ItemUtil.is(it, ItemType.GOLDEN_APPLE)) {
+			if (sh.arena() instanceof final Defusal df
+				&& !df.indon) df.indSts(p);
 		}
 
-        if (p.getInventory().getItemInMainHand().getType() == Material.GOLDEN_APPLE) {
-            if (sh.arena() != null && ((Defusal) sh.arena()).indon) {
-                ((Defusal) sh.arena()).indSts(p);
-            }
-        }
+		if (ItemUtil.is(p.getInventory().getItemInMainHand(), ItemType.GOLDEN_APPLE)) {
+			if (sh.arena() instanceof final Defusal df
+				&& df.indon) df.indSts(p);
+		}
     }
 
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = false)
@@ -105,14 +91,13 @@ public class InventLis implements Listener {
 				e.setCancelled(true);
 				if (e.getClickedInventory().getType() != InventoryType.PLAYER && it.getItemMeta().hasDisplayName()) {
 					p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 2f, 1.5f);
-					final int mdl;
-					final GunType gt = GunType.getGnTp(it);
+					final GunType gt = GunType.get(it);
 					if (gt != null) {
 						sh = Shooter.getPlShooter(p.getName(), true);
-						mdl = sh.getModel(gt);
-						p.getInventory().setItem(gt.prm ? 0 : 1, new ItemBuilder(it.getType()).name((mdl == GunType.defCMD ? "§5" + gt.toString() :
-								"§5" + gt.toString() + " '" + Main.nrmlzStr(Quest.getQuest(gt, mdl).toString()) + "'") + " " + gt.icn)
-							.amount(gt.amo).modelData(mdl).build());
+						final Quest shq = Quest.get(gt, sh.model(gt));
+						p.getInventory().setItem(gt.prm ? 0 : 1, new ItemBuilder(gt.type()).name((shq == null ? "§5" + gt.name() :
+								"§5" + gt.name() + " '" + Main.nrmlzStr(shq.name()) + "'") + " " + gt.icn)
+							.amount(gt.amo).maxDamage(gt.rtm).model(gt.skin(shq == null ? GunType.DEF_MDL : shq.model)).build());
 						break;
 					}
 					final NadeType nt = NadeType.getNdTp(it);
@@ -133,7 +118,7 @@ public class InventLis implements Listener {
 				sh = Shooter.getPlShooter(p.getName(), true);
 				final ItemStack cp;
 				final NadeType nt = NadeType.getNdTp(it);
-				final GunType gt = GunType.getGnTp(it);
+				final GunType gt = GunType.get(it);
 				e.setCancelled(true);
 				if (e.getClickedInventory().getType() != InventoryType.PLAYER && it.getItemMeta().hasDisplayName()) {
 					if (gt != null) {
@@ -145,11 +130,11 @@ public class InventLis implements Listener {
 							p.getInventory().setHeldItemSlot(gt.prm ? 0 : 1);
 							p.dropItem(false);
 							p.getInventory().setHeldItemSlot(8);
-							final int mdl = sh.getModel(gt);
+							final Quest shq = Quest.get(gt, sh.model(gt));
 							p.getInventory().setItem(gt.prm ? 0 : 1,
-							new ItemBuilder(it.getType()).name((mdl == GunType.defCMD ? "§5" + gt.toString() :
-								"§5" + gt.toString() + " '" + Main.nrmlzStr(Quest.getQuest(gt, mdl).toString()) + "'") + " " + gt.icn)
-							.amount(gt.amo).modelData(mdl).build());
+							new ItemBuilder(gt.type()).name((shq == null ? "§5" + gt.name() :
+									"§5" + gt.name() + " '" + Main.nrmlzStr(shq.name()) + "'") + " " + gt.icn)
+							.amount(gt.amo).maxDamage(gt.rtm).model(gt.skin(shq == null ? GunType.DEF_MDL : shq.model)).build());
 							p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 1.4f);
 						}
 					} else if (nt != null) {
@@ -162,11 +147,7 @@ public class InventLis implements Listener {
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else {
 								sh.arena().chngMn(sh, -nt.prc);
-								cp = it.clone();
-								final ItemMeta im = cp.getItemMeta();
-								im.lore(Arrays.asList());
-								cp.setItemMeta(im);
-								p.getInventory().setItem(NadeType.prmSlot, cp);
+								p.getInventory().setItem(NadeType.prmSlot, new ItemBuilder(it).deLore().build());
 								p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
 							}
 						} else {
@@ -178,10 +159,7 @@ public class InventLis implements Listener {
 								p.sendMessage(Main.prf() + "§cУ вас уже есть граната в этом слоту!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else {
-								cp = it.clone();
-								final ItemMeta im = cp.getItemMeta();
-								im.lore(Arrays.asList());
-								cp.setItemMeta(im);
+								cp = new ItemBuilder(it).deLore().build();
 								if (addSetItm(p.getInventory(), NadeType.scdSlot, cp)) {
 									sh.arena().chngMn(sh, -nt.prc);
 									p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
@@ -193,70 +171,54 @@ public class InventLis implements Listener {
 					} else {
 						switch (it.getType()) {
 						case SUGAR:
-							if (sh.money() - GunType.wirePrc < 0) {
+							if (sh.money() - Shooter.wirePrc < 0) {
 								p.sendMessage(Main.prf() + "§cУ вас не хватает денег для покупки этого!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else if (p.getInventory().getItem(3) != null) {
 								p.sendMessage(Main.prf() + "§cУ вас уже есть граната в этом слоту!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else {
-								sh.arena().chngMn(sh, -GunType.wirePrc);
-								cp = it.clone();
-								final ItemMeta im = cp.getItemMeta();
-								im.lore(Arrays.asList());
-								cp.setItemMeta(im);
-								p.getInventory().setItem(3, cp);
+								sh.arena().chngMn(sh, -Shooter.wirePrc);
+								p.getInventory().setItem(3, new ItemBuilder(it).deLore().build());
 								p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
 							}
 							break;
 						case SHEARS:
-							if (sh.money() - GunType.kitPrc < 0) {
+							if (sh.money() - Shooter.kitPrc < 0) {
 								p.sendMessage(Main.prf() + "§cУ вас не хватает денег для покупки этого!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else if (p.getInventory().getItem(7) != null && p.getInventory().getItem(7).getType() == Material.SHEARS) {
 								p.sendMessage(Main.prf() + "§cУ вас уже есть спец. набор!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else {
-								sh.arena().chngMn(sh, -GunType.kitPrc);
-								cp = it.clone();
-								final ItemMeta im = cp.getItemMeta();
-								im.lore(Arrays.asList());
-								cp.setItemMeta(im);
-								p.getInventory().setItem(7, cp);
+								sh.arena().chngMn(sh, -Shooter.kitPrc);
+								p.getInventory().setItem(7, new ItemBuilder(it).deLore().build());
 								p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
 							}
 							break;
 						case LEATHER_HELMET:
-							if (sh.money() - GunType.helmPrc < 0) {
+							if (sh.money() - Shooter.helmPrc < 0) {
 								p.sendMessage(Main.prf() + "§cУ вас не хватает денег для покупки этого!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else if (p.getInventory().getHelmet() != null) {
 								p.sendMessage(Main.prf() + "§cУ вас уже есть шлем!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else {
-								sh.arena().chngMn(sh, -GunType.helmPrc);
-								cp = it.clone();
-								final ItemMeta im = cp.getItemMeta();
-								im.lore(Arrays.asList());
-								cp.setItemMeta(im);
-								p.getInventory().setHelmet(cp);
+								sh.arena().chngMn(sh, -Shooter.helmPrc);
+								p.getInventory().setHelmet(new ItemBuilder(it).deLore().build());
 								p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_IRON, 1f, 1.4f);
 							}
 							break;
 						case LEATHER_CHESTPLATE:
-							if (sh.money() - GunType.chestPrc < 0) {
+							if (sh.money() - Shooter.chestPrc < 0) {
 								p.sendMessage(Main.prf() + "§cУ вас не хватает денег для покупки этого!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else if (p.getInventory().getChestplate() != null) {
 								p.sendMessage(Main.prf() + "§cУ вас уже есть нагрудник!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else {
-								cp = it.clone();
-								final ItemMeta im = cp.getItemMeta();
-								im.lore(Arrays.asList());
-								cp.setItemMeta(im);
-								sh.arena().chngMn(sh, -GunType.chestPrc);
-								p.getInventory().setChestplate(cp);
+								sh.arena().chngMn(sh, -Shooter.chestPrc);
+								p.getInventory().setChestplate(new ItemBuilder(it).deLore().build());
 								p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_IRON, 1f, 1.4f);
 							}
 							break;
@@ -264,80 +226,6 @@ public class InventLis implements Listener {
 							break;
 						}
 					}
-				}
-			}
-			break;
-		case "Разминировка Бомбы":
-			e.setCancelled(true);
-			if (it != null && it.getType() == Material.STRING) {
-				sh = Shooter.getPlShooter(p.getName(), true);
-				final Arena ar = sh.arena();
-				final int cmd = it.getItemMeta().getCustomModelData();
-				final Location eye = p.getEyeLocation();
-				if (cmd == e.getClickedInventory().getItem(0).getItemMeta().getCustomModelData()) {
-					final ItemStack cp = it.clone();
-					final ItemMeta im = it.getItemMeta();
-					im.setCustomModelData(10);
-					ar.w.spawnParticle(Particle.ITEM, eye.add(eye.getDirection()),
-						8, 0d, 0d, 0d, 0.2d, p.getInventory().getItemInMainHand());
-					ar.w.playSound(eye, Sound.BLOCK_TRIPWIRE_CLICK_ON, 1f, 2f);
-					p.swingMainHand();
-					it.setItemMeta(im);
-					if (!e.getClickedInventory().contains(cp)) {
-						ar.w.playSound(eye, Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, 2f, 2f);
-						ar.w.playSound(eye, Sound.BLOCK_IRON_TRAPDOOR_CLOSE, 2f, 2f);
-						p.closeInventory();
-						if (ar instanceof Defusal) {
-							((Defusal) ar).defuse();
-							ar.chngMn(sh, 250);
-							ApiOstrov.addStat((Player) p, Stat.CS_bomb);
-						}
-					}
-				} else if (cmd != 10) {
-					if (ar instanceof Defusal) {
-						((Defusal) ar).wrngWire();
-					}
-					final ItemMeta im = it.getItemMeta();
-					im.setCustomModelData(10);
-					ar.w.playSound(eye, Sound.BLOCK_GLASS_BREAK, 2f, 2f);
-					((Player) p).playSound(eye, Sound.BLOCK_TRIPWIRE_CLICK_ON, 1f, 2f);
-					it.setItemMeta(im);
-				}
-			}
-			break;
-		case "Обезвреживание Спавнера":
-			e.setCancelled(true);
-			if (it != null && it.getType() == Material.STRING) {
-				sh = Shooter.getPlShooter(p.getName(), true);
-				final Arena ar = sh.arena();
-				final int cmd = it.getItemMeta().getCustomModelData();
-				final Location eye = p.getEyeLocation();
-				if (cmd == e.getClickedInventory().getItem(0).getItemMeta().getCustomModelData()) {
-					final ItemStack cp = it.clone();
-					final ItemMeta im = it.getItemMeta();
-					im.setCustomModelData(10);
-					ar.w.spawnParticle(Particle.ITEM, eye.add(eye.getDirection()),
-						8, 0d, 0d, 0d, 0.2d, p.getInventory().getItemInMainHand());
-					ar.w.playSound(eye, Sound.BLOCK_TRIPWIRE_CLICK_ON, 1f, 2f);
-					p.swingMainHand();
-					it.setItemMeta(im);
-					if (!e.getClickedInventory().contains(cp)) {
-						ar.w.playSound(eye, Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, 2f, 2f);
-						ar.w.playSound(eye, Sound.BLOCK_IRON_TRAPDOOR_CLOSE, 2f, 2f);
-						p.closeInventory();
-						if (ar instanceof Invasion) {
-							((Invasion) sh.arena()).rmvSpnr(sh);
-						}
-					}
-				} else if (cmd != 10) {
-					if (ar instanceof Invasion) {
-						((Invasion) sh.arena()).wrngWire(sh);
-					}
-					final ItemMeta im = it.getItemMeta();
-					im.setCustomModelData(10);
-					ar.w.playSound(eye, Sound.BLOCK_GLASS_BREAK, 2f, 2f);
-					((Player) p).playSound(eye, Sound.BLOCK_TRIPWIRE_CLICK_ON, 1f, 2f);
-					it.setItemMeta(im);
 				}
 			}
 			break;
@@ -361,29 +249,6 @@ public class InventLis implements Listener {
 				}
 			}
 			break;
-		}
-	}
-
-	@EventHandler
-	public void oClose(final InventoryCloseEvent e) {
-		final HumanEntity p = e.getPlayer();
-		final Shooter sh;
-		switch (TCUtil.strip(e.getView().title())) {
-			case "Разминировка Бомбы":
-				sh = Shooter.getPlShooter(p.getName(), true);
-				if (sh.arena() instanceof final Defusal df && df.isBmbOn()) {
-					df.getBomb().defusing = null;
-				}
-				break;
-			case "Обезвреживание Спавнера":
-				sh = Shooter.getPlShooter(p.getName(), true);
-				if (sh.arena() instanceof final Invasion in) {
-					final Mobber mb = in.getClsMbbr(new WXYZ(p.getLocation()), true);
-					if (mb != null) mb.defusing = null;
-				}
-				break;
-			default:
-				break;
 		}
 	}
 

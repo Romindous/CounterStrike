@@ -10,6 +10,7 @@ import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Game.Arena.Team;
 import me.Romindous.CounterStrike.Game.Defusal;
 import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.Defusable;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import org.bukkit.Bukkit;
@@ -26,6 +27,7 @@ import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.ItemMergeEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.ItemType;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.potion.PotionEffectType;
 import ru.komiss77.Ostrov;
@@ -108,7 +110,7 @@ public class MainLis implements Listener {
 		final Item drop = e.getItemDrop();
 		final ItemStack it = drop.getItemStack();
 		final Shooter pr = Shooter.getPlShooter(p.getName(), true);
-		final GunType gt = GunType.getGnTp(it);
+		final GunType gt = GunType.get(it);
 		if (gt != null) {
 			it.setAmount(1);
 			if (pr.arena() == null) drop.remove();
@@ -139,7 +141,7 @@ public class MainLis implements Listener {
 				}
 				break;
 			case SHEARS:
-				p.getInventory().setItem(7, Main.mkItm(Material.GOLD_NUGGET, "§eКусачки §f\u9268", 10));
+				p.getInventory().setItem(7, Main.mkItm(ItemType.GOLD_NUGGET, "§eКусачки §f\u9268", Defusable.PLIERS_MDL));
 				break;
 			default:
 				if (pr.arena() == null) {
@@ -157,7 +159,7 @@ public class MainLis implements Listener {
 		if (e.getEntityType() == EntityType.PLAYER) {
 			final PlayerInventory inv = ((Player) e.getEntity()).getInventory();
 			final ItemStack it = e.getItem().getItemStack();
-			final GunType gt = GunType.getGnTp(it);
+			final GunType gt = GunType.get(it);
 			final NadeType nt = NadeType.getNdTp(it);
 			e.setCancelled(((HumanEntity) e.getEntity()).getGameMode() != GameMode.CREATIVE);
 			if (gt != null) {
@@ -268,7 +270,7 @@ public class MainLis implements Listener {
 	@EventHandler
 	public void onShift(final PlayerToggleSneakEvent e) {
 		final Player p = e.getPlayer();
-		final GunType gt = GunType.getGnTp(p.getInventory().getItemInMainHand());
+		final GunType gt = GunType.get(p.getInventory().getItemInMainHand());
 		if (gt != null && gt.snp && !e.isSneaking()) {
 			Shooter.getPlShooter(p.getName(), true).scope(false);
 			if (!ItemUtil.isBlank(p.getInventory().getItemInOffHand(), false))

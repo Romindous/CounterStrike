@@ -1,4 +1,4 @@
-package me.Romindous.CounterStrike.Objects.Game;
+package me.Romindous.CounterStrike.Objects;
 
 import org.bukkit.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;

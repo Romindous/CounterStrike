@@ -24,7 +24,7 @@ import ru.komiss77.modules.world.Schematic.Rotate;
 import ru.komiss77.modules.world.WXYZ;
 import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.utils.ClassUtil;
-import ru.komiss77.utils.FastMath;
+import ru.komiss77.utils.NumUtil;
 
 public class MapBuilder {
 	
@@ -208,7 +208,7 @@ public class MapBuilder {
 			final EnumSet<TileType> possible = EnumSet.copyOf(TileType.gns);
 			for (final Entry<Integer, TileType> en : tiles.entrySet()) {
 				final int enc = en.getKey(), z = enc >> encodeBits, x = enc - (z << encodeBits),
-					d = FastMath.abs(X - x) + FastMath.abs(Z - z);
+					d = NumUtil.abs(X - x) + NumUtil.abs(Z - z);
 				if (d < maxCheckDist) {
 					final TileType tileAtXZ = en.getValue();
                     possible.removeIf(pos -> !tileAtXZ.canPlaceNear(pos, d));

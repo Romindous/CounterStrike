@@ -17,7 +17,7 @@ import me.Romindous.CounterStrike.Objects.Game.TripWire;
 import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
-import me.Romindous.CounterStrike.Objects.Skins.SkinQuest;
+import me.Romindous.CounterStrike.Menus.ChosenSkinMenu;
 import me.Romindous.CounterStrike.Utils.Inventories;
 import me.Romindous.CounterStrike.Utils.Utils;
 import net.kyori.adventure.text.Component;
@@ -26,6 +26,7 @@ import org.bukkit.FireworkEffect.Type;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemType;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.potion.PotionEffect;
@@ -34,10 +35,10 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.Scoreboard;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
+import ru.komiss77.modules.items.ItemBuilder;
 import ru.komiss77.modules.player.PM;
 import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.utils.ClassUtil;
-import ru.komiss77.utils.ItemBuilder;
 import ru.komiss77.utils.TCUtil;
 
 public class Gungame extends Arena {
@@ -75,10 +76,10 @@ public class Gungame extends Arena {
 		switch (gst) {
 			case WAITING:
 				chngTeam(sh, Team.SPEC);
-				sh.item(2, Main.mkItm(Material.NETHER_STAR, "§eВыбор Комманды", 10));
-				sh.item(5, Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10));
-				sh.item(6, Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10));
-				sh.item(8, Main.mkItm(Material.SLIME_BALL, "§cВыход", 10));
+				sh.item(2, new ItemBuilder(ItemType.NETHER_STAR).name("§eВыбор Комманды").build());
+				sh.item(5, new ItemBuilder(ItemType.HEART_OF_THE_SEA).name("§чБоторейка").build());
+				sh.item(6, Main.mkItm(ItemType.GHAST_TEAR, "§5Магазин", Shooter.SHOP_MDL));
+				sh.item(8, new ItemBuilder(ItemType.SLIME_BALL).name("§cВыход").build());
 				if (shtrs.size() == min) {
 					for (final Entry<Shooter, Team> en : shtrs.entrySet()) {
 						final Player pl = en.getKey().getPlayer();
@@ -108,10 +109,10 @@ public class Gungame extends Arena {
 				}
 				break;
 			case BEGINING:
-				sh.item(2, Main.mkItm(Material.NETHER_STAR, "§eВыбор Комманды", 10));
-				sh.item(5, Main.mkItm(Material.HEART_OF_THE_SEA, "§чБоторейка", 10));
-				sh.item(6, Main.mkItm(Material.GHAST_TEAR, "§5Магазин", 10));
-				sh.item(8, Main.mkItm(Material.SLIME_BALL, "§cВыход", 10));
+				sh.item(2, new ItemBuilder(ItemType.NETHER_STAR).name("§eВыбор Комманды").build());
+				sh.item(5, new ItemBuilder(ItemType.HEART_OF_THE_SEA).name("§чБоторейка").build());
+				sh.item(6, Main.mkItm(ItemType.GHAST_TEAR, "§5Магазин", Shooter.SHOP_MDL));
+				sh.item(8, new ItemBuilder(ItemType.SLIME_BALL).name("§cВыход").build());
 				if (!rnd) {
 					p.teleport(ClassUtil.rndElmt(spots).getCenterLoc(w));
 				}
@@ -133,8 +134,8 @@ public class Gungame extends Arena {
 					chngTeam(sh, Team.SPEC);
 					p.setGameMode(GameMode.SPECTATOR);
 					p.teleport(Main.getNrLoc(Main.srnd.nextBoolean() ? ClassUtil.rndElmt(TSpawns) : ClassUtil.rndElmt(CTSawns), w));
-					sh.item(2, Main.mkItm(Material.NETHER_STAR, "§eВыбор Комманды", 10));
-					sh.item(8, Main.mkItm(Material.SLIME_BALL, "§cВыход", 10));
+					sh.item(2, new ItemBuilder(ItemType.NETHER_STAR).name("§eВыбор Комманды").build());
+					sh.item(8, new ItemBuilder(ItemType.SLIME_BALL).name("§cВыход").build());
 					for (final Shooter s : shtrs.keySet()) {
 						final Player pl = s.getPlayer();
 						if (pl != null) {
@@ -164,13 +165,13 @@ public class Gungame extends Arena {
 		p.teleport(ClassUtil.rndElmt(spots).getCenterLoc(w));
 		final PlayerInventory pinv = p.getInventory();
 		p.setGameMode(GameMode.SURVIVAL);
-		pinv.setItem(2, Main.mkItm(Material.BLAZE_ROD, "§fНож \u9298", 10));
+		pinv.setItem(2, Main.mkItm(ItemType.BLAZE_ROD, "§fНож \u9298", Shooter.KNIFE_MDL));
 		if (tm == Team.Ts) {
-			pinv.setHelmet(Inventories.TShop.getItem(GunType.helmSlt).clone());
-			pinv.setChestplate(Inventories.TShop.getItem(GunType.chestSlt).clone());
+			pinv.setHelmet(Inventories.TShop.getItem(Shooter.helmSlt).clone());
+			pinv.setChestplate(Inventories.TShop.getItem(Shooter.chestSlt).clone());
 		} else {
-			pinv.setHelmet(Inventories.CTShop.getItem(GunType.helmSlt).clone());
-			pinv.setChestplate(Inventories.CTShop.getItem(GunType.chestSlt).clone());
+			pinv.setHelmet(Inventories.CTShop.getItem(Shooter.helmSlt).clone());
+			pinv.setChestplate(Inventories.CTShop.getItem(Shooter.chestSlt).clone());
 		}
 		p.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 240, 240, true, false, false));
 		p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 40, 2, true, false, false));
@@ -440,7 +441,7 @@ public class Gungame extends Arena {
 			if (le instanceof final Player p) {
 				Utils.sendSbTtl(p, e.getValue().icn.substring(0, 2) + "§lВперед", 30);
 				PM.getOplayer(p).score.getSideBar().update(STAGE, "§7Cтадия: §5Бой");
-				p.playSound(p, "cs.info." + e.getValue().goSnd, 10f, 1f);
+				p.playSound(p, "info." + e.getValue().goSnd, 10f, 1f);
 			}
 		}
 		tsk = new BukkitRunnable() {
@@ -462,7 +463,7 @@ public class Gungame extends Arena {
 						final Player p = e.getKey().getPlayer();
 						if (p != null) {
 							Utils.sendAcBr(p, "§7Осталось §d" + time + " §7секунд!");
-							p.playSound(p.getLocation(), "cs.info." + (e.getValue() == Team.Ts ? "t30sec" : "ct30sec"), 10f, 1f);
+							p.playSound(p.getLocation(), "info." + (e.getValue() == Team.Ts ? "t30sec" : "ct30sec"), 10f, 1f);
 							PM.getOplayer(p).score.getSideBar().update(LIMIT, rtm);
 						}
 					}
@@ -539,13 +540,13 @@ public class Gungame extends Arena {
         st = switch (wn) {
             case Ts -> {
                 msg = " \n§7Победа в раунде: §4Террористы\n \n§5=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n§7Лучший спецназовец: §3" +
-                        (bct == null ? "Никто" : bct.name()) + "\n          §7--=x=--\n§7Самый злобный террорист: §4" +
+                        (bct == null ? "Никто" : bct.name()) + "\n          §7-=x=-\n§7Самый злобный террорист: §4" +
                         (bt == null ? "Никто" : bt.name()) + "\n§5=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-";
                 yield "§4§lТеррористы §7выйграли!";
             }
             case CTs -> {
                 msg = " \n§7Победа в раунде: §3Спецназ\n \n§5=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n§7Лучший спецназовец: §3" +
-                        (bct == null ? "Никто" : bct.name()) + "\n          §7--=x=--\n§7Самый злобный террорист: §4" +
+                        (bct == null ? "Никто" : bct.name()) + "\n          §7-=x=-\n§7Самый злобный террорист: §4" +
                         (bt == null ? "Никто" : bt.name()) + "\n§5=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-";
                 yield "§3§lСпецназ §7одержал победу!";
             }
@@ -561,7 +562,7 @@ public class Gungame extends Arena {
 				final Player p = sh.getPlayer();
 				p.closeInventory();
 				PM.getOplayer(p).score.getSideBar().update(LIMIT, "§d00:00 §7до конца!");
-				p.playSound(p, "cs.info." + e.getValue().finSnd, 10f, 1f);
+				p.playSound(p, "info." + e.getValue().finSnd, 10f, 1f);
 				p.sendMessage(msg);
 				Utils.sendTtlSbTtl(p, "§5Финиш", st, 40);
 				sh.taq("§7<§d" + name + "§7> ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", Team.SPEC.clr);
@@ -570,12 +571,12 @@ public class Gungame extends Arena {
 				
 				if (e.getValue() == wn) {
 					ApiOstrov.addStat(p, Stat.CS_win);
-					SkinQuest.tryCompleteQuest(e.getKey(), Quest.ГРУЗЧИК, ApiOstrov.getStat(p, Stat.CS_win));
+					ChosenSkinMenu.tryCompleteQuest(e.getKey(), Quest.ГРУЗЧИК, ApiOstrov.getStat(p, Stat.CS_win));
 				} else {
 					ApiOstrov.addStat(p, Stat.CS_loose);
 				}
 				ApiOstrov.addStat(p, Stat.CS_game);
-				SkinQuest.tryCompleteQuest(sh, Quest.ДУША, ApiOstrov.getStat(p, Stat.CS_game));
+				ChosenSkinMenu.tryCompleteQuest(sh, Quest.ДУША, ApiOstrov.getStat(p, Stat.CS_game));
 				sh.clearInv();
 			} else {
 				((BtShooter) sh).own().remove();
@@ -640,14 +641,14 @@ public class Gungame extends Arena {
 			.add(" ")
 			.add("§7Карта: §5" + name)
 			.add("§7Режим: §d" + getType().name)
-			.add("§7=-=-=-=-=-=-=-=-")
+			.add("§7=-=-=-=-=-=-=-")
 			.add("§7Комманды:")
 			.add(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
 				+ (tm == Team.Ts ? " §7чел. §8✦ Ты" : " §7чел."))
 			.add(" ")
 			.add(CT_AMT, Team.CTs.icn + " §7: " + getTmAmt(Team.CTs, true, true)
 				+ (tm == Team.CTs ? " §7чел. §8✦ Ты" : " §7чел."))
-			.add("§7=-=-=-=-=-=-=-=-")
+			.add("§7=-=-=-=-=-=-=-")
 			.add(LIMIT, "§7Начало через: §5" + String.valueOf(time))
 			.add(" ")
 			.add("§e   ostrov77.ru").build();
@@ -661,7 +662,7 @@ public class Gungame extends Arena {
 			.add(" ")
 			.add("§7Карта: §5" + name)
 			.add("§7Режим: §d" + getType().name)
-			.add("§7=-=-=-=-=-=-=-=-")
+			.add("§7=-=-=-=-=-=-=-")
 			.add(STAGE, "§7Cтадия: " + (gst == GameState.BUYTIME ? "§5Подготовка" : "§5Бой"))
 			.add(LIMIT, getTime(time, "§d") + " §7до конца!")
 			.add(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
@@ -669,7 +670,7 @@ public class Gungame extends Arena {
 			.add(" ")
 			.add(CT_AMT, Team.CTs.icn + " §7: " + getTmAmt(Team.CTs, true, true)
 					+ (tm == Team.CTs ? " §7чел. §8✦ Ты" : " §7чел."))
-			.add("§7=-=-=-=-=-=-=-=-")
+			.add("§7=-=-=-=-=-=-=-")
 			.add(MONEY, "§7Прогрес: §d" + sh.money() + "§7/§d" + String.valueOf(cycle))
 			.add(" ")
 			.add("§e   ostrov77.ru").build();
@@ -694,7 +695,7 @@ public class Gungame extends Arena {
 				+ Team.CTs.clr + getTmProg(Team.CTs) + "§7/" + Team.CTs.clr + cycle + " §7: " + Team.CTs.icn)
 			.add("§7Карта: §5" + name)
 			.add("§7Режим: §d" + getType().name)
-			.add("§7=-=-=-=-=-=-=-=-")
+			.add("§7=-=-=-=-=-=-=-")
 			.add("§7Cтадия: §dФиниш")
 			.add(LIMIT, getTime(time, "§d") + " §7до конца!")
 			.add(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
@@ -702,7 +703,7 @@ public class Gungame extends Arena {
 			.add(" ")
 			.add(CT_AMT, Team.CTs.icn + " §7: " + getTmAmt(Team.CTs, true, true)
 				+ (tm == Team.CTs ? " §7чел. §8✦ Ты" : " §7чел."))
-			.add("§7=-=-=-=-=-=-=-=-")
+			.add("§7=-=-=-=-=-=-=-")
 			.add(MONEY, "§7Прогрес: §d" + sh.money() + "§7/§d" + String.valueOf(cycle))
 			.add(" ")
 			.add("§e   ostrov77.ru").build();
@@ -741,17 +742,17 @@ public class Gungame extends Arena {
 		}
 		
 		sh.item(0, Main.air.clone()); sh.item(1, Main.air.clone());
-		sh.item(2, Main.mkItm(Material.BLAZE_ROD, "§fНож \u9298", 10));
+		sh.item(2, Main.mkItm(ItemType.BLAZE_ROD, "§fНож \u9298", Shooter.KNIFE_MDL));
 		sh.item(3, Main.air.clone()); sh.item(4, Main.air.clone());
 		
 		switch (shtrs.get(sh)) {
 		case Ts:
-			sh.item(EquipmentSlot.HEAD, Inventories.TShop.getItem(GunType.helmSlt).clone());
-			sh.item(EquipmentSlot.CHEST, Inventories.TShop.getItem(GunType.chestSlt).clone());
+			sh.item(EquipmentSlot.HEAD, Inventories.TShop.getItem(Shooter.helmSlt).clone());
+			sh.item(EquipmentSlot.CHEST, Inventories.TShop.getItem(Shooter.chestSlt).clone());
 			break;
 		case CTs:
-			sh.item(EquipmentSlot.HEAD, Inventories.CTShop.getItem(GunType.helmSlt).clone());
-			sh.item(EquipmentSlot.CHEST, Inventories.CTShop.getItem(GunType.chestSlt).clone());
+			sh.item(EquipmentSlot.HEAD, Inventories.CTShop.getItem(Shooter.helmSlt).clone());
+			sh.item(EquipmentSlot.CHEST, Inventories.CTShop.getItem(Shooter.chestSlt).clone());
 			break;
 		default:
 			break;
@@ -764,18 +765,17 @@ public class Gungame extends Arena {
 				Utils.sendTtlSbTtl(p, "", "§7Последний §dцыкл §7оружия!", 20);
 			}
 		} else {
-			final int mdl = sh.getModel(gt);
+			final Quest shq = Quest.get(gt, sh.model(gt));
 			final NadeType nt = nadeFromPts(sh.money());
-			sh.item(2, Main.mkItm(Material.BLAZE_ROD, "§fНож \u9298", 10));
-			sh.item(gt.prm ? 0 : 1, new ItemBuilder(gt.getMat()).name((mdl == GunType.defCMD ? "§5" + gt.toString() :
-				"§5" + gt.toString() + " '" + Main.nrmlzStr(Quest.getQuest(gt, mdl).toString()) + "'") + " " + gt.icn)
-			.amount(gt.amo).modelData(mdl).build());
+			sh.item(2, Main.mkItm(ItemType.BLAZE_ROD, "§fНож \u9298", Shooter.KNIFE_MDL));
+			sh.item(gt.prm ? 0 : 1, new ItemBuilder(gt.type()).name((shq == null ? "§5" + gt.name() :
+				"§5" + gt.name() + " '" + Main.nrmlzStr(shq.name()) + "'") + " " + gt.icn)
+			.amount(gt.amo).maxDamage(gt.rtm).model(gt.skin(shq == null ? GunType.DEF_MDL : shq.model)).build());
 			sh.item(nt.prm ? NadeType.prmSlot : NadeType.scdSlot, Inventories.CTShop.getItem(nt.slt).clone());
-			//Bukkit.broadcast(Component.text("guns-" + sh.getEntity().getEntityId()));
 		}
 		
 		final LivingEntity le = sh.getEntity();
-		le.setHealth(le.getAttribute(Attribute.GENERIC_MAX_HEALTH).getBaseValue());
+		le.setHealth(le.getAttribute(Attribute.MAX_HEALTH).getBaseValue());
 		if (sh instanceof PlShooter) {
 			final Player p = (Player) le;
 			PM.getOplayer(p).score.getSideBar().update(SCORE,
@@ -791,11 +791,11 @@ public class Gungame extends Arena {
 	private NadeType nadeFromPts(final int pts) {
 		final float cof = 10f / cycle;
         return switch (Main.srnd.nextInt((int) (cof * pts) + 1)) {
-            default -> NadeType.FRAG;
             case 7, 6, 5 -> NadeType.FLAME;
             case 4, 3 -> NadeType.SMOKE;
             case 2, 1 -> NadeType.FLASH;
             case 0 -> NadeType.DECOY;
+            default -> NadeType.FRAG;
         };
 	}
 
@@ -808,8 +808,8 @@ public class Gungame extends Arena {
 		final Player p = sh.getPlayer();
 		if (p != null) {
 			ApiOstrov.addStat(p, Stat.CS_kill);
-			SkinQuest.tryCompleteQuest(sh, Quest.ЗЕМЛЯ, sh.kills() / Math.max(sh.deaths(), 1));
-			SkinQuest.tryCompleteQuest(sh, Quest.ТОКСИК, sh.kills());
+			ChosenSkinMenu.tryCompleteQuest(sh, Quest.ЗЕМЛЯ, sh.kills() / Math.max(sh.deaths(), 1));
+			ChosenSkinMenu.tryCompleteQuest(sh, Quest.ТОКСИК, sh.kills());
 		}
 	}
 

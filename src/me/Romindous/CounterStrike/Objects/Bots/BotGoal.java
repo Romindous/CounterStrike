@@ -8,7 +8,6 @@ import com.destroystokyo.paper.entity.ai.Goal;
 import com.destroystokyo.paper.entity.ai.GoalKey;
 import com.destroystokyo.paper.entity.ai.GoalType;
 import me.Romindous.CounterStrike.Enums.GameState;
-import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Game.Arena.Team;
 import me.Romindous.CounterStrike.Game.Defusal;
@@ -17,7 +16,7 @@ import me.Romindous.CounterStrike.Listeners.DmgLis;
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Objects.Game.Bomb;
 import me.Romindous.CounterStrike.Objects.Game.BtShooter;
-import me.Romindous.CounterStrike.Objects.Mobs.Mobber;
+import me.Romindous.CounterStrike.Objects.Game.Mobber;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -96,14 +95,6 @@ public class BotGoal implements Goal<Mob> {
     @Override
     public boolean shouldStayActive() {
         return true;
-    }
- 
-    @Override
-    public void start() {
-    }
- 
-    @Override
-    public void stop() {
     }
     
     @Override
@@ -230,7 +221,7 @@ public class BotGoal implements Goal<Mob> {
 						if (tick % KNIFE_KD == 0) {
 							bsh.own().swingHand(true);
 							DmgLis.prcDmg(le, bsh.tgtSh, bsh, le.getEquipment().getChestplate() == null ? 3d : 2d,
-									"§f\u9298", 5, GunType.knifRwd, false, false, false, false, false);
+									"§f\u9298", 5, Shooter.knifRwd, false, false, false, false, false);
 						}
 					} else {
 						if ((tick & DEL_TGT) == 0) changeTLoc(getStrfLoc(loc, vc, 8));
@@ -255,11 +246,6 @@ public class BotGoal implements Goal<Mob> {
 			} else {//go places
 				final Location dir = arp.getNextLoc();
 				switch (bsh.own().getHandSlot()) {
-				default://nades, knif
-					bsh.switchToGun();
-					vc = dir == null ? eyel.getDirection() : dir.subtract(loc).toVector().setY(0d);
-					if ((tick & DEL_TGT) == 0) bsh.tryBuy();
-					break;
 				case 0, 1:
 					if (ItemUtil.isBlank(bsh.item(EquipmentSlot.HAND), false))
 						bsh.switchToGun();
@@ -278,7 +264,12 @@ public class BotGoal implements Goal<Mob> {
 						bsh.own().swingHand(true);
 					}
 					break;
-				}
+				default://nades, knif
+					bsh.switchToGun();
+					vc = dir == null ? eyel.getDirection() : dir.subtract(loc).toVector().setY(0d);
+					if ((tick & DEL_TGT) == 0) bsh.tryBuy();
+					break;
+                }
 
 				switch (bsh.arena().getType()) {
 				case DEFUSAL:
@@ -294,10 +285,10 @@ public class BotGoal implements Goal<Mob> {
 									if (df.gst == GameState.ROUND && act == SITE_ACT
 										&& site.distSq(bsh.getPos()) < SPOT_DST_SQ) {
 										if (acttm == 0) {
-											if (bmb.defusing == null) {//can defuse
+											if (bmb.defusing() == null) {//can defuse
 												bsh.own().swapToSlot(7);
 												acttm += DEL_ACT;
-												bmb.defusing = bsh;
+												bmb.defusing(bsh);
 											} else {//defend defuser
 												changeTLoc(site, SITE_ACT, false);
 											}
@@ -315,8 +306,8 @@ public class BotGoal implements Goal<Mob> {
 									} else {
 										acttm = 0;
 										changeTLoc(site, SITE_ACT, false);
-										final Shooter ds = bmb.defusing;
-										if (bsh.equals(ds)) bmb.defusing = null;
+										final Shooter ds = bmb.defusing();
+										if (bsh.equals(ds)) bmb.defusing(null);
 									}
 								} else {//set go defend
 									site = null;
@@ -409,10 +400,10 @@ public class BotGoal implements Goal<Mob> {
 								if (!arp.hasTgt() || tLoc == null || act == DIRECT || tAct) {
 									if (in.gst == GameState.ROUND && site.distSq(bsh.getPos()) < SPOT_DST_SQ) {
 										if (acttm == 0) {
-											if (mb.defusing == null) {//can defuse
+											if (mb.defusing() == null) {//can defuse
 												bsh.own().swapToSlot(7);
 												acttm += DEL_ACT;
-												mb.defusing = bsh;
+												mb.defusing(bsh);
 												act = SITE_ACT;
 											}
 										} else if (tAct) {
@@ -432,8 +423,8 @@ public class BotGoal implements Goal<Mob> {
 									} else {
 										acttm = 0;
 										changeTLoc(site, GO_SPOT, true);
-										final Shooter ds = mb.defusing;
-										if (bsh.equals(ds)) mb.defusing = null;
+										final Shooter ds = mb.defusing();
+										if (bsh.equals(ds)) mb.defusing(null);
 									}
 								}
 							} else {
@@ -465,7 +456,7 @@ public class BotGoal implements Goal<Mob> {
             }
 		}
 
-		bsh.own().move(loc, vc, true);
+		bsh.own().move(loc, vc);
     }
 
 	private void changeTLoc(final XYZ nlc) {
