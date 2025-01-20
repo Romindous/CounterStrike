@@ -1,10 +1,7 @@
 package me.Romindous.CounterStrike.Objects.Map;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.*;
 import java.util.Map.Entry;
 import me.Romindous.CounterStrike.Enums.GameType;
 import me.Romindous.CounterStrike.Enums.TileSet;
@@ -18,6 +15,8 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.EnderCrystal;
+import org.bukkit.entity.EnderDragon;
 import ru.komiss77.Ostrov;
 import ru.komiss77.modules.world.Schematic;
 import ru.komiss77.modules.world.Schematic.Rotate;
@@ -125,6 +124,13 @@ public class MapBuilder {
 			buildFloor(dX, dZ, origin.clone().add(0, cellDims.y * f, 0), flr, spts);
 		}
 		spots = spts.toArray(spots);
+		cntr.getWorld().spawn(cntr.add(0.5d, 40d, 0.5d), EnderCrystal.class).setShowingBottom(false);
+		final EnderDragon ed = cntr.getWorld().spawn(cntr.add(0d, 2d, 0d), EnderDragon.class);
+		if (ed.getDragonBattle() != null) ed.getDragonBattle().setPreviouslyKilled(true);
+		ed.setPhase(EnderDragon.Phase.LEAVE_PORTAL);
+		ed.setGlowing(true);
+//		Bukkit.createBossBar(OStrap.key(stp.nm), "Драконус", BarColor.PURPLE,
+//			BarStyle.SEGMENTED_12, BarFlag.DARKEN_SKY, BarFlag.CREATE_FOG);
 	}
 	
 	private void buildFloor(final int lenX, final int widZ, final XYZ org, final Floor flr, final LinkedList<XYZ> spts) {
@@ -285,7 +291,7 @@ public class MapBuilder {
 		}
 		
 		Ostrov.sync(() -> {
-			if (w.getHighestBlockYAt(0, 0) > 0 && tries != 0) {
+			if (w.getHighestBlockYAt(origin.x, origin.z) > 0 && tries != 0) {
 				Bukkit.getConsoleSender().sendMessage("couldnt remove arena form " + origin.toString() + " trying again");
 				remove(w, tries - 1);
 			}

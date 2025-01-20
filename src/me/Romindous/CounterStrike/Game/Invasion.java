@@ -555,7 +555,7 @@ public class Invasion extends Arena {
 		if (tsk != null) tsk.cancel();
 		time = 10;
 		gst = GameState.FINISH;
-		for (final Entity e : w.getEntitiesByClasses(Item.class, ArmorStand.class, Turtle.class)) {
+		for (final Entity e : w.getEntitiesByClasses(Item.class, ArmorStand.class)) {
 			e.remove();
 		}
 		updateData();

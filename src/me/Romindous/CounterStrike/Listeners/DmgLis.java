@@ -112,14 +112,15 @@ public class DmgLis implements Listener {
 		case FREEZE:
 			e.setCancelled(true);
 			break;
-		case FIRE:
-			e.setDamage(2d);
+		case FIRE, DRAGON_BREATH:
+			e.setDamage(1d);
 			e.setCancelled(true);
 			if (e.getEntity() instanceof final LivingEntity ent && !e.getEntity().isInvulnerable()) {
                 final Shooter sh = Shooter.getShooter(ent, false);
 				if (sh != null) {
 					if (sh.arena() != null && sh.arena().gst != GameState.BUYTIME) {
-						prcDmg(ent, sh, null, sh instanceof PlShooter ? e.getDamage() : e.getDamage() * 0.1d, "§f\u9295", 5);
+						prcDmg(ent, sh, null, sh instanceof PlShooter
+							? e.getDamage() : e.getDamage() * 0.2d, "§f\u9295", 5);
 					}
 				} else if (ent instanceof Mob) {
 					prcDmg(ent, null, null, e.getDamage(), "", 5);

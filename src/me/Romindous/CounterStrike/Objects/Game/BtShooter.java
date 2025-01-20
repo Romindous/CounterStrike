@@ -449,6 +449,7 @@ public class BtShooter implements Shooter, Botter.Extent {
 						Utils.crackBlock(new WXYZ(b));
 						dmg *= 0.5f;
 					}
+					continue;
 				}
 				if (b.getCollisionShape().overlaps(new BoundingBox().shift(adj(x - (int) x), adj(y - (int) y), adj(z - (int) z)))) {
 					b.getWorld().spawnParticle(Particle.BLOCK, new Location(b.getWorld(), x, y, z), 10, 0.1d, 0.1d, 0.1d, b.getBlockData());

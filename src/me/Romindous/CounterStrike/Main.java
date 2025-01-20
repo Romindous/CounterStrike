@@ -73,8 +73,8 @@ public final class Main extends JavaPlugin implements Listener {
 		bmb = Main.mkItm(ItemType.GOLDEN_APPLE, "§4§lС*4 §c\u926e",
 			Defusable.BOMB_MDL, "§dПКМ §7- Заложить бомбу", "§7Можно установить на точку §5A §7или §5B"),
 		tHelm = new ItemBuilder(ItemType.LEATHER_HELMET).name("§cШапка Террориста §f\u9267")
-			.lore("§7Цена: §d" + Shooter.helmPrc + " §6⛃").color(Color.RED).build(),
-		tChest = new ItemBuilder(LEATHER_CHESTPLATE).color(Color.RED)
+			.lore("§7Цена: §d" + Shooter.helmPrc + " §6⛃").color(Color.MAROON).build(),
+		tChest = new ItemBuilder(LEATHER_CHESTPLATE).color(Color.MAROON)
 			.name("§cКуртка Террориста §f\u9266").lore("§7Цена: §d" + Shooter.chestPrc + " §6⛃").build(),
 		ctHelm = new ItemBuilder(ItemType.LEATHER_HELMET).name("§3Шлем Спецназа §f\u9267")
 			.lore("§7Цена: §d" + Shooter.helmPrc + " §6⛃").color(Color.TEAL).build(),
