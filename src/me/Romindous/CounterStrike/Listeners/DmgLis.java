@@ -1,11 +1,10 @@
 package me.Romindous.CounterStrike.Listeners;
 
 import javax.annotation.Nullable;
+import java.util.Set;
 import me.Romindous.CounterStrike.Enums.GameState;
-import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Enums.NadeType;
 import me.Romindous.CounterStrike.Game.Arena;
-import me.Romindous.CounterStrike.Game.Arena.Team;
 import me.Romindous.CounterStrike.Game.Defusal;
 import me.Romindous.CounterStrike.Game.Gungame;
 import me.Romindous.CounterStrike.Game.Invasion;
@@ -22,10 +21,11 @@ import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.damage.DamageSource;
+import org.bukkit.damage.DamageType;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -33,117 +33,103 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 import ru.komiss77.ApiOstrov;
-import ru.komiss77.Ostrov;
+import ru.komiss77.boot.OStrap;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.utils.EntityUtil;
 
 public class DmgLis implements Listener {
 
-	public static final String DEATH_SND = Ostrov.registries
-		.SOUNDS.getKey(Sound.BLOCK_ENDER_CHEST_OPEN).asMinimalString();
+	public static final String DEATH_SND = OStrap.keyOf(Sound.BLOCK_ENDER_CHEST_OPEN).asMinimalString();
+	private static final Set<DamageType> IGNORED = Set.of(DamageType.ON_FIRE, DamageType.FREEZE, DamageType.EXPLOSION, DamageType.PLAYER_EXPLOSION, DamageType.FIREWORKS);
+	private static final Set<DamageType> TICKED = Set.of(DamageType.IN_FIRE, DamageType.CAMPFIRE, DamageType.DROWN, DamageType.DRAGON_BREATH, DamageType.INDIRECT_MAGIC);
 
 	@EventHandler
 	public void onDmg(final EntityDamageEvent e) {
-		switch (e.getCause()) {
-		case ENTITY_ATTACK:
-			if (e instanceof final EntityDamageByEntityEvent ee) {
-                if (e.getEntity() instanceof final LivingEntity ent
-					&& ee.getDamager() instanceof final LivingEntity dmgr
-					&& !e.getEntity().isInvulnerable()) {
-                    final Shooter sh = Shooter.getShooter(dmgr, false);
-					if (sh != null) {
-						//if player shoots living
-						if (sh.arena() == null) {
-							if (!(ee instanceof EntityShootAtEntityEvent) && dmgr.getType() == EntityType.PLAYER) {
-								e.setCancelled(((HumanEntity) dmgr).getGameMode() != GameMode.CREATIVE);
-								EntityUtil.indicate(ent.getEyeLocation(), "§6"
-									+ (ent.getEquipment().getChestplate() == null ? 4 : 2) * 5, (Player) dmgr);
-							}
-						} else {
-							if (ee instanceof final EntityShootAtEntityEvent eee) {
-								//need to deal damage
-                                final GunType gt = GunType.get(sh.item(EquipmentSlot.HAND));
-								if (gt == null) return;
-								if (eee.isCritical() && dmgr.getType() == EntityType.PLAYER) {
-									ApiOstrov.addStat((Player) dmgr, Stat.CS_hshot);
-								}
-
-								eee.setDamage(prcDmg(ent, Shooter.getShooter(ent, false), 
-								sh, e.getDamage(), gt.icn, 0, gt.rwd, dmgr.hasPotionEffect(PotionEffectType.BLINDNESS),
-									eee.smoked, eee.noscope, eee.isCritical(), eee.wallbang));
-							} else {
-								e.setCancelled(true);
-								//if player hits living
-								final ItemStack hnd = sh.item(EquipmentSlot.HAND);
-								switch (hnd.getType()) {
-								case BONE:
-								case BLAZE_ROD:
-									if (ent.getNoDamageTicks() == 0) {
-										e.setDamage(ent.getEquipment().getChestplate() == null ? 3d : 2d);
-										prcDmg(ent, Shooter.getShooter(ent, false), sh, e.getDamage(), 
-										"§f\u9298", 5, Shooter.knifRwd, false, false, false, false, false);
-										if (dmgr.getType() == EntityType.PLAYER) {
-											EntityUtil.indicate(ent.getEyeLocation(), "§6" + (int) e.getDamage() * 5, (Player) dmgr);
-										}
-									}
-									break;
-								default:
-									break;
-								}
-							}
-						}
-					} else if (ent instanceof Mob) {
-						final Invasion ar = Invasion.getMobInvasion(ee.getDamager().getEntityId());
-						if (ar != null && e.getEntityType() == EntityType.PLAYER) {
-							e.setCancelled(true);
-							e.setDamage(ent.getEquipment().getChestplate() == null ? e.getDamage() : e.getDamage() * 0.6);
-							e.setDamage(ent.getEquipment().getHelmet() == null ? e.getDamage() : e.getDamage() * 0.8);
-							prcDmg(ent, Shooter.getShooter(ent, false), null, e.getDamage(),
-								Team.SPEC.clr + ee.getDamager().getName() + "§f\u929a", 5);
-						}
-					}
-				}
-			}
-			break;
-		case FIRE_TICK:
+		final DamageSource ds = e.getDamageSource();
+		final DamageType dt = ds.getDamageType();
+		if (!(e.getEntity() instanceof final LivingEntity tgt)) return;
+		if (e.getEntity().isInvulnerable()) return;
+		if (IGNORED.contains(dt)) {
+			e.setDamage(0d);
 			e.getEntity().setFireTicks(0);
-		case BLOCK_EXPLOSION:
-		case ENTITY_EXPLOSION:
-		case FREEZE:
 			e.setCancelled(true);
-			break;
-		case FIRE, DRAGON_BREATH:
-			e.setDamage(1d);
-			e.setCancelled(true);
-			if (e.getEntity() instanceof final LivingEntity ent && !e.getEntity().isInvulnerable()) {
-                final Shooter sh = Shooter.getShooter(ent, false);
-				if (sh != null) {
-					if (sh.arena() != null && sh.arena().gst != GameState.BUYTIME) {
-						prcDmg(ent, sh, null, sh instanceof PlShooter
-							? e.getDamage() : e.getDamage() * 0.2d, "§f\u9295", 5);
-					}
-				} else if (ent instanceof Mob) {
-					prcDmg(ent, null, null, e.getDamage(), "", 5);
-				}
-			}
-			break;
-		case FALL:
-			e.setCancelled(true);
-			if (e.getEntityType() == EntityType.PLAYER && !e.getEntity().isInvulnerable()) {
-				if (e.getDamage() > 2d) {
-					final LivingEntity ent = (LivingEntity) e.getEntity();
-					final Shooter sh = Shooter.getShooter(ent, false);
-					if (sh != null) {
-						if (sh.arena() != null) {
-							prcDmg(ent, sh, null, e.getDamage(), "§f\u9296\u9297", 2);
-						}
-					}
-				}
-			}
-			break;
-		default:
-			break;
+			return;
 		}
+		double dmg = e.getDamage();
+		if (DamageType.PLAYER_ATTACK.equals(dt)) {
+			if (!(ds.getCausingEntity() instanceof final LivingEntity dmgr)) return;
+			final Shooter sh = Shooter.getShooter(dmgr, false);
+			if (sh == null) return;
+			if (sh.arena() == null) {
+				if (!(e instanceof EntityShootAtEntityEvent) && dmgr instanceof final HumanEntity he) {
+					e.setCancelled(he.getGameMode() != GameMode.CREATIVE);
+					EntityUtil.indicate(tgt.getEyeLocation(), "§6"
+						+ (tgt.getEquipment().getChestplate() == null ? dmg : dmg * 0.5d) * 5, (Player) dmgr);
+				}
+				return;
+			}
+			if (e instanceof final EntityShootAtEntityEvent eee) {
+				//need to deal damage
+				if (eee.gun == null) return;
+				if (eee.isCritical() && dmgr instanceof final Player pl) ApiOstrov.addStat(pl, Stat.CS_hshot);
+				eee.setDamage(prcDmg(tgt, Shooter.getShooter(tgt, false), sh, e.getDamage(),
+					eee.gun.icn, 0, eee.gun.rwd, dmgr.hasPotionEffect(PotionEffectType.BLINDNESS),
+					eee.smoked, eee.noscope, eee.isCritical(), eee.wallbang));
+				return;
+			}
+			e.setCancelled(true);
+			final ItemStack hnd = sh.item(EquipmentSlot.HAND);
+			switch (hnd.getType()) {
+				case BONE:
+				case BLAZE_ROD:
+					if (tgt.getNoDamageTicks() != 0) return;
+					final double knfDmg = tgt.getEquipment().getChestplate() == null ? 3d : 2d;
+					e.setDamage(knfDmg);
+					prcDmg(tgt, Shooter.getShooter(tgt, false), sh, knfDmg, "§f\u9298", 5,
+						Shooter.knifRwd, false, false, false, false, false);
+					if (dmgr.getType() == EntityType.PLAYER)
+						EntityUtil.indicate(tgt.getEyeLocation(),
+							"§6" + (int) knfDmg * 5, (Player) dmgr);
+					break;
+				default:
+					break;
+			}
+			return;
+		}
+		if (DamageType.FALL.equals(dt)) {
+			e.setDamage(0d);
+			e.setCancelled(true);
+            if (e.getEntityType() != EntityType.PLAYER || dmg < 2.5d) return;
+            final Shooter sh = Shooter.getShooter(tgt, false);
+            if (sh == null || sh.arena() == null) return;
+            prcDmg(tgt, sh, null, dmg, "§f\u9296\u9297", 2);
+            return;
+		}
+		if (TICKED.contains(dt)) {
+			e.setDamage(1d);
+			dmg = e.getDamage();
+			e.setCancelled(true);
+			if (tgt.getNoDamageTicks() != 0) return;
+			final Shooter sh = Shooter.getShooter(tgt, false);
+			if (sh == null) {
+				if (!(tgt instanceof Mob)) return;
+				prcDmg(tgt, null, null, dmg, "", 2);
+				return;
+			}
+			if (sh.arena() == null || sh.arena().gst == GameState.BUYTIME) return;
+			prcDmg(tgt, sh, null, sh instanceof PlShooter
+				? dmg : dmg * 0.2d, "§f\u9295", 2);
+		}
+		/*else if (ent instanceof Mob) {
+			final Invasion ar = Invasion.getMobInvasion(ee.getDamager().getEntityId());
+			if (ar != null && e.getEntityType() == EntityType.PLAYER) {
+				e.setCancelled(true);
+				e.setDamage(ent.getEquipment().getChestplate() == null ? e.getDamage() : e.getDamage() * 0.6);
+				e.setDamage(ent.getEquipment().getHelmet() == null ? e.getDamage() : e.getDamage() * 0.8);
+				prcDmg(ent, Shooter.getShooter(ent, false), null, e.getDamage(),
+					Team.SPEC.clr + ee.getDamager().getName() + "§f\u929a", 5);
+			}
+		}*/
 	}
 
 	public static double prcDmg(final LivingEntity target, final Shooter tgtsh, 

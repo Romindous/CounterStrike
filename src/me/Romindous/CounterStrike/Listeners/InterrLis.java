@@ -1,6 +1,5 @@
 package me.Romindous.CounterStrike.Listeners;
 
-import io.papermc.paper.event.player.PlayerStopUsingItemEvent;
 import io.papermc.paper.math.Position;
 import me.Romindous.CounterStrike.Enums.GameState;
 import me.Romindous.CounterStrike.Enums.GunType;
@@ -12,6 +11,7 @@ import me.Romindous.CounterStrike.Game.Invasion;
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Menus.ChosenSkinMenu;
 import me.Romindous.CounterStrike.Objects.Game.*;
+import me.Romindous.CounterStrike.Objects.Loc.Info;
 import me.Romindous.CounterStrike.Objects.Map.MapManager;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
@@ -39,8 +39,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ItemType;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
-import ru.komiss77.modules.world.WXYZ;
-import ru.komiss77.modules.world.XYZ;
+import ru.komiss77.modules.world.BVec;
+import ru.komiss77.objects.IntHashMap;
 import ru.komiss77.utils.ItemUtil;
 import ru.komiss77.utils.ScreenUtil;
 import ru.komiss77.utils.TCUtil;
@@ -55,18 +55,17 @@ public class InterrLis implements Listener {
 			e.setCancelled(true);
 			final Invasion ar = Invasion.getMobInvasion(e.getEntity().getEntityId());
 			if (ar != null && ar.gst == GameState.ROUND) {
-				switch (b.getType()) {
-				case WARPED_PRESSURE_PLATE:
-					if (new WXYZ(ar.ads.getLocation()).distAbs(new WXYZ(b)) == 0) {
+				final BlockType bt = b.getType().asBlockType();
+				if (bt == BlockType.WARPED_PRESSURE_PLATE) {
+					if (BVec.of(ar.ads.getLocation()).distAbs(BVec.of(b)) == 0) {
 						ar.hrtSt(true, (byte) (2 + Mobber.MobType.get(e.getEntityType()).pow << 1));
 						e.getEntity().remove();
-					} else if (new WXYZ(ar.bds.getLocation()).distAbs(new WXYZ(b)) == 0) {
+					} else if (BVec.of(ar.bds.getLocation()).distAbs(BVec.of(b)) == 0) {
 						ar.hrtSt(false, (byte) (2 + Mobber.MobType.get(e.getEntityType()).pow << 1));
 						e.getEntity().remove();
 					}
-					break;
-				case TRIPWIRE:
-					final TripWire tw = Arena.tblks.get(new XYZ(b.getLocation()));
+				} else if (bt == BlockType.TRIPWIRE) {
+					final TripWire tw = Arena.tblks.get(BVec.of(b.getLocation()));
 					if (tw != null) {
 						e.setCancelled(true);
 						if (tw.tm == Team.CTs) {
@@ -74,68 +73,63 @@ public class InterrLis implements Listener {
 							tw.trigger(b.getLocation().add(0.5d, 0d, 0.5d));
 						}
 					}
-					break;
-				default:
-					break;
 				}
 			}
 		}
 	}
 	
-	@EventHandler(priority = EventPriority.HIGHEST)
+	/*@EventHandler(priority = EventPriority.HIGHEST)
 	public void onStop(final PlayerStopUsingItemEvent e) {
 		final ItemStack it = e.getItem();
         final Player p = e.getPlayer();
-		if (ItemType.SPYGLASS.equals(it.getType().asItemType())) {
-			final PlShooter sh = Shooter.getPlShooter(p.getName(), true);
-			final ItemStack mh = p.getInventory().getItemInMainHand();
-			final GunType gt = GunType.get(mh);
-			if (p.isSneaking() && sh.scope() && sh.shtTm() == 0) {
-//					p.sendMessage("f");
-				sh.scope(false);
-				final boolean hd = Main.hasDur(mh);
-				if ((sh.count() == 0 || hd) && sh.cldwn() == 0) {
-					if (mh.getAmount() == 1) {
-						if (hd) return;
-						sh.count(0);
-						Main.setDur(mh, 0);
-					} else {
-						if (hd) {
-							Main.setDur(mh, Main.maxDur(mh));
-							sh.count(0);
-						}
+        if (!ItemUtil.is(it, ItemType.SPYGLASS)) return;
+        final PlShooter sh = Shooter.getPlShooter(p.getName(), true);
+        final ItemStack mh = p.getInventory().getItemInMainHand();
+        final GunType gt = GunType.get(mh);
+        if (!p.isSneaking() || !sh.scope()
+			|| sh.shtTm() != 0 || gt == null) return;
+        sh.scope(false);
+        final boolean hd = Main.hasDur(mh);
+        if ((sh.count() != 0 && !hd) || sh.cldwn() != 0) return;
+        if (mh.getAmount() == 1) {
+            if (hd) return;
+            sh.count(0);
+            Main.setDur(mh, 0);
+        } else {
+            if (hd) {
+                Main.setDur(mh, Main.maxDur(mh));
+                sh.count(0);
+            }
 
-						mh.setAmount(mh.getAmount() - 1);
-					}
-					final int tr = sh.count() < sh.rclTm() ? sh.count() : sh.rclTm();
-					sh.cldwn(gt.cld);
-					for (byte i = gt.brst == 0 ? 1 : gt.brst; i > 0; i--) {
-						sh.shoot(gt, false, tr);
-					}
-					if (gt.cld > 2) p.setCooldown(mh, gt.cld - 1);
-					Main.plyWrldSnd(p, gt.snd, 1.1f - Main.srnd.nextFloat() * 0.2f);
-				}
-			}
-		}
-    }
+            mh.setAmount(mh.getAmount() - 1);
+        }
+        final int tr = sh.count() < sh.rclTm() ? sh.count() : sh.rclTm();
+        sh.cldwn(gt.cld);
+        for (byte i = gt.brst == 0 ? 1 : gt.brst; i > 0; i--) {
+            sh.shoot(gt, false, tr);
+        }
+        if (gt.cld > 2) p.setCooldown(mh, gt.cld - 1);
+        Main.plyWrldSnd(p, gt.snd, 1.1f - Main.srnd.nextFloat() * 0.2f);
+    }*/
 	
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onInter(final PlayerInteractEvent e) {
 		final Block b;
 		final ItemStack it = e.getItem();
-		final GunType gt = GunType.get(it);
 		final NadeType nt = NadeType.getNdTp(it);
+		final GunType gt = GunType.fast(it);
 		final PlShooter sh;
 		switch (e.getAction()) {
 		case LEFT_CLICK_AIR:
 		case LEFT_CLICK_BLOCK:
 			if (gt != null) {
 				e.setCancelled(true);
-				sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
 				if (!Main.hasDur(it) && it.getAmount() != gt.amo) {
+					sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
 					Main.setDur(it, 0);
 					sh.shtTm(0);
 					sh.count(0);
+					Utils.zoom(e.getPlayer(), false);
 				}
 			} else if (nt != null) {
 				e.getPlayer().setExp((e.getPlayer().getExp() == 1f) ? 0f :
@@ -146,17 +140,9 @@ public class InterrLis implements Listener {
 		case RIGHT_CLICK_BLOCK:
 			final Player p = e.getPlayer();
 			if (gt != null) {
+				sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
 				e.setUseInteractedBlock(Result.DENY);
 				e.setUseItemInHand(Result.DENY);
-				sh = Shooter.getPlShooter(p.getName(), true);
-				if (gt.snp && p.isSneaking()) {
-					if (ItemUtil.isBlank(p.getInventory().getItemInOffHand(), false))
-						p.getInventory().setItemInOffHand(Main.spy);
-					e.setUseItemInHand(Result.ALLOW);
-					sh.scope(true);
-					return;
-				}
-				
 				final boolean hd = Main.hasDur(it);
 				if (sh.shtTm() == 0) {
 					if ((sh.count() == 0 || hd) && sh.cldwn() == 0) {
@@ -172,18 +158,23 @@ public class InterrLis implements Listener {
 							
 							it.setAmount(it.getAmount() - 1);
 						}
-						final int tr = sh.count() < sh.rclTm() ? sh.count() : sh.rclTm();
 						sh.cldwn(gt.cld);
-						for (byte i = gt.brst == 0 ? 1 : gt.brst; i > 0; i--) {
-							sh.shoot(gt, true, tr);
+						final int tr = sh.count() < sh.recoil() ? sh.count() : sh.recoil();
+						final boolean scp = gt.snp && p.isSneaking();
+						if (gt.brst == 0) sh.shoot(gt, !scp, tr, new IntHashMap<>());
+						else {
+							final IntHashMap<Info> info = new IntHashMap<>();
+							for (int i = gt.brst; i != 0; i--) sh.shoot(gt, !scp, tr, info);
 						}
+						if (scp) Utils.zoom(p, false);
+						if (gt.snp && p.isSneaking()) p.setSneaking(false);
 						if (gt.cld > 2) p.setCooldown(it, gt.cld - 1);
 						Main.plyWrldSnd(p, gt.snd, 1.1f - Main.srnd.nextFloat() * 0.2f);
 					}
 				}
 				sh.shtTm(5);
 			} else if (nt != null) {
-				sh = Shooter.getPlShooter(p.getName(), true);
+				sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
 				if (sh.arena() != null) {
 					switch (sh.arena().gst) {
 					case BUYTIME:
@@ -198,7 +189,7 @@ public class InterrLis implements Listener {
 				if (b != null && b.getType() == Material.TRIPWIRE && !nt.prm) {
 					final Arena ar = sh.arena();
 					if (ar != null) {
-						final TripWire tw = Arena.tblks.get(new XYZ(b.getLocation()));
+						final TripWire tw = Arena.tblks.get(BVec.of(b.getLocation()));
 						if (tw != null) {
 							e.setCancelled(true);
 							if (tw.tm == ar.shtrs.get(sh)) {
@@ -213,7 +204,7 @@ public class InterrLis implements Listener {
 					}
 				}
 
-				Nade.launch(p, sh, p.getEyeLocation().getDirection().multiply(0.75f * p.getExp() + 0.5f),
+				Nade.launch(p, sh, p.getEyeLocation().getDirection().multiply(0.8f * p.getExp() + 0.4f),
 					(int) (nt.time * p.getExp()) + 4, p.getInventory().getHeldItemSlot());
 			} else {
 				e.setUseInteractedBlock(p.getGameMode() == GameMode.CREATIVE ? Result.ALLOW : Result.DENY);
@@ -224,7 +215,7 @@ public class InterrLis implements Listener {
 						e.setUseItemInHand(Result.ALLOW);
 						break;
 					case GHAST_TEAR:
-						sh = Shooter.getPlShooter(p.getName(), true);
+						sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
 						if (sh.arena() == null) {
 							p.playSound(p.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 2f);
 							p.openInventory(Inventories.LBShop);
@@ -305,7 +296,7 @@ public class InterrLis implements Listener {
 					case GOLD_NUGGET:
 					case SHEARS:
 						final boolean kit = ItemUtil.is(it, ItemType.SHEARS);
-						sh = Shooter.getPlShooter(p.getName(), true);
+						sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
 						if (b != null && sh.arena() != null && p.getGameMode() == GameMode.SURVIVAL) {
 							e.setCancelled(true);
 							final Arena ar = sh.arena();
@@ -323,7 +314,7 @@ public class InterrLis implements Listener {
 								}
 							} else if (BlockType.SPAWNER.equals(b.getType().asBlockType())) {
 								if (ar instanceof final Invasion in && ar.gst == GameState.ROUND) {
-									final Mobber mb = in.mbbrs.get(new WXYZ(b).getSLoc());
+									final Mobber mb = in.mbbrs.get(BVec.of(b).thin());
 									if (mb != null && mb.isAlive()) {
 										if (mb.defusing() == null) {
 											mb.defusing(sh);
@@ -338,7 +329,7 @@ public class InterrLis implements Listener {
 						break;
 					case SUGAR:
 						if (b != null) {
-							sh = Shooter.getPlShooter(p.getName(), true);
+							sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
 							if (sh.arena() != null) {
 								switch (sh.arena().gst) {
 								case BUYTIME:
@@ -376,8 +367,8 @@ public class InterrLis implements Listener {
 						break;
 					case NETHER_STAR:
 						if (it.hasItemMeta() && TCUtil.strip(it.getItemMeta().displayName()).equals("Выбор Комманды")) {
-							sh = Shooter.getPlShooter(p.getName(), true);
 							p.playSound(p.getLocation(), Sound.BLOCK_CONDUIT_ATTACK_TARGET, 1f, 2f);
+							sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
 							if (sh.arena() != null) {
 								sh.arena().teamInv.open(p);
 							}
@@ -393,7 +384,7 @@ public class InterrLis implements Listener {
 						break;
 					case HEART_OF_THE_SEA:
 						if (it.hasItemMeta() && TCUtil.strip(it.getItemMeta().displayName()).equals("Боторейка")) {
-							sh = Shooter.getPlShooter(p.getName(), true);
+							sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
 							if (sh.arena() != null && sh.arena().botInv != null) {
 								p.playSound(p.getLocation(), Sound.BLOCK_BREWING_STAND_BREW, 1f, 1.6f);
 								sh.arena().botInv.open(p);
@@ -424,12 +415,12 @@ public class InterrLis implements Listener {
 		case PHYSICAL:
 			b = e.getClickedBlock();
 			if (b != null) {
-				switch (b.getType()) {
-				case TRIPWIRE:
+				final BlockType bt = b.getType().asBlockType();
+				if (bt == BlockType.TRIPWIRE) {
 					sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
 					final Arena ar = sh.arena();
 					if (ar != null) {
-						final TripWire tw = Arena.tblks.get(new XYZ(b.getLocation()));
+						final TripWire tw = Arena.tblks.get(BVec.of(b.getLocation()));
 						if (tw != null) {
 							e.setCancelled(true);
 							if (ar.name.equals(sh.arena().name) && ar.shtrs.get(sh) != tw.tm) {
@@ -438,12 +429,8 @@ public class InterrLis implements Listener {
 							}
 						}
 					}
-					break;
-				case WARPED_PRESSURE_PLATE:
+				} else if (bt == BlockType.WARPED_PRESSURE_PLATE || bt == BlockType.FARMLAND) {
 					e.setCancelled(true);
-					break;
-				default:
-					break;
 				}
 			}
 			break;
@@ -497,9 +484,9 @@ public class InterrLis implements Listener {
 
 	public boolean crtTrpwr(final Block b, final BlockFace bf, final Player p) {
 		if (b.getType().isSolid()) {
-			final byte r = 5;
+			final int r = 5;
 			final Block[] twbs = new Block[r];
-			for (byte i = 0; i < r + 1; i++) {
+			for (byte i = 0; true; i++) {
 				final Block t = b.getRelative(bf, i + 1);
 				if (t.getType().isAir()) {
 					if (i == r) {
@@ -525,7 +512,6 @@ public class InterrLis implements Listener {
 					return false;
 				}
 			}
-			return false;
 		}
 		p.sendMessage(Main.prf() + "§cРастяжку можно крепить только на целые блоки!");
 		return false;

@@ -1,24 +1,26 @@
 package me.Romindous.CounterStrike.Objects.Game;
 
-import java.util.*;
+import java.util.EnumMap;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Predicate;
-import io.papermc.paper.math.BlockPosition;
-import io.papermc.paper.math.Position;
 import me.Romindous.CounterStrike.Enums.GameState;
 import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Game.Arena.Team;
 import me.Romindous.CounterStrike.Game.Defusal;
+import me.Romindous.CounterStrike.Game.Gungame;
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Objects.EntityShootAtEntityEvent;
-import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
+import me.Romindous.CounterStrike.Objects.Loc.Broken;
+import me.Romindous.CounterStrike.Objects.Loc.Info;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Skins.GunSkin;
 import me.Romindous.CounterStrike.Objects.TargetLe;
 import me.Romindous.CounterStrike.Utils.Utils;
 import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockType;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -31,32 +33,33 @@ import org.bukkit.util.Vector;
 import ru.komiss77.Ostrov;
 import ru.komiss77.modules.player.Oplayer;
 import ru.komiss77.modules.player.PM;
-import ru.komiss77.modules.world.WXYZ;
+import ru.komiss77.modules.world.BVec;
 import ru.komiss77.notes.Slow;
+import ru.komiss77.objects.IntHashMap;
 import ru.komiss77.objects.SortedList;
 import ru.komiss77.utils.EntityUtil;
-import ru.komiss77.utils.NumUtil;
 import ru.komiss77.utils.ItemUtil;
-import ru.komiss77.version.Nms;
+import ru.komiss77.utils.NumUtil;
 
 public class PlShooter implements Shooter {
 
-	private static final double MOB_TRC = 12d;
+	private static final double MOB_TRC = 8d;
 
 	private final Predicate<Player> isAlly = pl -> {
-		if (arena() == null) return true;
 		final Arena ar = arena();
+		if (ar == null) return true;
 		switch (ar.gst) {
             case WAITING, BEGINING, FINISH: return true;
 			case BUYTIME, ROUND, ENDRND: break;
 		}
+		if (ar instanceof Gungame) return false;
 		final PlShooter ps = Shooter.getPlShooter(pl.getName(), true);
-		return ps.arena() == null || ps.arena().shtrs.get(ps) == arena().shtrs.get(this);
+		return ps.arena() == null || ps.arena().shtrs.get(ps) == ar.shtrs.get(this);
 	};
 	
 	public PlShooter(final Player p) {
 		name = p.getName();
-		rclTm = 50; cldwn = 0; count = 0; shtTm = 0;
+		recoil = MAX_RCL; cldwn = 0; count = 0; shtTm = 0;
 		money = 0; kills = 0; spwnrs = 0; deaths = 0;
 		arena = null;
 
@@ -64,7 +67,7 @@ public class PlShooter implements Shooter {
 		skins = new EnumMap<>(GunType.class);
 		inv = p.getInventory();
 		final Oplayer op = PM.getOplayer(p);
-		op.setTagVis(isAlly);
+		op.tag.canSee(isAlly);
 		final Map<String, String> data = op.mysqlData;
 		Ostrov.async(() -> {
 			for (final GunType gt : GunType.values()) {
@@ -88,9 +91,9 @@ public class PlShooter implements Shooter {
 				
 				cldwn = Math.max(cldwn - 1, 0);
 				final ItemStack it = item(EquipmentSlot.HAND);
-				final GunType gt = GunType.get(it);
+				final GunType gun = GunType.fast(it);
 				final Player p = getPlayer();
-				if (gt == null || p == null) {
+				if (gun == null || p == null) {
 					return;
 				}
 
@@ -101,59 +104,52 @@ public class PlShooter implements Shooter {
 					if ((count & 0x3) == 0) {
 						p.getWorld().playSound(p.getLocation(), Sound.BLOCK_CHAIN_FALL, 0.5f, 2f);
 					}
-					if (count < gt.rtm) Main.setDur(it, count);
+					if (count < gun.rtm) Main.setDur(it, count);
 					else {
 						Main.setDur(it, Main.maxDur(it));
 						p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 2f);
-						it.setAmount(gt.amo);
-						count = 0;
+						it.setAmount(gun.amo); count = 0;
+						if (gun.snp) Ostrov.sync(() -> Utils.zoom(p, p.isSneaking()), 1);
 					} 
 				}
 				
 				if (shtTm == 0) {
 					if (count != 0 && !ps) {
-						count = count > rclTm + 1 ? rclTm : (count - 2 < 0) ? 0 : (count - 2);
+						count = count > recoil + 1 ? recoil
+							: (count - 2 < 0) ? 0 : (count - 2);
 					}
 				} else {
 					shtTm--;
 					if (!ps) count++;
-					if (scope() && scope(p.isSneaking())) return;
-					if (count % gt.cld == 0) {
-						final int tr = count < rclTm ? count : rclTm;
+//					if (scope() && scope(p.isSneaking())) return;
+					if (count % gun.cld == 0) {
 						if (it.getAmount() == 1) {
 							if (ps) return;
 							count = 0;
-							
-							if (gt.snp && p.isSneaking()) {
-								if (ItemUtil.isBlank(p.getInventory().getItemInOffHand(), false))
-									p.getInventory().setItemInOffHand(Main.spy);
-								scope(true);
-								return;
-							} else {
-								Main.setDur(it, 0);
-							}
+
+							Main.setDur(it, 0);
 						} else {
 							if (ps) {
 								Main.setDur(it, Main.maxDur(it));
 								count = 0;
 							}
 
-							if (gt.snp && p.isSneaking()) {
-								if (ItemUtil.isBlank(p.getInventory().getItemInOffHand(), false))
-									p.getInventory().setItemInOffHand(Main.spy);
-								scope(true);
-								return;
-							} else {
-								it.setAmount(it.getAmount() - 1);
-							}
+							it.setAmount(it.getAmount() - 1);
 						} 
-						cldwn = gt.cld;
-//						p.sendMessage("3");
-						for (int i = gt.brst == 0 ? 1 : gt.brst; i > 0; i--) {
-							shoot(gt, true, tr);
+						cldwn = gun.cld;
+						final int tr = count < recoil ? count : recoil;
+						final boolean scp = gun.snp && p.isSneaking();
+						if (gun.brst == 0) shoot(gun, !scp, tr, new IntHashMap<>());
+						else {
+							final IntHashMap<Info> info = new IntHashMap<>();
+							for (int i = gun.brst; i != 0; i--) shoot(gun, !scp, tr, info);
 						}
-						if (gt.cld > 2) p.setCooldown(it, gt.cld - 1);
-						Main.plyWrldSnd(p, gt.snd, 1.1f - Main.srnd.nextFloat() * 0.2f);
+						if (scp) {
+							Utils.zoom(p, false);
+							p.setSneaking(false);
+						}
+						if (gun.cld > 2) p.setCooldown(it, gun.cld - 1);
+						Main.plyWrldSnd(p, gun.snd, 1.1f - Main.srnd.nextFloat() * 0.2f);
 					}
 				}
 			}
@@ -187,19 +183,15 @@ public class PlShooter implements Shooter {
 		return pss.get(Math.max(pss.size() - dst, 0)).clone();
 	}
 	
-	public WXYZ getPos() {return new WXYZ(getEntity().getLocation());}
-	
-	private boolean scope;
-	public boolean scope() {return scope;}
-	public boolean scope(final boolean scp) {return scope=scp;}
+	public BVec getPos() {return BVec.of(getEntity().getLocation());}
 	
 	private int shtTm;
 	public int shtTm() {return shtTm;}
 	public void shtTm(final int n) {shtTm=n;}
 	
-	private int rclTm;
-	public int rclTm() {return rclTm;}
-	public void rclTm(final int n) {rclTm=n;}
+	private int recoil;
+	public int recoil() {return recoil;}
+	public void rstRcl() {recoil=MAX_RCL;}
 	
 	private int cldwn;
 	public int cldwn() {return cldwn;}
@@ -236,46 +228,53 @@ public class PlShooter implements Shooter {
 	public ItemStack item(final EquipmentSlot slot) {return inv.getItem(slot);}
 	public ItemStack item(final int slot) {return inv.getItem(slot);}
 	public void item(final EquipmentSlot slot, final ItemStack it) {
-		final GunType gt = GunType.get(item(slot));
-		if (gt != null && gt.snp) inv.setItemInOffHand(Main.air);
 		inv.setItem(slot, it);
+		if (slot != EquipmentSlot.HAND) return;
+		final Player pl = getPlayer();
+		if (pl.isSneaking()) Utils.zoom(pl, false);
 	}
 	public void item(final int slot, final ItemStack it) {
-		final GunType gt = GunType.get(item(slot));
-		if (gt != null && gt.snp) inv.setItemInOffHand(Main.air);
 		inv.setItem(slot, it);
+		if (slot != inv.getHeldItemSlot()) return;
+		final Player pl = getPlayer();
+		if (pl.isSneaking()) Utils.zoom(pl, false);
 	}
 	public PlayerInventory inv() {return inv;}
 	public void inv(final PlayerInventory i) {inv = i;}
-	public void clearInv() {inv.clear();}
+	public void clearInv() {
+		item(EquipmentSlot.HAND, ItemUtil.air);
+		inv.clear();
+	}
 	
 	public void drop(final Location loc) {
 		final World w = loc.getWorld();
 		ItemStack it = item(3);
 		if (!ItemUtil.isBlank(it, false)) {
-			w.dropItem(loc, it);
+			w.dropItem(loc, it).setInvulnerable(true);
 		}
 		it = item(4);
 		if (!ItemUtil.isBlank(it, false)) {
 			if (it.getAmount() == 1) {
-				w.dropItem(loc, it);
+				w.dropItem(loc, it).setInvulnerable(true);
 			} else {
 				it.setAmount(1);
-				w.dropItem(loc, it);
-				w.dropItem(loc, it);
+				w.dropItem(loc, it).setInvulnerable(true);
+				w.dropItem(loc, it).setInvulnerable(true);
 			}
 		}
 		
 		if (arena() instanceof Defusal) {
 			it = item(0);
 			if (!ItemUtil.isBlank(it, false)) {
+				Main.setDur(it, 0);
 				it.setAmount(1);
-				w.dropItem(loc, it);
+				w.dropItem(loc, it).setInvulnerable(true);
 			}
 			it = item(1);
 			if (!ItemUtil.isBlank(it, false)) {
+				Main.setDur(it, 0);
 				it.setAmount(1);
-				w.dropItem(loc, it);
+				w.dropItem(loc, it).setInvulnerable(true);
 			}
 		}
 		
@@ -292,7 +291,7 @@ public class PlShooter implements Shooter {
 					}
 				}
 			} else if (it.getType() == Material.SHEARS) {
-				w.dropItem(loc, it);
+				w.dropItem(loc, it).setInvulnerable(true);
 			}
 		}
 		clearInv();
@@ -335,6 +334,7 @@ public class PlShooter implements Shooter {
 	public void taq(final String pfx, final String sfx, final String afx) {
 		final Player pl = getPlayer();
 		final Oplayer op = PM.getOplayer(pl);
+		op.tag.canSee(isAlly);
 		op.tabPrefix(pfx, pl);
 		op.tabSuffix(sfx, pl);
 		op.beforeName(afx, pl);
@@ -355,7 +355,7 @@ public class PlShooter implements Shooter {
 
 	@Override
 	@Slow(priority = 4)
-	public void shoot(final GunType gt, final boolean dff, final int tr) {
+	public void shoot(final GunType gt, final boolean dff, final int tr, final IntHashMap<Info> blocks) {
 		final LivingEntity ent = getEntity();
 		final Location loc = ent.getEyeLocation();
 		if (dff) {
@@ -363,9 +363,9 @@ public class PlShooter implements Shooter {
 				loc.setPitch(loc.getPitch() - tr * gt.yrcl + ((float) ent.getVelocity().getY() + (ent.isInWater() ? 0.005f : 0.0784f)) * 40f);
 				loc.setYaw((Main.srnd.nextFloat() - 0.5f) * gt.xsprd * tr + loc.getYaw());
 			} else {
-				loc.setPitch((Main.srnd.nextFloat() - 0.5f) * gt.xsprd * rclTm() + loc.getPitch() - tr * 0.1F
+				loc.setPitch((Main.srnd.nextFloat() - 0.5f) * gt.xsprd * recoil() + loc.getPitch() - tr * 0.1F
 					+ ((float) ent.getVelocity().getY() + (ent.isInWater() ? 0.005f : 0.0784f)) * 40f);
-				loc.setYaw((Main.srnd.nextFloat() - 0.5f) * gt.xsprd * rclTm() + loc.getYaw());
+				loc.setYaw((Main.srnd.nextFloat() - 0.5f) * gt.xsprd * recoil() + loc.getYaw());
 			}
 		}
 		final double lkx = -Math.sin(Math.toRadians((180f - loc.getYaw())));
@@ -373,8 +373,8 @@ public class PlShooter implements Shooter {
 		final Vector vec = loc.getDirection().normalize().multiply(TRC_STEP);
 		final SortedList<TargetLe> shot = new SortedList<>();
 		for (final LivingEntity e : Main.getLEs(loc.getWorld())) {
-			if (!e.getType().isAlive() ||
-				e.getEntityId() == ent.getEntityId()) continue;
+			if (!e.getType().isAlive() || e.getNoDamageTicks() != 0
+				|| e.getEntityId() == ent.getEntityId()) continue;
 			final Shooter sh = Shooter.getShooter(e, false);
 			final Vector lc;
 			if (sh == null) {
@@ -396,14 +396,13 @@ public class PlShooter implements Shooter {
 		}
 
 		float dmg = gt.dmg;
-		final boolean brkBlks = arena() != null && arena().gst == GameState.ROUND;
-		final HashSet<BlockPosition> wls = new HashSet<>();
+		final Arena ar = arena();
+		final boolean brkBlks = ar != null && ar.gst == GameState.ROUND;
 		final World w = ent.getWorld();
 		double x = TRC_FCT * vec.getX() + loc.getX();
 		double y = TRC_FCT * vec.getY() + loc.getY();
 		double z = TRC_FCT * vec.getZ() + loc.getZ();
-		LivingEntity tgt;
-		BoundingBox ebx;
+		boolean wallBang = false;
 
 		boolean smoke = false;
 		int tit = shot.size() - 1;
@@ -416,39 +415,50 @@ public class PlShooter implements Shooter {
             if ((i & 63) == 0) {
                 w.spawnParticle(Particle.ASH, x, y, z, 1);
             }
+			final BVec bv = BVec.of((int) NumUtil.floor(x),
+				(int) NumUtil.floor(y), (int) NumUtil.floor(z));
+			final Info info, in = blocks.get(bv.thin());
+			final boolean has;
+			if (in == null) {
+				info = Info.of(w, bv);
+				blocks.put(bv.thin(), info);
+				has = false;
+			} else {
+				info = in;
+				has = true;
+			}
 
-			final BlockType mat = Nms.fastType(w, (int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
 			final Block b;
-			if (BlockType.POWDER_SNOW.equals(mat)) {
+			final Location bl;
+			if (info.smoke()) {
 				smoke = true;
-			} else if (BREAKABLE.contains(mat)) {
-				if (brkBlks) {
-					b = w.getBlockAt((int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
-					arena().brkn.add(new BrknBlck(b));
-					w.playSound(b.getLocation(), Sound.BLOCK_SHROOMLIGHT_FALL, 2f, 0.8f);
-					w.spawnParticle(Particle.BLOCK, b.getLocation().add(0.5d, 0.5d, 0.5d),
-						40, 0.4d, 0.4d, 0.4d, b.getType().createBlockData());
+			} else if (info.broke()) {
+				if (brkBlks && !has) {
+					b = w.getBlockAt(bv.x, bv.y, bv.z);
+					ar.brkn.add(new Broken(b));
 					b.setType(Material.AIR, false);
-					wls.add(Position.block(b.getX(), b.getY(), b.getZ()));
+					bl = new Location(w, x, y, z);
+					w.playSound(bl, Sound.BLOCK_SHROOMLIGHT_FALL, 2f, 0.8f);
+					w.spawnParticle(Particle.BLOCK, bl,
+						40, 0.4d, 0.4d, 0.4d, info.data());
+					wallBang = true;
 					dmg *= 0.5f;
 				}
-			} else if (mat.hasCollision()) {
-				if (PASSABLE.contains(mat)) continue;
-				b = w.getBlockAt((int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
-				if (BANGABLE.contains(mat)) {
-					final BlockPosition bp = Position.block(b.getX(), b.getY(), b.getZ());
-					if (wls.contains(bp)) continue;
-					if (b.getCollisionShape().overlaps(new BoundingBox().shift(adj(x - (int) x), adj(y - (int) y), adj(z - (int) z)))) {
-						wls.add(bp);
-						b.getWorld().spawnParticle(Particle.BLOCK, new Location(b.getWorld(), x, y, z), 4, 0.1d, 0.1d, 0.1d, b.getBlockData());
-						Utils.crackBlock(new WXYZ(b));
+			} else if (info.collides()) {
+				if (info.pass()) continue;
+				if (info.bang()) {
+					if (has) continue;
+					if (info.shape().overlaps(new BoundingBox().shift(x - bv.x, y - bv.y, z - bv.z))) {
+						w.spawnParticle(Particle.BLOCK, new Location(w, x, y, z), 4, 0.1d, 0.1d, 0.1d, info.data());
+						Utils.crackBlock(w, bv);
+						wallBang = true;
 						dmg *= 0.5f;
 					}
 					continue;
 				}
-				if (b.getCollisionShape().overlaps(new BoundingBox().shift(adj(x - (int) x), adj(y - (int) y), adj(z - (int) z)))) {
-					b.getWorld().spawnParticle(Particle.BLOCK, new Location(b.getWorld(), x, y, z), 10, 0.1d, 0.1d, 0.1d, b.getBlockData());
-					Utils.crackBlock(new WXYZ(b));
+				if (info.shape().overlaps(new BoundingBox().shift(x - bv.x, y - bv.y, z - bv.z))) {
+					w.spawnParticle(Particle.BLOCK, new Location(w, x, y, z), 10, 0.1d, 0.1d, 0.1d, info.data());
+					Utils.crackBlock(w, bv);
 					return;
 				}
 			}
@@ -457,41 +467,35 @@ public class PlShooter implements Shooter {
                 final TargetLe tle = shot.get(tit);
                 if (i < tle.dst()) break;
 
-                tgt = tle.le();
-                ebx = tgt.getBoundingBox();
-                if (tgt.getNoDamageTicks() != 0) continue;
+				final LivingEntity tgt = tle.le();
                 final String nm;
-                final boolean hst = y - ebx.getMinY() > ebx.getHeight() * 0.75d;
+                final boolean hst = y - tle.box().getMinY()
+					> tle.box().getHeight() * 0.75d;
                 final EntityShootAtEntityEvent ese;
                 final Location tlc = tgt.getEyeLocation();
                 if (hst) {
                     dmg *= 2f * (tgt.getEquipment().getHelmet() == null ? 1f : 0.5f);
-                    ese = new EntityShootAtEntityEvent(ent, tgt, dmg, true,
-						wls.size() > 0, dff && gt.snp, smoke);
+                    ese = new EntityShootAtEntityEvent(ent, tgt, gt, dmg,
+						true, wallBang, dff && gt.snp, smoke);
+					if (dmg <= 0f) return;//dmg 0, end
                     ese.callEvent();
                     nm = "<red>銑" + NumUtil.abs((int) ((dmg - ese.getDamage()) * 5.0d));
                 } else {
                     dmg *= tgt.getEquipment().getChestplate() == null ? 1f : 0.6f;
-                    ese = new EntityShootAtEntityEvent(ent, tgt, dmg, false,
-						wls.size() > 0, dff && gt.snp, smoke);
+                    ese = new EntityShootAtEntityEvent(ent, tgt, gt, dmg,
+						false, wallBang, dff && gt.snp, smoke);
+					if (dmg <= 0f) return;//dmg 0, end
                     ese.callEvent();
                     nm = "<gold>" + NumUtil.abs((int) ((dmg - ese.getDamage()) * 5.0d));
                 }
-                dmg = (float) ese.getDamage();
 
                 if (ent instanceof final Player pl) {
                     if (hst) pl.playSound(loc, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 2f);
                     pl.playSound(loc, Sound.BLOCK_END_PORTAL_FRAME_FILL, 2f, 2f);
 					EntityUtil.indicate(tlc, nm, pl);
                 }
-
-                if (dmg <= 0f) return;//dmg 0, end
             }
         }
-	}
-
-	private double adj(final double v) {
-		return v < 0 ? v + 1d : v;
 	}
 
 	@Override

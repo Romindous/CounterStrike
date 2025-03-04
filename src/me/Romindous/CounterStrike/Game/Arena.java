@@ -8,31 +8,32 @@ import me.Romindous.CounterStrike.Enums.GameState;
 import me.Romindous.CounterStrike.Enums.GameType;
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Menus.BotMenu;
+import me.Romindous.CounterStrike.Menus.ChosenSkinMenu;
 import me.Romindous.CounterStrike.Menus.GameMenu;
 import me.Romindous.CounterStrike.Menus.TeamMenu;
 import me.Romindous.CounterStrike.Objects.Game.BtShooter;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Game.TripWire;
-import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
+import me.Romindous.CounterStrike.Objects.Loc.Broken;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
-import me.Romindous.CounterStrike.Menus.ChosenSkinMenu;
 import me.Romindous.CounterStrike.Utils.Utils;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.Transformation;
+import org.joml.Vector3f;
 import ru.komiss77.Ostrov;
 import ru.komiss77.enums.Game;
 import ru.komiss77.modules.bots.BotManager;
 import ru.komiss77.modules.games.GM;
 import ru.komiss77.modules.player.PM;
-import ru.komiss77.modules.world.XYZ;
+import ru.komiss77.modules.world.BVec;
 import ru.komiss77.notes.Slow;
 import ru.komiss77.utils.ClassUtil;
+import ru.komiss77.utils.TCUtil;
 import ru.komiss77.utils.inventory.InventoryManager;
 import ru.komiss77.utils.inventory.SmartInventory;
 
@@ -40,23 +41,25 @@ public class Arena {
 
 	public static SmartInventory gameInv = SmartInventory.builder().id("Arenas")
 		.title("           §5§lВыбор Игры").provider(new GameMenu()).size(6, 9).build();
-	public final static HashMap<XYZ, TripWire> tblks = new HashMap<>();
+	public final static HashMap<BVec, TripWire> tblks = new HashMap<>();
 	protected final static String T_AMT = "tamt", CT_AMT = "ctamt",
 		LIMIT = "rem", MONEY = "mn", STAGE = "gst", SCORE = "scr";
 
 	protected static int botID = 0;
 	
 	public final HashMap<Shooter, Team> shtrs = new HashMap<>();
-	public final HashSet<BrknBlck> brkn = new HashSet<>();
+	public final HashSet<Broken> brkn = new HashSet<>();
 	public final HashSet<TripWire> tws = new HashSet<>();
 	public final String name;
 	public final World w;
 	public final byte min;
 	public final byte max;
 //	public final Area area;
-	protected final XYZ[] TSpawns;
-	protected final XYZ[] CTSawns;
-	protected final XYZ[] spots;
+	protected final BVec[] TSpawns;
+	protected final BVec[] CTSpawns;
+	protected final BVec[] spots;
+	private final TextDisplay tSpDs;
+	private final TextDisplay ctSpDs;
 	public final SmartInventory botInv;
 	public final SmartInventory teamInv;
 	public final boolean rnd;
@@ -66,7 +69,7 @@ public class Arena {
 	public GameState gst;
 	
 	public Arena(final String name, final byte min, final byte max, 
-		final XYZ[] TSpawns, final XYZ[] CTSawns, final XYZ[] spots, 
+		final BVec[] TSpawns, final BVec[] CTSpawns, final BVec[] spots,
 		final World w, final boolean rnd, final boolean bots) {
 		this.w = w;
 		w.setTime(6000L);
@@ -77,7 +80,7 @@ public class Arena {
 		w.setGameRule(GameRule.NATURAL_REGENERATION, false);
 		this.gst = GameState.WAITING;
 		this.TSpawns = TSpawns;
-		this.CTSawns = CTSawns;
+		this.CTSpawns = CTSpawns;
 		this.spots = spots;
 		
 //		this.area = area;
@@ -93,6 +96,51 @@ public class Arena {
 			.provider(new TeamMenu(this)).type(InventoryType.HOPPER).build();
 		this.bots = botInv != null;
 		Ostrov.async(() -> ClassUtil.shuffle(spots));
+
+
+		tSpDs = w.spawn(avgLoc(w, TSpawns).add(0.5d, 2d, 0.5d), TextDisplay.class, it -> {
+			it.setVisibleByDefault(false);
+			it.text(TCUtil.form(Team.Ts.clr + Team.Ts.icn + "\n§5§l↳§c§l!§5§l↲"));
+			final Transformation tr = it.getTransformation();
+			it.setTransformation(new Transformation(tr.getTranslation(), tr.getLeftRotation(),
+				new Vector3f(8f, 8f, 8f), tr.getRightRotation()));
+			it.setBillboard(Display.Billboard.VERTICAL);
+			it.setBackgroundColor(Color.fromARGB(0));
+			it.setViewRange(200f);
+			it.setSeeThrough(true);
+			it.setShadowed(true);
+			it.setGravity(false);
+		});
+
+		ctSpDs = w.spawn(avgLoc(w, CTSpawns).add(0.5d, 2d, 0.5d), TextDisplay.class, it -> {
+			it.setVisibleByDefault(false);
+			it.text(TCUtil.form(Team.CTs.clr + Team.CTs.icn + "\n§5§l↳§c§l!§5§l↲"));
+			final Transformation tr = it.getTransformation();
+			it.setTransformation(new Transformation(tr.getTranslation(), tr.getLeftRotation(),
+				new Vector3f(8f, 8f, 8f), tr.getRightRotation()));
+			it.setBillboard(Display.Billboard.VERTICAL);
+			it.setBackgroundColor(Color.fromARGB(0));
+			it.setViewRange(200f);
+			it.setSeeThrough(true);
+			it.setShadowed(true);
+			it.setGravity(false);
+		});
+	}
+
+	private Location avgLoc(final World w, final BVec[] locs) {
+		int x = 0, y = 0, z = 0;
+		for (final BVec bv : locs) {
+			x += bv.x; y += bv.y; z += bv.z;
+		}
+		return BVec.of(x, y, z).mul(1f / locs.length).center(w);
+	}
+
+	public void indSpawn(final Player p, final PlShooter sh, final boolean see) {
+		if (this instanceof Gungame) return;
+		final Team tm = shtrs.getOrDefault(sh, Team.SPEC);
+		if (tm == Team.SPEC) return;
+		if (see) p.showEntity(Main.plug, tm == Team.Ts ? tSpDs : ctSpDs);
+        else p.hideEntity(Main.plug, tm == Team.Ts ? tSpDs : ctSpDs);
 	}
 
 //	public static Arena getPlArena(final Shooter pl) {
@@ -213,7 +261,8 @@ public class Arena {
 	}
 
 	public boolean isSmTm(final Shooter org, final Shooter cmp) {
-		if (cmp.arena() == null || org.arena() == null || !org.arena().name.equals(cmp.arena().name)) return true;
+		if (cmp.arena() == null || org.arena() == null
+			|| !org.arena().name.equals(cmp.arena().name)) return true;
 		final Team tm = shtrs.get(org);
 		return tm != null && tm == shtrs.get(cmp);
 	}
@@ -246,13 +295,13 @@ public class Arena {
 	public boolean canOpnShp(final Location loc, final Team tm) {
 		switch (tm) {
 		case Ts:
-			for (final XYZ b : TSpawns) {
-				if (b.distAbs(loc) < 5) return true;
+			for (final BVec b : TSpawns) {
+				if (b.distAbs(loc) < 8) return true;
 			}
 			break;
 		case CTs:
-			for (final XYZ b : CTSawns) {
-				if (b.distAbs(loc) < 5) return true;
+			for (final BVec b : CTSpawns) {
+				if (b.distAbs(loc) < 8) return true;
 			}
 			break;
 		case SPEC:
@@ -311,7 +360,7 @@ public class Arena {
 
 	public void blncTms() {
 		if (botInv != null && bots) {
-			int tmMx = max >> 1;
+			int max = this.max >> (this instanceof Gungame ? 2 : 1);
 
 			int tPls = 0, ctPls = 0;
 			final Iterator<Entry<Shooter, Team>> it = shtrs.entrySet().iterator();
@@ -319,22 +368,22 @@ public class Arena {
 				final Entry<Shooter, Team> en = it.next();
 				switch (en.getValue()) {
 					case Ts:
-						if (++tPls > tmMx) {
+						if (++tPls > max) {
 							if (en.getKey() instanceof BtShooter) {
 								it.remove();
 								((BtShooter) en.getKey()).own().remove();
 							} else {
-								tmMx = tPls;
+								max = tPls;
 							}
 						}
 						break;
 					case CTs:
-						if (++ctPls > tmMx) {
+						if (++ctPls > max) {
 							if (en.getKey() instanceof BtShooter) {
 								it.remove();
 								((BtShooter) en.getKey()).own().remove();
 							} else {
-								tmMx = ctPls;
+								max = ctPls;
 							}
 						}
 						break;
@@ -343,7 +392,7 @@ public class Arena {
 				}
 			}
 
-			for (int i = tPls; i < tmMx; i++) {
+			for (int i = tPls; i < max; i++) {
 				BotManager.createBot("Bot-v" + botID++, w, bt -> {
 					final BtShooter nbt = new BtShooter(bt, this);
 					shtrs.put(nbt, Team.Ts);
@@ -351,7 +400,7 @@ public class Arena {
 				});
 			}
 
-			for (int i = ctPls; i < tmMx; i++) {
+			for (int i = ctPls; i < max; i++) {
 				BotManager.createBot("Bot-v" + botID++, w, bt -> {
 					final BtShooter nbt = new BtShooter(bt, this);
 					shtrs.put(nbt, Team.CTs);
@@ -409,8 +458,8 @@ public class Arena {
 	}
 	
 	@Slow(priority = 2)
-	public XYZ getClosestPos(final XYZ loc, final int dst) {
-		final XYZ lc = loc.clone().add(Main.srnd.nextBoolean() ? dst : -dst, 
+	public BVec getClosestPos(final BVec loc, final int dst) {
+		final BVec lc = loc.add(Main.srnd.nextBoolean() ? dst : -dst,
 			0, Main.srnd.nextBoolean() ? dst : -dst);
 		int bbi = 0;
 		int dd = Integer.MAX_VALUE;
@@ -422,7 +471,7 @@ public class Arena {
 			}
 		}
 //		final XYZ dif = spots[bbi];
-//		w.getPlayers().forEach(p -> p.sendBlockChange(dif.getCenterLoc(w), Material.STONE.createBlockData()));
+//		w.getPlayers().forEach(p -> p.sendBlockChange(dif.center(w), Material.STONE.createBlockData()));
 		return spots[bbi];
 	}
 

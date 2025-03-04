@@ -55,7 +55,7 @@ public class ChosenSkinMenu implements InventoryProvider {
 				default -> false;
 			}) i++;
 			final Quest shq = Quest.get(gt, sh.model(gt));
-			its.set(i, ClickableItem.of(new ItemBuilder(gt.type()).name("§5" + gt.toString()).model(gt.skin(shq == null ? GunType.DEF_MDL : shq.model))
+			its.set(i, ClickableItem.of(gt.item().name("§5" + gt.toString()).model(gt.skin(shq == null ? GunType.DEF_MDL : shq.model))
 				.lore(Arrays.asList("§7Выбранная обшивка снаряжения!", " ", "§6Клик §7==> Выбор")).maxDamage(gt.rtm).build(), e -> {
 				SmartInventory.builder().type(InventoryType.HOPPER).id("Quest "+pl.getName())
 					.title("§6Выбор обшивки " + gt.name())

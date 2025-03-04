@@ -23,10 +23,12 @@ import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Utils.Inventories;
 import me.Romindous.CounterStrike.Utils.Utils;
 import net.kyori.adventure.key.Key;
+import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.World.Environment;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.block.BlockType;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.LivingEntity;
@@ -45,17 +47,16 @@ import org.bukkit.util.Vector;
 import org.joml.Vector3f;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.Ostrov;
+import ru.komiss77.Timer;
 import ru.komiss77.enums.Game;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.modules.games.GM;
 import ru.komiss77.modules.items.ItemBuilder;
 import ru.komiss77.modules.player.PM;
-import ru.komiss77.modules.world.WXYZ;
+import ru.komiss77.modules.world.BVec;
 import ru.komiss77.modules.world.WorldManager;
 import ru.komiss77.modules.world.WorldManager.Generator;
-import ru.komiss77.modules.world.XYZ;
-import ru.komiss77.utils.StringUtil;
-import ru.komiss77.utils.TCUtil;
+import ru.komiss77.utils.*;
 
 import static org.bukkit.inventory.ItemType.LEATHER_CHESTPLATE;
 
@@ -63,22 +64,20 @@ public final class Main extends JavaPlugin implements Listener {
 
 	public static Main plug;
 	public static File folder;
-	public static WXYZ lobby;
+	public static BVec lobby;
 	public static ScoreboardManager smg;
 	public static YamlConfiguration ars;
 	public static final SecureRandom srnd = new SecureRandom();
 	public static final LivingEntity[] emt = new LivingEntity[0];
-	public static final ItemStack air = new ItemStack(Material.AIR),
-		spy = new ItemBuilder(ItemType.SPYGLASS).name("§8О.О").build(),
-		bmb = Main.mkItm(ItemType.GOLDEN_APPLE, "§4§lС*4 §c\u926e",
-			Defusable.BOMB_MDL, "§dПКМ §7- Заложить бомбу", "§7Можно установить на точку §5A §7или §5B"),
-		tHelm = new ItemBuilder(ItemType.LEATHER_HELMET).name("§cШапка Террориста §f\u9267")
-			.lore("§7Цена: §d" + Shooter.helmPrc + " §6⛃").color(Color.MAROON).build(),
-		tChest = new ItemBuilder(LEATHER_CHESTPLATE).color(Color.MAROON)
-			.name("§cКуртка Террориста §f\u9266").lore("§7Цена: §d" + Shooter.chestPrc + " §6⛃").build(),
-		ctHelm = new ItemBuilder(ItemType.LEATHER_HELMET).name("§3Шлем Спецназа §f\u9267")
-			.lore("§7Цена: §d" + Shooter.helmPrc + " §6⛃").color(Color.TEAL).build(),
-		ctChest = new ItemBuilder(LEATHER_CHESTPLATE).color(Color.TEAL)
+	public static final ItemStack bmb = Main.mkItm(ItemType.GOLDEN_APPLE, "§4§lС*4 §c\u926e",
+			Defusable.BOMB_MDL, "§dПКМ §7- Заложить бомбу", "§7Можно установить на точку §5A §7или §5B");
+	public static final ItemStack tHelm = new ItemBuilder(ItemType.LEATHER_HELMET).name("§cШапка Террориста §f\u9267")
+			.lore("§7Цена: §d" + Shooter.helmPrc + " §6⛃").color(Color.MAROON).build();
+	public static final ItemStack tChest = new ItemBuilder(LEATHER_CHESTPLATE).color(Color.MAROON)
+			.name("§cКуртка Террориста §f\u9266").lore("§7Цена: §d" + Shooter.chestPrc + " §6⛃").build();
+	public static final ItemStack ctHelm = new ItemBuilder(ItemType.LEATHER_HELMET).name("§3Шлем Спецназа §f\u9267")
+			.lore("§7Цена: §d" + Shooter.helmPrc + " §6⛃").color(Color.TEAL).build();
+	public static final ItemStack ctChest = new ItemBuilder(LEATHER_CHESTPLATE).color(Color.TEAL)
 			.name("§3Жилет Спецназа §f\u9266").lore("§7Цена: §d" + Shooter.chestPrc + " §6⛃").build();
 
 	private static final HashMap<UUID, LivingEntity[]> wlents = new HashMap<>();
@@ -87,12 +86,12 @@ public final class Main extends JavaPlugin implements Listener {
 	public static final HashMap<String, Setup> nnactvarns = new HashMap<>();
 	public static final HashMap<String, PlShooter> shtrs = new HashMap<>();
 
-	public static final HashSet<WXYZ> cracks = new HashSet<>();
-	public static final ArrayList<WXYZ> ndBlks = new ArrayList<>();
+	public static final Set<BVec> ndBlks = new HashSet<>();
+	public static final ArrayList<BVec> cracks = new ArrayList<>();
 	public static final HashMap<Player, BlockPosition> plnts = new HashMap<>();
 	public static final HashMap<String, MapBuilder> mapBlds = new HashMap<>();
 	public static final HashMap<UUID, Nade> nades = new HashMap<>();
-	public static final ArrayList<WXYZ> decoys = new ArrayList<>();
+	public static final ArrayList<BVec> decoys = new ArrayList<>();
 
 	public void onEnable() {
 
@@ -116,7 +115,10 @@ public final class Main extends JavaPlugin implements Listener {
 		new BukkitRunnable() {
 			public void run() {
 
-				Main.cracks.removeIf(lc -> lc.yaw-- == 0);
+				Main.cracks.removeIf(lc -> {
+					final byte[] vals = lc.vals();
+                    return vals.length == 0 || vals[0]-- == 0;
+                });
 
 				final Iterator<Entry<Player, BlockPosition>> pi = Main.plnts.entrySet().iterator();
 				while (pi.hasNext()) {
@@ -131,11 +133,14 @@ public final class Main extends JavaPlugin implements Listener {
 					pi.remove();
 				}
 
-				final Iterator<WXYZ> nbi = Main.ndBlks.iterator();
+				final Iterator<BVec> nbi = Main.ndBlks.iterator();
 				while (nbi.hasNext()) {
-					final WXYZ bl = nbi.next();
-					if (bl.pitch-- == 0) {
-						bl.getBlock().setType(Material.AIR, false);
+					final BVec bl = nbi.next();
+					final byte[] vals = bl.vals();
+					final World w = bl.w();
+					if (w == null) {nbi.remove(); continue;}
+					if (vals.length == 0 || vals[0]-- == 0) {
+						BlockUtil.set(bl.block(w), BlockType.AIR, false);
 						nbi.remove();
 					}
 				}
@@ -156,16 +161,19 @@ public final class Main extends JavaPlugin implements Listener {
 		new BukkitRunnable() {
 			public void run() {
 
-				final Iterator<WXYZ> li = Main.decoys.iterator();
+				final int tick = (int) Timer.tickTime();
+				final Iterator<BVec> li = Main.decoys.iterator();
 				while (li.hasNext()) {
-					final WXYZ loc = li.next();
-					loc.w.spawnParticle(Particle.SOUL, loc.getCenterLoc(), 2, 0.2D, 0.2D, 0.2D, 0.0D, null, false);
-					final GunType gt = GunType.values()[loc.yaw];
-					if ((loc.pitch & 31) < 16 && loc.pitch % gt.cld == 0) {
-						Main.plyWrldSnd(loc.getCenterLoc(), gt.snd, 1f);
-					}
-					if ((loc.pitch--) == 0) {
-						li.remove();
+					final BVec loc = li.next();
+					final World w = loc.w();
+					if (w == null) {li.remove(); continue;}
+					final byte[] vals = loc.vals();
+					if (vals.length != 2) {li.remove(); continue;}
+					w.spawnParticle(Particle.SOUL, loc.center(w), 2, 0.2D, 0.2D, 0.2D, 0.0D, null, false);
+					final GunType gt = GunType.values()[vals[1]];
+					if ((tick & 16) == 0 && vals[0]-- == 0) {li.remove(); continue;}
+					if (tick % gt.cld == 0) {
+						Main.plyWrldSnd(loc.center(w), gt.snd, 1f);
 					}
 				}
 
@@ -180,6 +188,11 @@ public final class Main extends JavaPlugin implements Listener {
 		for (final PlShooter sh : shtrs.values()) {
 			if (sh.arena() != null) sh.arena().rmvPl(sh);
 		}
+	}
+
+	public static Location lobby() {
+		final World w = lobby.w();
+		return lobby.center(w == null ? Bukkit.getWorlds().getFirst() : w);
 	}
 
 	public void loadConfigs() {
@@ -225,14 +238,15 @@ public final class Main extends JavaPlugin implements Listener {
 				}
 			}
 
+			final World w;
 			if (ars.contains("lobby")) {
-				final XYZ lb = XYZ.fromString(ars.getString("lobby"));
-				final World w = Bukkit.getWorld(lb.worldName);
-				lobby = new WXYZ(w == null ? Bukkit.getWorlds().getFirst() : w, lb);
-			}
+				final BVec lb = BVec.parse(ars.getString("lobby"));
+				final World tw = lb.w();
+				lobby = lb.w(w = tw == null ? Bukkit.getWorlds().getFirst() : tw);
+			} else w = Bukkit.getWorlds().getFirst();
 
 			wlents.clear();
-			wlents.put(lobby.w.getUID(), emt);
+			wlents.put(w.getUID(), emt);
 
 			Inventories.fillLbbInv();
 			Inventories.fillTsInv();
@@ -251,7 +265,7 @@ public final class Main extends JavaPlugin implements Listener {
 		if (p.isInsideVehicle()) {
 			p.getVehicle().remove();
 		}
-		if (Main.lobby != null) p.teleport(getNrLoc(Main.lobby));
+		p.teleport(getNrLoc(Main.lobby()));
 		p.getInventory().setItem(2, new ItemBuilder(ItemType.CAMPFIRE).name("§dВыбор Игры").build());
 		p.getInventory().setItem(5, new ItemBuilder(ItemType.TOTEM_OF_UNDYING).name("§eВыбор Обшивки").build());
 		p.getInventory().setItem(6, Main.mkItm(ItemType.GHAST_TEAR, "§5Магазин", Shooter.SHOP_MDL));
@@ -403,50 +417,51 @@ public final class Main extends JavaPlugin implements Listener {
 		return ar;
 	}
 
-	public static Location getNrLoc(final XYZ loc, final World w) {
-		return new Location(w, (Main.srnd.nextBoolean() ? -1 : 1) + loc.x + 0.5d, loc.y + 0.1d, (Main.srnd.nextBoolean() ? -1 : 1) + loc.z + 0.5d);
-	}
-
 	public static Location getNrLoc(final Location loc) {
 		return loc.add(Main.srnd.nextBoolean() ? -1d : 1d, 0.1d, Main.srnd.nextBoolean() ? -1d : 1d);
 	}
 
-	public static Location getNrLoc(final WXYZ loc) {
-		return new Location(loc.w, (Main.srnd.nextBoolean() ? -1 : 1) + loc.x + 0.5d, loc.y + 0.1d, (Main.srnd.nextBoolean() ? -1 : 1) + loc.z + 0.5d);
+	public static Location getNrLoc(final World w, final BVec loc) {
+		return new Location(w, (Main.srnd.nextBoolean() ? -1 : 1) + loc.x + 0.5d, loc.y + 0.1d, (Main.srnd.nextBoolean() ? -1 : 1) + loc.z + 0.5d);
 	}
 
-	public static Vector getNrVec(final XYZ loc) {
+	public static Vector getNrVec(final BVec loc) {
 		return new Vector((Main.srnd.nextBoolean() ? -1 : 1) + loc.x + 0.5d, loc.y + 0.1d, (Main.srnd.nextBoolean() ? -1 : 1) + loc.z + 0.5d);
 	}
 
-	public static XYZ getNrPos(final XYZ loc) {
-		return loc.clone().add(Main.srnd.nextBoolean() ? -1 : 1, 0, Main.srnd.nextBoolean() ? -1 : 1);
+	public static BVec getNrPos(final BVec loc) {
+		return loc.add(Main.srnd.nextBoolean() ? -1 : 1, 0, Main.srnd.nextBoolean() ? -1 : 1);
 	}
 
+	public static final int RESONATE = 2000;
 	public static void plyWrldSnd(final Location org, final String snd, final float pt) {
 		Ostrov.async(() -> {
 			for (final Player p : org.getWorld().getPlayers()) {
-				p.playSound(org, snd, (float) (2000 / ((int) p.getLocation().distanceSquared(org) + 1)), pt);
+				p.playSound(org, snd, (float) (RESONATE / ((int) p.getLocation().distanceSquared(org) + 1)), pt);
 			}
 		});
 	}
 
 	public static void plyWrldSnd(final LivingEntity src, final String snd, final float pt) {
 		final Location org = src.getEyeLocation();
+		final int id = src.getEntityId();
 		Ostrov.async(() -> {
 			for (final Player p : org.getWorld().getPlayers()) {
-				p.playSound(org, snd, (float) (2000 / ((int) p.getLocation().distanceSquared(org) + 1)), pt);
+				if (p.getEntityId() == id) p.playSound(Sound.sound(Key.key(snd), Sound.Source.PLAYER, (float) RESONATE, pt), Sound.Emitter.self());
+				p.playSound(org, snd, (float) (RESONATE / ((int) p.getLocation().distanceSquared(org) + 1)), pt);
 			}
 		});
 	}
 
 	public static void plyWrldSnd(final LivingEntity src, final Arena ar, final Arena.Team tm, final String snd, final float pt) {
 		final Location org = src.getEyeLocation();
+		final int id = src.getEntityId();
 		Ostrov.async(() -> {
 			for (final Entry<Shooter, Arena.Team> en : ar.shtrs.entrySet()) {
 				final Player p = en.getKey().getPlayer();
 				if (p == null || en.getValue() != tm) continue;
-				p.playSound(src, snd, (float) (2000 / ((int) p.getLocation().distanceSquared(org) + 1)), pt);
+				if (p.getEntityId() == id) p.playSound(Sound.sound(Key.key(snd), Sound.Source.PLAYER, (float) RESONATE, pt), Sound.Emitter.self());
+				p.playSound(src, snd, (float) (RESONATE / ((int) p.getLocation().distanceSquared(org) + 1)), pt);
 			}
 		});
 	}

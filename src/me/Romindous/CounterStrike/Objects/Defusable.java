@@ -3,12 +3,10 @@ package me.Romindous.CounterStrike.Objects;
 import javax.annotation.Nullable;
 import me.Romindous.CounterStrike.Game.Arena;
 import net.kyori.adventure.key.Key;
-import org.bukkit.World;
 import org.bukkit.block.Block;
-import ru.komiss77.modules.world.WXYZ;
-import ru.komiss77.modules.world.XYZ;
+import ru.komiss77.modules.world.BVec;
 
-public abstract class Defusable extends WXYZ {
+public abstract class Defusable extends BVec {
 
     public static final String OFF_CLR = "off", PLANT = "plant", KIT_MDL = PLANT + "/defuse",
         PLIERS_MDL = PLANT + "/pliers", BOMB_MDL = PLANT + "/bomb", WIRE = "wire", DISP = "disp";
@@ -23,10 +21,10 @@ public abstract class Defusable extends WXYZ {
     }
 
     public Defusable(final Block b) {
-        super(b.getWorld(), b.getX(), b.getY(), b.getZ());
+        this(BVec.of(b));
     }
-    public Defusable(final World w, final XYZ loc) {
-        super(w, loc);
+    public Defusable(final BVec loc) {
+        super(loc.x, loc.y, loc.z);
     }
 
     public abstract Arena arena();

@@ -11,13 +11,13 @@ import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Enums.NadeType;
 import me.Romindous.CounterStrike.Listeners.MainLis;
 import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Menus.ChosenSkinMenu;
 import me.Romindous.CounterStrike.Objects.Game.BtShooter;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Game.TripWire;
-import me.Romindous.CounterStrike.Objects.Loc.BrknBlck;
+import me.Romindous.CounterStrike.Objects.Loc.Broken;
 import me.Romindous.CounterStrike.Objects.Shooter;
 import me.Romindous.CounterStrike.Objects.Skins.Quest;
-import me.Romindous.CounterStrike.Menus.ChosenSkinMenu;
 import me.Romindous.CounterStrike.Utils.Inventories;
 import me.Romindous.CounterStrike.Utils.Utils;
 import net.kyori.adventure.text.Component;
@@ -37,8 +37,9 @@ import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.modules.items.ItemBuilder;
 import ru.komiss77.modules.player.PM;
-import ru.komiss77.modules.world.XYZ;
+import ru.komiss77.modules.world.BVec;
 import ru.komiss77.utils.ClassUtil;
+import ru.komiss77.utils.ItemUtil;
 import ru.komiss77.utils.TCUtil;
 
 public class Gungame extends Arena {
@@ -46,9 +47,9 @@ public class Gungame extends Arena {
 	private final GunType[] guns;
 	private final byte cycle;
 	
-	public Gungame(final String name, final byte min, final byte max, 
-		final XYZ[] TSps, final XYZ[] CTSps, final XYZ[] spots, 
-		final World w, final boolean rnd, final boolean bots) {
+	public Gungame(final String name, final byte min, final byte max,
+	    final BVec[] TSps, final BVec[] CTSps, final BVec[] spots,
+	    final World w, final boolean rnd, final boolean bots) {
 		super(name, min, max, TSps, CTSps, spots, w, rnd, bots);
 		this.guns = new GunType[GunType.values().length + 1];
 		final List<GunType> gts = Arrays.asList(GunType.values());
@@ -88,7 +89,7 @@ public class Gungame extends Arena {
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел на карту!");
 							Utils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
 							if (!rnd) {
-								pl.teleport(ClassUtil.rndElmt(spots).getCenterLoc(w));
+								pl.teleport(ClassUtil.rndElmt(spots).center(w));
 							}
 							pl.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 600, 1));
 						}
@@ -114,7 +115,7 @@ public class Gungame extends Arena {
 				sh.item(6, Main.mkItm(ItemType.GHAST_TEAR, "§5Магазин", Shooter.SHOP_MDL));
 				sh.item(8, new ItemBuilder(ItemType.SLIME_BALL).name("§cВыход").build());
 				if (!rnd) {
-					p.teleport(ClassUtil.rndElmt(spots).getCenterLoc(w));
+					p.teleport(ClassUtil.rndElmt(spots).center(w));
 				}
 				p.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, time * 20, 1));
 				beginScore(p, Team.SPEC);
@@ -133,7 +134,7 @@ public class Gungame extends Arena {
 					gameScore(sh, p);
 					chngTeam(sh, Team.SPEC);
 					p.setGameMode(GameMode.SPECTATOR);
-					p.teleport(Main.getNrLoc(Main.srnd.nextBoolean() ? ClassUtil.rndElmt(TSpawns) : ClassUtil.rndElmt(CTSawns), w));
+					p.teleport(Main.getNrLoc(w, Main.srnd.nextBoolean() ? ClassUtil.rndElmt(TSpawns) : ClassUtil.rndElmt(CTSpawns)));
 					sh.item(2, new ItemBuilder(ItemType.NETHER_STAR).name("§eВыбор Комманды").build());
 					sh.item(8, new ItemBuilder(ItemType.SLIME_BALL).name("§cВыход").build());
 					for (final Shooter s : shtrs.keySet()) {
@@ -162,7 +163,7 @@ public class Gungame extends Arena {
 
 	public void addToTm(final Player p, final PlShooter sh, final Team tm) {
 		p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1, 1);
-		p.teleport(ClassUtil.rndElmt(spots).getCenterLoc(w));
+		p.teleport(ClassUtil.rndElmt(spots).center(w));
 		final PlayerInventory pinv = p.getInventory();
 		p.setGameMode(GameMode.SURVIVAL);
 		pinv.setItem(2, Main.mkItm(ItemType.BLAZE_ROD, "§fНож \u9298", Shooter.KNIFE_MDL));
@@ -236,7 +237,7 @@ public class Gungame extends Arena {
 
 						} else {
 							waitScore(pl, min - 1);
-							pl.teleport(Main.getNrLoc(Main.lobby));
+							pl.teleport(Main.getNrLoc(Main.lobby()));
 							pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7вышел с карты,\n§7Слишком мало игроков для начала!");
 							Utils.sendAcBr(pl, "§7Игроков: §5" + shtrs.size() + " §7из §5" + max + " §7(макс)!");
 							pl.removePotionEffect(PotionEffectType.GLOWING);
@@ -382,7 +383,7 @@ public class Gungame extends Arena {
 				Utils.sendTtlSbTtl(p, "", "§l§eПодготовка Оружейни...", 30);
 			}
 			
-			sh.teleport(sh.getEntity(), ClassUtil.rndElmt(spots).getCenterLoc(w));
+			sh.teleport(sh.getEntity(), ClassUtil.rndElmt(spots).center(w));
 			
 			updateWeapon(sh);
 			sh.taq(e.getValue().icn + " ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", e.getValue().clr);
@@ -506,8 +507,8 @@ public class Gungame extends Arena {
 		}
 		updateData();
 
-		for (final BrknBlck bb : brkn) {
-			bb.getBlock().setBlockData(bb.bd, false);
+		for (final Broken bb : brkn) {
+			bb.block(w).setBlockData(bb.bd, false);
 		}
 		brkn.clear();
 
@@ -729,7 +730,7 @@ public class Gungame extends Arena {
 		}
 		if (gst != GameState.FINISH) {
 			final Location loc = rnd && gst != GameState.ROUND ?
-				Main.lobby.getCenterLoc() : Main.getNrLoc(ClassUtil.rndElmt(spots), w);
+				Main.lobby() : Main.getNrLoc(w, ClassUtil.rndElmt(spots));
 			loc.getWorld().spawnParticle(Particle.PORTAL, loc, 200, 0.2D, 0.4D, 0.2D, 0.4D, null, false);
 			sh.teleport(le, loc);
 		}
@@ -741,9 +742,9 @@ public class Gungame extends Arena {
 			return;
 		}
 		
-		sh.item(0, Main.air.clone()); sh.item(1, Main.air.clone());
+		sh.item(0, ItemUtil.air.clone()); sh.item(1, ItemUtil.air.clone());
 		sh.item(2, Main.mkItm(ItemType.BLAZE_ROD, "§fНож \u9298", Shooter.KNIFE_MDL));
-		sh.item(3, Main.air.clone()); sh.item(4, Main.air.clone());
+		sh.item(3, ItemUtil.air.clone()); sh.item(4, ItemUtil.air.clone());
 		
 		switch (shtrs.get(sh)) {
 		case Ts:
@@ -768,7 +769,7 @@ public class Gungame extends Arena {
 			final Quest shq = Quest.get(gt, sh.model(gt));
 			final NadeType nt = nadeFromPts(sh.money());
 			sh.item(2, Main.mkItm(ItemType.BLAZE_ROD, "§fНож \u9298", Shooter.KNIFE_MDL));
-			sh.item(gt.prm ? 0 : 1, new ItemBuilder(gt.type()).name((shq == null ? "§5" + gt.name() :
+			sh.item(gt.prm ? 0 : 1, gt.item().name((shq == null ? "§5" + gt.name() :
 				"§5" + gt.name() + " '" + Main.nrmlzStr(shq.name()) + "'") + " " + gt.icn)
 			.amount(gt.amo).maxDamage(gt.rtm).model(gt.skin(shq == null ? GunType.DEF_MDL : shq.model)).build());
 			sh.item(nt.prm ? NadeType.prmSlot : NadeType.scdSlot, Inventories.CTShop.getItem(nt.slt).clone());

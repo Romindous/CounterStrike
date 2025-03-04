@@ -33,11 +33,9 @@ public class QuestSkinMenu implements InventoryProvider {
 
         final Quest shq = Quest.get(gt, sh.model(gt));
 		final boolean def = shq == null;
-		its.add(ClickableItem.of(new ItemBuilder(gt.type())
-			.name("§5" + gt.name()).model(gt.skin(GunType.DEF_MDL)).glint(def)
-			.maxDamage(gt.rtm).lore(Arrays.asList("§7Ванильная обшивка снаряжения!", " ",
-				def ? " " : "§6Клик §7==> Выбор")).build(), e -> {
-			if (def) {
+		its.add(ClickableItem.of(gt.item().name("§5" + gt.name()).model(gt.skin(GunType.DEF_MDL)).glint(def).maxDamage(gt.rtm)
+			.lore(Arrays.asList("§7Ванильная обшивка снаряжения!", " ", def ? " " : "§6Клик §7==> Выбор")).build(), e -> {
+			if (!def) {
 				pl.playSound(pl.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 2f, 1.5f);
 				sh.choose(gt, GunType.DEF_MDL);
 			}
@@ -54,7 +52,7 @@ public class QuestSkinMenu implements InventoryProvider {
 				continue;
 			}
 			final boolean match = q == shq;
-			its.add(ClickableItem.of(new ItemBuilder(gt.type())
+			its.add(ClickableItem.of(gt.item()
 				.name("§5" + gt.name() + " '" + Main.nrmlzStr(q.name()) + "'")
 				.model(gt.skin(q.model)).glint(match).maxDamage(gt.rtm)
 				.lore(Arrays.asList("§7Для получения: §8(получена)", q.msg, " ",

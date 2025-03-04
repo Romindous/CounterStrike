@@ -1,5 +1,6 @@
 package me.Romindous.CounterStrike.Listeners;
 
+import java.util.Random;
 import com.destroystokyo.paper.event.player.PlayerJumpEvent;
 import me.Romindous.CounterStrike.CSCmd;
 import me.Romindous.CounterStrike.Enums.GameState;
@@ -13,6 +14,7 @@ import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Objects.Defusable;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Shooter;
+import me.Romindous.CounterStrike.Utils.Utils;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
@@ -26,9 +28,9 @@ import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.ItemMergeEvent;
 import org.bukkit.event.player.*;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ItemType;
-import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.potion.PotionEffectType;
 import ru.komiss77.Ostrov;
 import ru.komiss77.enums.Data;
@@ -36,8 +38,6 @@ import ru.komiss77.events.LocalDataLoadEvent;
 import ru.komiss77.modules.player.PM;
 import ru.komiss77.utils.ItemUtil;
 import ru.komiss77.utils.TCUtil;
-
-import java.util.Random;
 
 public class MainLis implements Listener {
 
@@ -74,7 +74,7 @@ public class MainLis implements Listener {
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onWorld(final PlayerChangedWorldEvent e) {
 		final Player p = e.getPlayer();
-		PM.getOplayer(p).tag(true);
+		PM.getOplayer(p).tag.visible(true);
 		for (final Player pl : Bukkit.getOnlinePlayers()) {
 			if (p.getEntityId() == pl.getEntityId()) continue;
 			pl.hidePlayer(Main.plug, p);
@@ -111,14 +111,17 @@ public class MainLis implements Listener {
 		final ItemStack it = drop.getItemStack();
 		final Shooter pr = Shooter.getPlShooter(p.getName(), true);
 		final GunType gt = GunType.get(it);
+		drop.setInvulnerable(true);
 		if (gt != null) {
 			it.setAmount(1);
+			Main.setDur(it, 0);
 			if (pr.arena() == null) drop.remove();
 			else drop.setItemStack(it);
-			p.getInventory().setItemInMainHand(Main.air);
-			if (gt.snp) p.getInventory().setItemInOffHand(Main.air);
-		} else {
-			switch (it.getType()) {
+			pr.item(EquipmentSlot.HAND, ItemUtil.air);
+			return;
+		}
+
+		switch (it.getType()) {
 			case BONE:
 			case BLAZE_ROD:
 			case NETHER_STAR:
@@ -150,37 +153,38 @@ public class MainLis implements Listener {
 					return;
 				}
 				break;
-			}
 		}
 	}
    
 	@EventHandler
 	public void onPick(final EntityPickupItemEvent e) {
-		if (e.getEntityType() == EntityType.PLAYER) {
-			final PlayerInventory inv = ((Player) e.getEntity()).getInventory();
+		if (e.getEntity() instanceof final Player pl) {
 			final ItemStack it = e.getItem().getItemStack();
 			final GunType gt = GunType.get(it);
 			final NadeType nt = NadeType.getNdTp(it);
-			e.setCancelled(((HumanEntity) e.getEntity()).getGameMode() != GameMode.CREATIVE);
+			e.setCancelled(pl.getGameMode() != GameMode.CREATIVE);
+			final Shooter pr = Shooter.getPlShooter(pl.getName(), true);
 			if (gt != null) {
-				if (inv.getItem(gt.prm ? 0 : 1) == null) {
-					inv.setItem(gt.prm ? 0 : 1, it);
+				if (ItemUtil.isBlank(pr.item(gt.prm ? 0 : 1), false)) {
+					pr.item(gt.prm ? 0 : 1, it);
 					e.getItem().remove();
 				} else {
 					e.getItem().setPickupDelay(10);
 				}
-			} else if (nt != null) {
+				return;
+			}
+			if (nt != null) {
 				if (nt.prm) {
-					if (inv.getItem(NadeType.prmSlot) == null) {
-						inv.setItem(NadeType.prmSlot, it);
+					if (ItemUtil.isBlank(pr.item(NadeType.prmSlot), false)) {
+						pr.item(NadeType.prmSlot, it);
 						e.getItem().remove();
 					} else {
 						e.getItem().setPickupDelay(10);
 					}
 				} else {
-					final ItemStack i = inv.getItem(4);
-					if (i == null) {
-						inv.setItem(NadeType.scdSlot, it);
+					final ItemStack i = pr.item(NadeType.scdSlot);
+					if (ItemUtil.isBlank(i, false)) {
+						pr.item(NadeType.scdSlot, it);
 						e.getItem().remove();
 					} else if (i.getType() == it.getType() && i.getAmount() == 1) {
 						i.setAmount(2);
@@ -189,9 +193,9 @@ public class MainLis implements Listener {
 						e.getItem().setPickupDelay(10);
 					}
 				}
-			} else if (e.getEntityType() == EntityType.PLAYER) {
-				final Shooter pr = Shooter.getPlShooter(e.getEntity().getName(), true);
-				switch (it.getType()) {
+				return;
+			}
+			switch (it.getType()) {
 				case GOLDEN_APPLE:
 					final Defusal ar = (Defusal) pr.arena();
 					if (ar != null && ar.shtrs.get(pr) == Team.Ts) {
@@ -207,8 +211,8 @@ public class MainLis implements Listener {
 					break;
 				case SHEARS:
 					if (pr.arena() != null && pr.arena().shtrs.get(pr) == Team.CTs) {
-						if (inv.getItem(7) == null || inv.getItem(7).getType() == Material.GOLD_NUGGET) {
-							inv.setItem(7, it);
+						if (!ItemUtil.is(pr.item(7), ItemType.SHEARS)) {
+							pr.item(7, it);
 							e.getItem().remove();
 						}
 					} else if (((HumanEntity) e.getEntity()).getGameMode() != GameMode.CREATIVE) {
@@ -216,8 +220,8 @@ public class MainLis implements Listener {
 					}
 					break;
 				case SUGAR:
-					if (inv.getItem(3) == null) {
-						inv.setItem(3, it);
+					if (ItemUtil.isBlank(pr.item(3), false)) {
+						pr.item(3, it);
 						e.getItem().remove();
 					} else {
 						e.getItem().setPickupDelay(10);
@@ -226,7 +230,6 @@ public class MainLis implements Listener {
 				default:
 					e.setCancelled(false);
 					break;
-				}
 			}
 		}
 	}
@@ -270,12 +273,14 @@ public class MainLis implements Listener {
 	@EventHandler
 	public void onShift(final PlayerToggleSneakEvent e) {
 		final Player p = e.getPlayer();
-		final GunType gt = GunType.get(p.getInventory().getItemInMainHand());
-		if (gt != null && gt.snp && !e.isSneaking()) {
-			Shooter.getPlShooter(p.getName(), true).scope(false);
-			if (!ItemUtil.isBlank(p.getInventory().getItemInOffHand(), false))
-				p.getInventory().setItemInOffHand(Main.air);
+		final ItemStack it = p.getInventory().getItemInMainHand();
+		final GunType gt = GunType.fast(it);
+		if (gt == null || !gt.snp) {
+			if (e.isSneaking()) return;
+			Utils.zoom(p, false);
+			return;
 		}
+		Utils.zoom(p, e.isSneaking() && !Main.hasDur(it));
 	}
 	
 	@EventHandler

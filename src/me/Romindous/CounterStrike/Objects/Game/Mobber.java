@@ -21,7 +21,7 @@ import org.bukkit.entity.Display.Billboard;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.PiglinBrute;
-import ru.komiss77.modules.world.XYZ;
+import ru.komiss77.modules.world.BVec;
 import ru.komiss77.version.Nms;
 
 public class Mobber extends Defusable {
@@ -38,9 +38,8 @@ public class Mobber extends Defusable {
 	private Shooter defusing;
 	public MobType mt;
   
-	public Mobber(final XYZ loc, final Invasion ar) {
-        super(ar.w, loc);
-        this.ar = ar;
+	public Mobber(final BVec loc, final Invasion ar) {
+        super(loc); this.ar = ar;
 		ind = ar.w.spawn(new Location(ar.w, loc.x, loc.y, loc.z), BlockDisplay.class);
 		ind.setGravity(false);
 		ind.setViewRange(100f);
@@ -48,7 +47,7 @@ public class Mobber extends Defusable {
 		setSpwn();
 		mt = MobType.WEAK;
 		
-		final Block b = getBlock();
+		final Block b = block(ar.w);
 		b.setType(Material.SPAWNER, false);
 		
 		final CreatureSpawner cs = (CreatureSpawner) b.getState();
@@ -56,7 +55,7 @@ public class Mobber extends Defusable {
 		cs.setSpawnCount(0);
 		cs.update();
 
-		ar.mbbrs.put(this.getSLoc(), this);
+		ar.mbbrs.put(this.thin(), this);
 		inv = new DefuseMenu(this).fillUp(mt.pow * 0.15f + 0.2f);
 	}
 
@@ -73,7 +72,7 @@ public class Mobber extends Defusable {
 	}
 
 	public void spwnMb() {
-        final Location loc = getCenterLoc();
+        final Location loc = center(ar.w);
 		final Mob mb = (Mob) ar.w.spawnEntity(Main.getNrLoc(loc), mt.type, false);
 		mb.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(mt.spd);
 		mb.getAttribute(Attribute.MAX_HEALTH).setBaseValue(mt.hp);

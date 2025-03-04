@@ -1,7 +1,10 @@
 package me.Romindous.CounterStrike.Objects.Map;
 
 import java.io.File;
-import java.util.*;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map.Entry;
 import me.Romindous.CounterStrike.Enums.GameType;
 import me.Romindous.CounterStrike.Enums.TileSet;
@@ -9,43 +12,47 @@ import me.Romindous.CounterStrike.Enums.TileType;
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Objects.Loc.PasteSet;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockType;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.EnderCrystal;
 import org.bukkit.entity.EnderDragon;
 import ru.komiss77.Ostrov;
+import ru.komiss77.modules.world.BVec;
 import ru.komiss77.modules.world.Schematic;
 import ru.komiss77.modules.world.Schematic.Rotate;
 import ru.komiss77.modules.world.WXYZ;
-import ru.komiss77.modules.world.XYZ;
 import ru.komiss77.utils.ClassUtil;
 import ru.komiss77.utils.NumUtil;
+import ru.komiss77.version.Nms;
 
 public class MapBuilder {
 	
 	public final Setup stp;
 	private final int[] stairs;
 	private final GameType type;
-	private final Material ceilMat;
+	private final BlockType ceilType;
 	private final boolean genCeiling;
-	private final XYZ mapDims, cellDims;
-	private final XYZ[] Tspawn;
-	private final XYZ[] CTspawn;
-	private XYZ[] spots;
+	private final BVec mapDims, cellDims;
+	private final BVec[] Tspawn;
+	private final BVec[] CTspawn;
+	private BVec[] spots;
 	public final LinkedList<PasteSet> sets = new LinkedList<>();
 	
 	//	private Area mar;
-	private XYZ origin;
-    private XYZ Asite;
-    private XYZ Bsite;
+	private BVec origin;
+    private BVec Asite;
+    private BVec Bsite;
 
-	public static final Material dftCeilMat = Material.STONE;
-	public static final XYZ dftMapDims = new XYZ("", 16, 1, 20);
-	public static final XYZ dftCellDims = new XYZ("", 5, 8, 5);
+	public static final BlockType dftCeilMat = BlockType.STONE;
+	public static final BVec dftMapDims = BVec.of(16, 1, 20);
+	public static final BVec dftCellDims = BVec.of(5, 8, 5);
 	public static final int maxCheckDist = TileType.getNoiseDiff();
 	public static final TileType[] etl = new TileType[0];
 	public static final int encodeBits = 6;
@@ -56,32 +63,32 @@ public class MapBuilder {
 		this.genCeiling = false;
 		this.cellDims = dftCellDims;
 		this.mapDims = stp.dims == null ? dftMapDims : stp.dims;
-		this.ceilMat = stp.ceil == null ? dftCeilMat : stp.ceil;
+		this.ceilType = stp.ceil == null ? dftCeilMat : stp.ceil;
 		this.Asite = null;
 		this.Bsite = null;
 		this.stairs = new int[4];
-		this.Tspawn = new XYZ[8];
-		this.CTspawn = new XYZ[8];
-		this.spots = new XYZ[0];
+		this.Tspawn = new BVec[8];
+		this.CTspawn = new BVec[8];
+		this.spots = new BVec[0];
 	}
 	
-	public XYZ getASite() {
+	public BVec getASite() {
 		return this.Asite;
 	}
 	
-	public XYZ getBSite() {
+	public BVec getBSite() {
 		return this.Bsite;
 	}
 	
-	public XYZ[] getTSpawns() {
+	public BVec[] getTSpawns() {
 		return this.Tspawn;
 	}
 	
-	public XYZ[] getCTSpawns() {
+	public BVec[] getCTSpawns() {
 		return this.CTspawn;
 	}
 
-	public XYZ[] getSpots() {
+	public BVec[] getSpots() {
 		return this.spots;
 	}
 	
@@ -89,28 +96,28 @@ public class MapBuilder {
 		final int dX = mapDims.x, dY = mapDims.y, dZ = mapDims.z;
 		final int cX = cellDims.x, cZ = cellDims.z;
 		final Location loc = cntr.clone().subtract(dX * cX >> 1, 0d, dZ * cZ >> 1);
-		origin = new XYZ("", loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
+		origin = BVec.of(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
 
 		final int rx = Main.srnd.nextInt((dX >> 3) + 1) + 2,
 		rz = Main.srnd.nextInt((dZ >> 3) + 1) + 2;
 		
-		Asite = origin.clone().add((rx + 2) * cX + 2, type == GameType.INVASION ? 1 : 3, (dZ - rz - 3) * cZ + 2);
+		Asite = origin.add((rx + 2) * cX + 2, type == GameType.INVASION ? 1 : 3, (dZ - rz - 3) * cZ + 2);
 		Bukkit.getConsoleSender().sendMessage("ast-(" + (rx + 2) + ", " + (dZ - rz - 3) + ")");
-		Bsite = origin.clone().add((dX - rx - 3) * cX + 2, type == GameType.INVASION ? 1 : 3, (rz + 2) * cZ + 2);
+		Bsite = origin.add((dX - rx - 3) * cX + 2, type == GameType.INVASION ? 1 : 3, (rz + 2) * cZ + 2);
 		Bukkit.getConsoleSender().sendMessage("bst-(" + (dX - rx - 3) + ", " + (rz + 2) + ")");
 
-		final XYZ Tsp = origin.clone().add((rx) * cX + 2, dY * cellDims.y - 4, (rz) * cZ + 2);
+		final BVec Tsp = origin.add((rx) * cX + 2, dY * cellDims.y - 4, (rz) * cZ + 2);
 		Bukkit.getConsoleSender().sendMessage("tsp-(" + (rx) + ", " + (rz) + ")");
 		for (int i = Tspawn.length - 1; i >= 0; i--) {
 			Tspawn[i] = Tsp;
 		}
-		final XYZ CTsp = origin.clone().add((dX - rx) * cX + 2, dY * cellDims.y - 4, (dZ - rz) * cZ + 2);
+		final BVec CTsp = origin.add((dX - rx) * cX + 2, dY * cellDims.y - 4, (dZ - rz) * cZ + 2);
 		Bukkit.getConsoleSender().sendMessage("ctsp-(" + (dX - rx) + ", " + (dZ - rz) + ")");
 		for (int i = CTspawn.length - 1; i >= 0; i--) {
 			CTspawn[i] = CTsp;
 		}
 
-		final LinkedList<XYZ> spts = new LinkedList<>();
+		final LinkedList<BVec> spts = new LinkedList<>();
 		for (int f = 0; f != mapDims.y; f++) {
 			Bukkit.getConsoleSender().sendMessage("Generating floor " + f);
 			final Floor flr;
@@ -124,16 +131,11 @@ public class MapBuilder {
 			buildFloor(dX, dZ, origin.clone().add(0, cellDims.y * f, 0), flr, spts);
 		}
 		spots = spts.toArray(spots);
-		cntr.getWorld().spawn(cntr.add(0.5d, 40d, 0.5d), EnderCrystal.class).setShowingBottom(false);
-		final EnderDragon ed = cntr.getWorld().spawn(cntr.add(0d, 2d, 0d), EnderDragon.class);
-		if (ed.getDragonBattle() != null) ed.getDragonBattle().setPreviouslyKilled(true);
-		ed.setPhase(EnderDragon.Phase.LEAVE_PORTAL);
-		ed.setGlowing(true);
 //		Bukkit.createBossBar(OStrap.key(stp.nm), "Драконус", BarColor.PURPLE,
 //			BarStyle.SEGMENTED_12, BarFlag.DARKEN_SKY, BarFlag.CREATE_FOG);
 	}
 	
-	private void buildFloor(final int lenX, final int widZ, final XYZ org, final Floor flr, final LinkedList<XYZ> spts) {
+	private void buildFloor(final int lenX, final int widZ, final BVec org, final Floor flr, final LinkedList<BVec> spts) {
 		final int cX = cellDims.x, cZ = cellDims.z;
 		final HashMap<Integer, TileType> tiles = new HashMap<>();
 		for (final int c : stairs) {
@@ -246,12 +248,12 @@ public class MapBuilder {
 			tile = tiles.get(encd(x, z - 1));
 			around[3] = tile == null ? TileType.OPEN : tile;
 
-			placeRotateSet(en.getValue(), around, org.clone().add(x * cX, 0, z * cZ));
+			placeRotateSet(en.getValue(), around, org.add(x * cX, 0, z * cZ));
 		}
 		Bukkit.getConsoleSender().sendMessage("Done async generating a floor");
 	}
 
-	private void placeRotateSet(final TileType tile, final TileType[] around, final XYZ loc) {
+	private void placeRotateSet(final TileType tile, final TileType[] around, final BVec loc) {
 		for (final TileSet set : TileSet.values()) {//for every set
 			if (set.original == tile) {
 				final int ln = around.length;//always 4
@@ -281,7 +283,7 @@ public class MapBuilder {
 	}
 
 	public void remove(final World w, final int tries) {
-		final XYZ lm = new XYZ("", mapDims.x * cellDims.x, mapDims.y * cellDims.y, mapDims.z * cellDims.z);
+		final BVec lm = BVec.of(mapDims.x * cellDims.x, mapDims.y * cellDims.y, mapDims.z * cellDims.z);
 		for (int x = lm.x; x >= 0; x--) {
 			for (int y = lm.y; y >= 0; y--) {
 				for (int z = lm.z; z >= 0; z--) {
@@ -304,22 +306,22 @@ public class MapBuilder {
 		final int cX = cellDims.x, cZ = cellDims.z;
 		
 		//ceiling
+		final BlockData ceilData = ceilType.createBlockData();
+		final BlockData lightData = BlockType.LIGHT.createBlockData();
 		for (int y = genCeiling ? mapDims.y : mapDims.y - 1; y > 0; y--) {
 			final int cY = cellDims.y * y - 1;
 			for (int x = (cX * mapDims.x) - 1; x >= 0; x--) {
 				for (int z = (cZ * mapDims.z) - 1; z >= 0; z--) {
-					ar.w.getBlockAt(origin.x + x, origin.y + cY, origin.z + z).setType(ceilMat, false);
+					ar.w.getBlockAt(origin.x + x, origin.y + cY, origin.z + z).setBlockData(ceilData, false);
 					if ((x & 3) == 0 && (z & 3) == 0) {
 						final Block b = ar.w.getBlockAt(origin.x + x, origin.y + cY - 1, origin.z + z);
-						if (b.getType().isAir()) {
-							b.setType(Material.LIGHT, false);
-						}
+						if (b.getType().isAir()) b.setBlockData(lightData, false);
 					}
 				}
 			}
 		}
 
-		final String cm = String.valueOf(ceilMat.name().charAt(0));
+		final String cm = String.valueOf(Character.toUpperCase(ceilType.key().asMinimalString().charAt(0)));
 		for (final PasteSet set : sets) {
 			//floor
 			final Block b = ar.w.getBlockAt(set.loc().x, set.loc().y, set.loc().z);
@@ -356,7 +358,7 @@ public class MapBuilder {
 				final int y = cellDims.y - 2;
 				for (int x = cellDims.x - 1; x >= 0; x--) {
 					for (int z = cellDims.z - 1; z >= 0; z--) {
-						set.loc().clone().add(x, y, z).getCenterLoc(ar.w).getBlock().setType(Material.AIR, false);
+						set.loc().clone().add(x, y, z).center(ar.w).getBlock().setType(Material.AIR, false);
 					}
 				}
 				break;
@@ -365,18 +367,23 @@ public class MapBuilder {
 			}
 			
 			//cl.getRegion().contract(null);
+			final BVec bv;
 			switch (set.rtt()) {
 			case 3:
-				clip.paste(cmd, new WXYZ(ar.w, set.loc()).add(0, set.set().height, cZ - 1), Rotate.r270, set.set().pstAir);
+				bv = set.loc().add(0, set.set().height, cZ - 1);
+				clip.paste(cmd, new WXYZ(ar.w, bv.x, bv.y, bv.z), Rotate.r270, set.set().pstAir);
 				break;
 			case 2:
-				clip.paste(cmd, new WXYZ(ar.w, set.loc()).add(cX - 1, set.set().height, cZ - 1), Rotate.r180, set.set().pstAir);
+				bv = set.loc().add(cX - 1, set.set().height, cZ - 1);
+				clip.paste(cmd, new WXYZ(ar.w, bv.x, bv.y, bv.z), Rotate.r180, set.set().pstAir);
 				break;
 			case 1:
-				clip.paste(cmd, new WXYZ(ar.w, set.loc()).add(cX - 1, set.set().height, 0), Rotate.r90, set.set().pstAir);
+				bv = set.loc().w(ar.w).add(cX - 1, set.set().height, 0);
+				clip.paste(cmd, new WXYZ(ar.w, bv.x, bv.y, bv.z), Rotate.r90, set.set().pstAir);
 				break;
 			default:
-				clip.paste(cmd, new WXYZ(ar.w, set.loc()).add(0, set.set().height, 0), Rotate.r0, set.set().pstAir);
+				bv = set.loc().w(ar.w).add(0, set.set().height, 0);
+				clip.paste(cmd, new WXYZ(ar.w, bv.x, bv.y, bv.z), Rotate.r0, set.set().pstAir);
 				break;
 			}
 		}
@@ -385,6 +392,12 @@ public class MapBuilder {
 			if (ar.w.getHighestBlockYAt(0, 0) > 0) {
 				sets.clear();
 				clips.clear();
+				final Location cntr = new Location(ar.w, 0.5d, 50.5d, 0.5d);
+				ar.w.spawn(cntr, EnderCrystal.class).setShowingBottom(false);
+				final EnderDragon ed = ar.w.spawn(cntr.add(0d, 2d, 0d), EnderDragon.class);
+				if (ed.getDragonBattle() != null) ed.getDragonBattle().setPreviouslyKilled(true);
+				ed.setPhase(EnderDragon.Phase.LEAVE_PORTAL);
+				Nms.colorGlow(ed, NamedTextColor.DARK_PURPLE, false);
 //				Ostrov.async(() -> mar.loadPos());
 			} else if (trs != 0) {
 				Bukkit.getConsoleSender().sendMessage("not placed, sets n-" + sets.toString());

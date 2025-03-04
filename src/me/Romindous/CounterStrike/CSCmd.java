@@ -1,5 +1,9 @@
 package me.Romindous.CounterStrike;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Game.Arena.Team;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
@@ -14,15 +18,9 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryType;
 import ru.komiss77.ApiOstrov;
-import ru.komiss77.modules.world.WXYZ;
-import ru.komiss77.modules.world.XYZ;
+import ru.komiss77.modules.world.BVec;
 import ru.komiss77.utils.ClassUtil;
 import ru.komiss77.utils.inventory.SmartInventory;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
 
 public class CSCmd implements CommandExecutor, TabCompleter {
 	
@@ -94,8 +92,8 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 					//установка лобби
 				} else if (args.length == 1) {
 					if (args[0].equalsIgnoreCase("setlobby")) {
-						Main.lobby = new WXYZ(p.getLocation());
-						Main.ars.set("lobby", new XYZ(Main.lobby.getCenterLoc()).toString());
+						Main.lobby = BVec.of(p.getLocation());
+						Main.ars.set("lobby", BVec.of(Main.lobby.center(p.getWorld())).toString());
 						p.sendMessage(Main.prf() + "Точка лобби сохранена на " + 
 							"(§5" + Main.lobby.x + "§7, §5" + Main.lobby.y + "§7, §5" + Main.lobby.z + "§7)!");
 						try {
@@ -224,18 +222,17 @@ public class CSCmd implements CommandExecutor, TabCompleter {
 	}
 
 	public static void partyJoinMap(final PlShooter sh, final Player p, final Arena ar) {
+		ar.addPl(sh);
 		if (ApiOstrov.hasParty(p) && ApiOstrov.isPartyLeader(p)) {
 			for (final String pn : ApiOstrov.getPartyPlayers(p)) {
 				final PlShooter ps = Shooter.getPlShooter(pn, true);
 				if (ps != null && ps.arena() == null) {
 					final Player pl = ps.getPlayer();
 					pl.sendMessage(Main.prf() + "Лидер вашей компании запшел на карту §d" + ar.name + "§7!");
-					partyJoinMap(ps, pl, ar);
+					ar.addPl(ps);
 				}
 			}
 		}
-
-		ar.addPl(sh);
 	}
 
 	//арена на которой больше всего игроков

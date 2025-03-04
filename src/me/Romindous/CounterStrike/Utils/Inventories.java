@@ -4,12 +4,14 @@ import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Objects.Defusable;
 import me.Romindous.CounterStrike.Objects.Shooter;
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
-import static me.Romindous.CounterStrike.Enums.GunType.*;
+import static me.Romindous.CounterStrike.Enums.GunType.DEF_MDL;
+import static me.Romindous.CounterStrike.Enums.GunType.GUNS;
 import static me.Romindous.CounterStrike.Enums.NadeType.*;
 import static org.bukkit.inventory.ItemType.*;
 
@@ -99,7 +101,8 @@ public class Inventories {
 		LBShop = Bukkit.createInventory(null, 54, Component.text("§5§lТренировка"));
 		final ItemStack[] its = new ItemStack[54];
 		for (final GunType gt : GunType.values()) {
-			its[gt.slt] = Main.mkItm(gt.type(), "§5" + gt.name() + " " + gt.icn, GUNS + "/" + gt.name + "/" + DEF_MDL);
+			its[gt.slt] = gt.item().name("§5" + gt.name() + " " + gt.icn)
+				.model(Key.key(GUNS + "/" + gt.name + "/" + DEF_MDL)).build();
 		}
 		its[FRAG.slt] = Main.mkItm(OAK_SAPLING, "§cОсколочная Граната " + FRAG.icn, FRAG.skin());
 		its[FLAME.slt] = Main.mkItm(ACACIA_SAPLING, "§6Огненная Граната " + FLAME.icn, FLAME.skin());
@@ -113,8 +116,8 @@ public class Inventories {
 		TShop = Bukkit.createInventory(null, 54, Component.text("§c§lМагазин Террористов"));
 		final ItemStack[] its = new ItemStack[54];
 		for (final GunType gt : GunType.values()) {
-			its[gt.slt] = Main.mkItm(gt.type(), "§5" + gt.name() + " " + gt.icn,
-				GUNS + "/" + gt.name + "/" + DEF_MDL, "§7Цена: §d" + gt.prc + " §6⛃");
+			its[gt.slt] = gt.item().name("§5" + gt.name() + " " + gt.icn)
+				.model(Key.key(GUNS + "/" + gt.name + "/" + DEF_MDL)).lore("§7Цена: §d" + gt.prc + " §6⛃").build();
 		}
 		its[Shooter.wireSlt] = Main.mkItm(SUGAR, "§9Растяжка §f\u929b\u929c", Shooter.ROPE_MDL, "§7Цена: §d" + Shooter.wirePrc + " §6⛃");
 		its[FRAG.slt] = Main.mkItm(OAK_SAPLING, "§cОсколочная Граната " + FRAG.icn, FRAG.skin(), "§7Цена: §d" + FRAG.prc + " §6⛃");
@@ -131,8 +134,8 @@ public class Inventories {
 		CTShop = Bukkit.createInventory(null, 54, Component.text("§9§lМагазин Спецназа"));
 		final ItemStack[] its = new ItemStack[54];
 		for (final GunType gt : GunType.values()) {
-			its[gt.slt] = Main.mkItm(gt.type(), "§5" + gt.name() + " " + gt.icn,
-				GUNS + "/" + gt.name + "/" + DEF_MDL, "§7Цена: §d" + gt.prc + " §6⛃");
+			its[gt.slt] = gt.item().name("§5" + gt.name() + " " + gt.icn)
+				.model(Key.key(GUNS + "/" + gt.name + "/" + DEF_MDL)).lore("§7Цена: §d" + gt.prc + " §6⛃").build();
 		}
 		its[Shooter.wireSlt] = Main.mkItm(SUGAR, "§9Растяжка §f\u929b\u929c", Shooter.ROPE_MDL, "§7Цена: §d" + Shooter.wirePrc + " §6⛃");
 		its[Shooter.kitSlt] = Main.mkItm(SHEARS, "§3Набор Для Разминировки §f\u9268", Defusable.KIT_MDL, "§7Цена: §d" + Shooter.kitPrc + " §6⛃");

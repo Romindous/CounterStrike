@@ -1,17 +1,16 @@
 package me.Romindous.CounterStrike.Menus;
 
+import java.util.ArrayList;
+import java.util.Map;
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Game.Invasion;
 import me.Romindous.CounterStrike.Objects.Game.PlShooter;
 import me.Romindous.CounterStrike.Objects.Shooter;
-import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
-import ru.komiss77.utils.ItemBuilder;
+import org.bukkit.inventory.ItemType;
+import ru.komiss77.modules.items.ItemBuilder;
 import ru.komiss77.utils.inventory.*;
-
-import java.util.ArrayList;
-import java.util.Map;
 
 
 public class TeamMenu implements InventoryProvider {
@@ -30,7 +29,7 @@ public class TeamMenu implements InventoryProvider {
 			return;
 		}
 
-		its.fill(ClickableItem.empty(new ItemBuilder(Material.CHAIN).name("§0.").build()));
+		its.fill(ClickableItem.empty(new ItemBuilder(ItemType.CHAIN).name("§0.").build()));
 
 		final ArrayList<String> tlrs = new ArrayList<>();
 		final ArrayList<String> clrs = new ArrayList<>();
@@ -43,20 +42,20 @@ public class TeamMenu implements InventoryProvider {
             }
 		}
 
-		its.set(4, ClickableItem.of(new ItemBuilder(Material.WARPED_NYLIUM).name(Arena.Team.CTs.clr + "§lСпецназ")
+		its.set(4, ClickableItem.of(new ItemBuilder(ItemType.WARPED_NYLIUM).name(Arena.Team.CTs.clr + "§lСпецназ")
 			.lore(clrs).build(), e -> select(p, sh, Arena.Team.CTs, its)));
 
 		if (ar instanceof Invasion) {
-			its.set(0, ClickableItem.of(new ItemBuilder(Material.WARPED_NYLIUM).name(Arena.Team.CTs.clr + "§lСпецназ")
+			its.set(0, ClickableItem.of(new ItemBuilder(ItemType.WARPED_NYLIUM).name(Arena.Team.CTs.clr + "§lСпецназ")
 				.lore(clrs).build(), e -> select(p, sh, Arena.Team.CTs, its)));
 		} else {
-			its.set(2, ClickableItem.of(new ItemBuilder(Material.ENDER_EYE).name("§5§lСлучайная")
+			its.set(2, ClickableItem.of(new ItemBuilder(ItemType.ENDER_EYE).name("§5§lСлучайная")
 				.lore(slrs).build(), e -> select(p, sh, switch (ar.gst) {
                 case WAITING, BEGINING, FINISH -> Arena.Team.SPEC;
                 case BUYTIME ,ROUND ,ENDRND -> ar.getMinTm();
             }, its)));
 
-			its.set(0, ClickableItem.of(new ItemBuilder(Material.CRIMSON_NYLIUM).name(Arena.Team.Ts.clr + "§lТеррористы")
+			its.set(0, ClickableItem.of(new ItemBuilder(ItemType.CRIMSON_NYLIUM).name(Arena.Team.Ts.clr + "§lТеррористы")
 				.lore(tlrs).build(), e -> select(p, sh, Arena.Team.Ts, its)));
 		}
     }

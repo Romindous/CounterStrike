@@ -55,14 +55,14 @@ public class DefuseMenu implements InventoryProvider {
 		} else if (def instanceof Mobber) {
 			ttl = "§3§lОбезвреживание Спавнера";
 		} else ttl = "";
-		SmartInventory.builder().id(def.getSLoc() + " Defuse").title(ttl)
+		SmartInventory.builder().id(def.thin() + " Defuse").title(ttl)
 			.provider(this).size(6, 9).build().open(pl);
 	}
 
 	private static final ClickableItem pane = ClickableItem.empty(
 		new ItemBuilder(ItemType.LIGHT_GRAY_STAINED_GLASS_PANE).name("§0.").build());
 	public void init(final Player p, final InventoryContent its) {
-		p.getWorld().playSound(def.getCenterLoc(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 0.5f);
+		p.getWorld().playSound(def.center(p.getWorld()), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 0.5f);
 
 		its.set(49, ClickableItem.empty(new ItemBuilder(ItemType.BOWL)
 			.name("§5§lРазрежь провода этого цвета!").model(Defusable.disp(clr)).build()));

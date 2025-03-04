@@ -1,16 +1,17 @@
 package me.Romindous.CounterStrike.Objects.Map;
 
-import me.Romindous.CounterStrike.Enums.GameType;
-import me.Romindous.CounterStrike.Main;
-import me.Romindous.CounterStrike.Objects.Game.TripWire;
-import org.bukkit.Material;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.YamlConfiguration;
-import ru.komiss77.modules.world.XYZ;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import me.Romindous.CounterStrike.Enums.GameType;
+import me.Romindous.CounterStrike.Main;
+import me.Romindous.CounterStrike.Objects.Game.TripWire;
+import net.kyori.adventure.key.Key;
+import org.bukkit.block.BlockType;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
+import ru.komiss77.boot.OStrap;
+import ru.komiss77.modules.world.BVec;
 
 public class Setup {
 	
@@ -18,13 +19,13 @@ public class Setup {
 	public final byte min;
 	public final byte max;
 	public final boolean rnd;
-	public final XYZ[] tSpawns;
-	public final XYZ[] ctSpawns;
-	public final XYZ[] spots;
-	public final XYZ A;
-	public final XYZ B;
-	public final XYZ dims;
-	public final Material ceil;
+	public final BVec[] tSpawns;
+	public final BVec[] ctSpawns;
+	public final BVec[] spots;
+	public final BVec A;
+	public final BVec B;
+	public final BVec dims;
+	public final BlockType ceil;
 //	public final XYZ bot;
 //	public final XYZ top;
 	public final Map<GameType, String> worlds;
@@ -50,11 +51,10 @@ public class Setup {
 			spots = null;
 			A = null;
 			B = null;
-			final XYZ dm = XYZ.fromString(ar.getString("dims"));
+			final BVec dm = BVec.parse(ar.getString("dims"));
 			dims = dm == null ? MapBuilder.dftMapDims : dm;
 			final String cl = ar.getString("ceil");
-			ceil = cl == null || Material.getMaterial(cl) == null
-				? Material.STONE : Material.getMaterial(cl);
+			ceil = cl == null ? BlockType.STONE : OStrap.get(Key.key(cl.toLowerCase()), BlockType.STONE);
 //			bot = null;
 //			top = null;
 		} else {
@@ -62,17 +62,17 @@ public class Setup {
 			ceil = null;
 			bots = ar.getBoolean("bots");
 			
-			final List<XYZ> tSps = ar.getStringList("tspawns").stream().map(XYZ::fromString).toList();
-			tSpawns = tSps.toArray(new XYZ[0]);
+			final List<BVec> tSps = ar.getStringList("tspawns").stream().map(BVec::parse).toList();
+			tSpawns = tSps.toArray(new BVec[0]);
 			
-			final List<XYZ> ctSps = ar.getStringList("ctspawns").stream().map(XYZ::fromString).toList();
-			ctSpawns = ctSps.toArray(new XYZ[0]);
+			final List<BVec> ctSps = ar.getStringList("ctspawns").stream().map(BVec::parse).toList();
+			ctSpawns = ctSps.toArray(new BVec[0]);
 			
-			final List<XYZ> tPss = ar.getStringList("spots").stream().map(XYZ::fromString).toList();
-			spots = tPss.toArray(new XYZ[0]);
+			final List<BVec> tPss = ar.getStringList("spots").stream().map(BVec::parse).toList();
+			spots = tPss.toArray(new BVec[0]);
 			
-			A = XYZ.fromString(ar.getString("asite"));
-			B = XYZ.fromString(ar.getString("bsite"));
+			A = BVec.parse(ar.getString("asite"));
+			B = BVec.parse(ar.getString("bsite"));
 			
 //			bot = XYZ.fromString(ar.getString("bot"));
 //			top = XYZ.fromString(ar.getString("top"));
@@ -90,7 +90,7 @@ public class Setup {
 		ar.set("rnd", rnd);
 		ar.set("bots", bots);
 		ar.set("dims", dims == null ? null : dims.toString());
-		ar.set("ceil", ceil == null ? null : ceil.name());
+		ar.set("ceil", ceil == null ? null : ceil.key().asMinimalString());
 		for (final GameType gt : GameType.values()) {
 			final String w = worlds.get(gt);
 			if (w != null) ar.set("world." + gt.toString(), w);
@@ -103,13 +103,13 @@ public class Setup {
 //		if (top != null) ar.set("top", top.toString());
 		
 		if (tSpawns != null) ar.set("tspawns", 
-			Arrays.stream(tSpawns).map(XYZ::toString).toList());
+			Arrays.stream(tSpawns).map(BVec::toString).toList());
 		
 		if (ctSpawns != null) ar.set("ctspawns", 
-			Arrays.stream(ctSpawns).map(XYZ::toString).toList());
+			Arrays.stream(ctSpawns).map(BVec::toString).toList());
 		
 		if (spots != null) ar.set("spots", 
-			Arrays.stream(spots).map(XYZ::toString).toList());
+			Arrays.stream(spots).map(BVec::toString).toList());
 		
 		try {
 			conf.save(new File(Main.plug.getDataFolder() + File.separator + "arenas.yml"));
@@ -120,15 +120,15 @@ public class Setup {
 	
 	public Setup(final String name) {
 		nm = name; min = 2; max = 2; rnd = false; dims = MapBuilder.dftMapDims;
-		ceil = Material.STONE; tSpawns = null; ctSpawns = null; spots = null;
+		ceil = BlockType.STONE; tSpawns = null; ctSpawns = null; spots = null;
 		worlds = Collections.unmodifiableMap(new EnumMap<>(GameType.class));
 		A = null; B = null; fin = false; bots = false;
 	}
 	
 	public Setup(final String name, final byte min, final byte max, 
-		final boolean rndM, final boolean fin, final boolean bots, final XYZ dims,
-		final Material ceil, final XYZ[] tSpawns, final XYZ[] ctSpawns, final XYZ[] spots,
-		final XYZ A, final XYZ B, final Map<GameType, String> worlds) {
+		final boolean rndM, final boolean fin, final boolean bots, final BVec dims,
+		final BlockType ceil, final BVec[] tSpawns, final BVec[] ctSpawns, final BVec[] spots,
+		final BVec A, final BVec B, final Map<GameType, String> worlds) {
 		this.nm = name;
 		this.min = min;
 		this.max = max;

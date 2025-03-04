@@ -1,5 +1,7 @@
 package me.Romindous.CounterStrike.Objects.Mobs;
 
+import java.util.EnumSet;
+import java.util.Map.Entry;
 import com.destroystokyo.paper.entity.ai.Goal;
 import com.destroystokyo.paper.entity.ai.GoalKey;
 import com.destroystokyo.paper.entity.ai.GoalType;
@@ -10,18 +12,15 @@ import me.Romindous.CounterStrike.Listeners.DmgLis;
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Objects.Game.Mobber;
 import me.Romindous.CounterStrike.Objects.Shooter;
+import me.Romindous.CounterStrike.Utils.Utils;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.potion.PotionEffectType;
 import ru.komiss77.modules.world.AStarPath;
-import ru.komiss77.modules.world.WXYZ;
-import ru.komiss77.utils.LocUtil;
+import ru.komiss77.modules.world.BVec;
 import ru.komiss77.version.Nms;
-
-import java.util.EnumSet;
-import java.util.Map.Entry;
 
 public class GoalGoToSite implements Goal<Mob> {
 	
@@ -42,7 +41,7 @@ public class GoalGoToSite implements Goal<Mob> {
         this.tgt = null;
         
         ap = new AStarPath(mob, 1000, false);
-        ap.setTgt(new WXYZ(Main.srnd.nextBoolean() || ar.bds.getViewRange() == 0f 
+        ap.setTgt(BVec.of(Main.srnd.nextBoolean() || ar.bds.getViewRange() == 0f
         	? ar.ads.getLocation() : ar.bds.getLocation()));
     }
  
@@ -54,14 +53,6 @@ public class GoalGoToSite implements Goal<Mob> {
     @Override
     public boolean shouldStayActive() {
         return !mob.isDead();//shouldActivate();
-    }
- 
-    @Override
-    public void start() {
-    }
- 
-    @Override
-    public void stop() {
     }
     
     @Override
@@ -77,7 +68,7 @@ public class GoalGoToSite implements Goal<Mob> {
 				for (final Entry<Shooter, Team> en : ar.shtrs.entrySet()) {
 					if (en.getKey().isDead()) continue;
 					final LivingEntity le = en.getKey().getEntity();
-					if (le != null && LocUtil.rayThruAir(eyel, le.getEyeLocation().toVector(), 0.1F)) {
+					if (le != null && Utils.isSeen(eyel, le)) {
 						tgt = Shooter.getShooter(le, false);
 						Nms.setAggro(mob, true);
 						tle = le;
@@ -86,7 +77,7 @@ public class GoalGoToSite implements Goal<Mob> {
 				}
 			} else {
 				tle = tgt.getEntity();
-				if (tle == null || !LocUtil.rayThruAir(eyel, tle.getEyeLocation().toVector(), 0.1F)) {
+				if (tle == null || !Utils.isSeen(eyel, tle)) {
 					Nms.setAggro(mob, false);
 					tgt = null;
 				}

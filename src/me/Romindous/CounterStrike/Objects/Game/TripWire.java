@@ -1,5 +1,6 @@
 package me.Romindous.CounterStrike.Objects.Game;
 
+import java.util.Map.Entry;
 import me.Romindous.CounterStrike.Enums.NadeType;
 import me.Romindous.CounterStrike.Game.Arena;
 import me.Romindous.CounterStrike.Game.Arena.Team;
@@ -13,9 +14,7 @@ import org.bukkit.entity.GlowItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Snowball;
 import org.bukkit.inventory.ItemStack;
-import ru.komiss77.modules.world.XYZ;
-
-import java.util.Map.Entry;
+import ru.komiss77.modules.world.BVec;
  
 public class TripWire {
 
@@ -23,7 +22,7 @@ public class TripWire {
 	private final int id;
 
 	public final World w;
-	public final XYZ[] blks;
+	public final BVec[] blks;
 	public final GlowItemFrame eif;
 	public final Team tm;
 	public NadeType nt;
@@ -35,10 +34,10 @@ public class TripWire {
 		tw.setFace(bf.getOppositeFace(), true);
 		this.id = cid++;
 		this.w = bs[0].getWorld();
-		this.blks = new XYZ[i];
+		this.blks = new BVec[i];
 		for (i--; i >= 0; i--) {
 			bs[i].setBlockData(tw, false);
-			final XYZ bl = new XYZ(bs[i].getLocation());
+			final BVec bl = BVec.of(bs[i].getLocation());
 			this.blks[i] = bl;
 			Arena.tblks.put(bl, this);
 		}
@@ -108,9 +107,9 @@ public class TripWire {
 	}
 
 	public void remove() {
-		for (final XYZ r : blks) {
+		for (final BVec r : blks) {
 			Arena.tblks.remove(r);
-			r.getCenterLoc(w).getBlock()
+			r.center(w).getBlock()
 				.setType(Material.AIR, false);
 		}
 		eif.remove();

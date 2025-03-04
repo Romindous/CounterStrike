@@ -3,6 +3,7 @@ package me.Romindous.CounterStrike.Objects;
 import java.util.EnumMap;
 import java.util.Map;
 
+import me.Romindous.CounterStrike.Enums.GunType;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
 import org.bukkit.entity.LivingEntity;
@@ -16,21 +17,22 @@ public class EntityShootAtEntityEvent extends EntityDamageByEntityEvent {
 	public final boolean wallbang;
 	public final boolean noscope;
 	public final boolean smoked;
+	public final GunType gun;
 
 	@SuppressWarnings("deprecation")
 	private static final Map<DamageModifier, Double> mods = new EnumMap<DamageModifier, Double>(DamageModifier.class);
 	@SuppressWarnings("deprecation")
 	private static final Map<DamageModifier, Function<Double, Double>> fnks = new EnumMap<DamageModifier, Function<Double, Double>>(DamageModifier.class);
 	
-	public EntityShootAtEntityEvent(final LivingEntity dmgr, final LivingEntity ent,
+	public EntityShootAtEntityEvent(final LivingEntity dmgr, final LivingEntity ent, final GunType gun,
 		final double dmg, final boolean headshot, final boolean wallbang, final boolean noscope, final boolean smoked) {
-		super(dmgr, ent, DamageCause.ENTITY_ATTACK,
-			DamageSource.builder(DamageType.PLAYER_ATTACK).build(),
-			makeDmgMods(dmg), makeDmgFnks(dmg), headshot);
+		super(dmgr, ent, DamageCause.ENTITY_ATTACK, DamageSource.builder(DamageType.PLAYER_ATTACK)
+			.withCausingEntity(dmgr).withDirectEntity(dmgr).build(), makeDmgMods(dmg), makeDmgFnks(dmg), headshot);
 		this.headshot = headshot;
 		this.wallbang = wallbang;
 		this.noscope = noscope;
 		this.smoked = smoked;
+		this.gun = gun;
 	}
 
 	@SuppressWarnings("deprecation")
