@@ -1,6 +1,7 @@
 package me.Romindous.CounterStrike.Objects.Game;
 
 import java.lang.ref.WeakReference;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.function.Predicate;
 import com.destroystokyo.paper.entity.ai.Goal;
@@ -417,6 +418,7 @@ public class BtShooter implements Shooter, Botter.Extent {
 		final Arena ar = arena();
 		final boolean brkBlks = arena() != null && arena().gst == GameState.ROUND;
 		final World w = ent.getWorld();
+		final HashSet<BVec> bangs = new HashSet<>();
 		double x = TRC_FCT * vec.getX() + loc.getX();
 		double y = TRC_FCT * vec.getY() + loc.getY();
 		double z = TRC_FCT * vec.getZ() + loc.getZ();
@@ -465,7 +467,7 @@ public class BtShooter implements Shooter, Botter.Extent {
 			} else if (info.collides()) {
 				if (info.pass()) continue;
 				if (info.bang()) {
-					if (has) continue;
+					if (!bangs.add(bv)) continue;
 					if (info.shape().overlaps(new BoundingBox().shift(x - bv.x, y - bv.y, z - bv.z))) {
 						w.spawnParticle(Particle.BLOCK, new Location(w, x, y, z), 4, 0.1d, 0.1d, 0.1d, info.data());
 						Utils.crackBlock(w, bv);

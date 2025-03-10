@@ -91,7 +91,14 @@ public class InterrLis implements Listener {
 		final GunType gt = GunType.fast(mh);
 		if (gt == null || !gt.snp) return;
         final boolean hd = Main.hasDur(mh);
-        if ((sh.count() != 0 && !hd) || sh.cldwn() != 0) return;
+        if ((sh.count() != 0 && !hd) || sh.cldwn() != 0) {
+			if (mh.getAmount() == 1 && hd) return;
+			Ostrov.sync(() -> {
+				final GunType ngt = GunType.fast(p.getInventory().getItemInMainHand());
+				Utils.spy(p, ngt != null && ngt.snp, p.isSneaking() && !Main.hasDur(mh));
+			}, 2);
+			return;
+		}
         if (mh.getAmount() == 1) {
             if (hd) return;
             sh.count(0);

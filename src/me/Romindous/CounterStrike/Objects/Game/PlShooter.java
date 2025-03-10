@@ -1,9 +1,6 @@
 package me.Romindous.CounterStrike.Objects.Game;
 
-import java.util.EnumMap;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Predicate;
 import me.Romindous.CounterStrike.Enums.GameState;
 import me.Romindous.CounterStrike.Enums.GunType;
@@ -402,6 +399,7 @@ public class PlShooter implements Shooter {
 		final Arena ar = arena();
 		final boolean brkBlks = ar != null && ar.gst == GameState.ROUND;
 		final World w = ent.getWorld();
+		final HashSet<BVec> bangs = new HashSet<>();
 		double x = TRC_FCT * vec.getX() + loc.getX();
 		double y = TRC_FCT * vec.getY() + loc.getY();
 		double z = TRC_FCT * vec.getZ() + loc.getZ();
@@ -450,7 +448,7 @@ public class PlShooter implements Shooter {
 			} else if (info.collides()) {
 				if (info.pass()) continue;
 				if (info.bang()) {
-					if (has) continue;
+					if (!bangs.add(bv)) continue;
 					if (info.shape().overlaps(new BoundingBox().shift(x - bv.x, y - bv.y, z - bv.z))) {
 						w.spawnParticle(Particle.BLOCK, new Location(w, x, y, z), 4, 0.1d, 0.1d, 0.1d, info.data());
 						Utils.crackBlock(w, bv);
