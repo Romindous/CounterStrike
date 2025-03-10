@@ -109,7 +109,7 @@ public class PlShooter implements Shooter {
 						Main.setDur(it, Main.maxDur(it));
 						p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 2f);
 						it.setAmount(gun.amo); count = 0;
-						if (gun.snp) Ostrov.sync(() -> Utils.zoom(p, p.isSneaking()), 1);
+						Ostrov.sync(() -> Utils.spy(p, gun.snp, p.isSneaking()), 1);
 					} 
 				}
 				
@@ -123,10 +123,9 @@ public class PlShooter implements Shooter {
 					if (!ps) count++;
 //					if (scope() && scope(p.isSneaking())) return;
 					if (count % gun.cld == 0) {
-						if (it.getAmount() == 1) {
+						final boolean one = it.getAmount() == 1;
+						if (one) {
 							if (ps) return;
-							count = 0;
-
 							Main.setDur(it, 0);
 						} else {
 							if (ps) {
@@ -134,6 +133,7 @@ public class PlShooter implements Shooter {
 								count = 0;
 							}
 
+							if (gun.snp && p.isSneaking()) return;
 							it.setAmount(it.getAmount() - 1);
 						} 
 						cldwn = gun.cld;
@@ -144,10 +144,11 @@ public class PlShooter implements Shooter {
 							final IntHashMap<Info> info = new IntHashMap<>();
 							for (int i = gun.brst; i != 0; i--) shoot(gun, !scp, tr, info);
 						}
-						if (scp) {
-							Utils.zoom(p, false);
-							p.setSneaking(false);
-						}
+//						if (scp) {
+//							Utils.zoom(p, false);
+//							p.setSneaking(false);
+//						}
+						if (one) count = 0;
 						if (gun.cld > 2) p.setCooldown(it, gun.cld - 1);
 						Main.plyWrldSnd(p, gun.snd, 1.1f - Main.srnd.nextFloat() * 0.2f);
 					}
@@ -230,14 +231,16 @@ public class PlShooter implements Shooter {
 	public void item(final EquipmentSlot slot, final ItemStack it) {
 		inv.setItem(slot, it);
 		if (slot != EquipmentSlot.HAND) return;
+		final GunType gt = GunType.fast(it);
 		final Player pl = getPlayer();
-		if (pl.isSneaking()) Utils.zoom(pl, false);
+		Utils.spy(pl, gt != null && gt.snp, pl.isSneaking());
 	}
 	public void item(final int slot, final ItemStack it) {
 		inv.setItem(slot, it);
 		if (slot != inv.getHeldItemSlot()) return;
+		final GunType gt = GunType.fast(it);
 		final Player pl = getPlayer();
-		if (pl.isSneaking()) Utils.zoom(pl, false);
+		Utils.spy(pl, gt != null && gt.snp, pl.isSneaking());
 	}
 	public PlayerInventory inv() {return inv;}
 	public void inv(final PlayerInventory i) {inv = i;}

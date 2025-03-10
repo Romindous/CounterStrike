@@ -7,14 +7,12 @@ import io.papermc.paper.datacomponent.DataComponentTypes;
 import me.Romindous.CounterStrike.Enums.GunType;
 import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Objects.Loc.Info;
-import me.Romindous.CounterStrike.Objects.Shooter;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.BlockType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.ItemType;
 import org.bukkit.inventory.PlayerInventory;
 import ru.komiss77.Ostrov;
 import ru.komiss77.modules.items.ItemBuilder;
@@ -47,14 +45,13 @@ public class Utils {
 
     public static void crackBlock(final World w, final BVec bl) {
         final Location loc = bl.center(w);
-        final float stg = getNxtStg(bl);
+        final float stg = getNxtStg(bl.w(w));
         w.getPlayers().forEach(p -> p.sendBlockDamage(loc, stg,
             (id == 1000 ? id = 0 : id++) + 10000));
     }
 
     private static final int MAX_CRACK = 7;
-    private static final int TICK_PER_STAGE = 16;
-    private static final float CRACK_DEL = 0.8f / MAX_CRACK;
+    private static final float CRACK_DEL = 1f / MAX_CRACK;
     public static float getNxtStg(final BVec bl) {
         try {
             for (final BVec s : Main.cracks) {
@@ -65,10 +62,10 @@ public class Utils {
                     return vals[0] * CRACK_DEL;
                 }
             }
-        } catch (ConcurrentModificationException e) {
+        } catch (final ConcurrentModificationException e) {
             return 0.4f;
         }
-        Main.cracks.add(bl.wals(bl.w(), new byte[]{1}));
+        Main.cracks.add(bl.wals(bl.wname(), new byte[]{1}));
         return 0.1f;
     }
 
@@ -93,25 +90,31 @@ public class Utils {
         return THRU.contains(bt);
     }
 
-    public static final ItemStack spy = Main.mkItm(ItemType.RABBIT_FOOT, "§0О.О", Shooter.SCP_MDL);
-    public static void zoom(final Player pl, final boolean in) {
+    public static void spy(final Player pl, final boolean snp, final boolean snk) {
         final PlayerInventory pi = pl.getInventory();
-        if (in) {
-            if (!((LivingEntity) pl).isOnGround()) return;
-            Nms.zoom(pl, 19.5f);
-            pi.setItemInOffHand(spy);
-            Nms.fakeItem(pl, new ItemBuilder(pi.getItemInMainHand())
-                .reset(DataComponentTypes.CHARGED_PROJECTILES).build(), pi.getHeldItemSlot());
+        if (!snk) {
+            Nms.zoom(pl, 0f);
+            final ItemStack it = pi.getItemInMainHand();
+            if (!it.isEmpty()) it.setData(DataComponentTypes
+                .CHARGED_PROJECTILES, GunType.CHARGE);
+            pl.updateInventory();
+            pi.setItemInOffHand(snp ? Main.spy : ItemUtil.air);
             return;
         }
-        Nms.zoom(pl, 0f);
-        pi.setItemInOffHand(ItemUtil.air);
-        pi.getItemInMainHand().setData(DataComponentTypes.CHARGED_PROJECTILES, GunType.CHARGE);
-        pl.updateInventory();
+        if (!snp) {
+            Nms.zoom(pl, 0f);
+            pi.setItemInOffHand(ItemUtil.air);
+            final ItemStack it = pi.getItemInMainHand();
+            if (!it.isEmpty()) it.setData(DataComponentTypes
+                .CHARGED_PROJECTILES, GunType.CHARGE);
+            pl.updateInventory();
+            return;
+        }
+        pi.setItemInOffHand(Main.spy);
+        final ItemStack it = pi.getItemInMainHand();
+        if (!it.isEmpty()) Nms.fakeItem(pl, new ItemBuilder(it)
+            .reset(DataComponentTypes.CHARGED_PROJECTILES).build(),
+            pi.getHeldItemSlot());
+        Nms.zoom(pl, 10f);
     }
- 	
-	/*public static void sendRecoil(final PlShooter sh, final Location rot) {
-		final Location lc = rot.add(rot.getDirection().multiply(40d));
-		Nms.sendPacket(sh.getPlayer(), new PacketPlayOutLookAt(Anchor.b, lc.getX(), lc.getY(), lc.getZ()));
-	}*/
 }

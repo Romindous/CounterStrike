@@ -7,9 +7,9 @@ import org.jetbrains.annotations.Nullable;
 
 public enum NadeType {
 	
-	FRAG(true, 6, 300, "§f鉬", 36),
-	FLAME(true, 36, 250, "§f鉫", 37, BlockFace.UP),
-	SMOKE(false, 28, 100, "§f鉪", 46),
+	FRAG(true, 6, 200, "§f鉬", 36),
+	FLAME(true, 20, 150, "§f鉫", 37, BlockFace.UP),
+	SMOKE(false, 28, 80, "§f鉪", 46),
 	FLASH(false, 4, 50, "§f鉩", 38, BlockFace.WEST, BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH),
 	DECOY(false, 10, 20, "§f鉭", 47);
 

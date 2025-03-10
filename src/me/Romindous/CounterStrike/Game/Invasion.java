@@ -184,7 +184,7 @@ public class Invasion extends Arena {
 		gameScore(sh, p);
 		chngTeam(sh, Team.CTs);
 		final int pls = getPlaying(true, false);
-		cnt = Math.max(((isDay ? KD_DAY : KD_NIGHT) - (ccl << 1)) / pls, 1);
+		cnt = Math.max(((isDay ? KD_DAY : KD_NIGHT) - (ccl << 1)) / (pls + 2), 1);
 		for (final Shooter s : shtrs.keySet()) {
 			final Player pl = s.getPlayer();
 			if (pl != null) {
@@ -272,7 +272,7 @@ public class Invasion extends Arena {
 						}
 					}
 				} else if (sz == 1) {
-					cnt = Math.max(((isDay ? KD_DAY : KD_NIGHT) - (ccl << 1)) / pls, 1);
+					cnt = Math.max(((isDay ? KD_DAY : KD_NIGHT) - (ccl << 1)) / (pls + 2), 1);
 					for (final Shooter s : shtrs.keySet()) {
 						final Player pl = s.getPlayer();
 						if (pl != null) {
@@ -286,7 +286,7 @@ public class Invasion extends Arena {
 					bds.setViewRange(0f);
 					bds.getLocation().getBlock().setType(Material.AIR, false);
 				} else {
-					cnt = Math.max(((isDay ? KD_DAY : KD_NIGHT) - (ccl << 1)) / pls, 1);
+					cnt = Math.max(((isDay ? KD_DAY : KD_NIGHT) - (ccl << 1)) / (pls + 2), 1);
 					for (final Shooter s : shtrs.keySet()) {
 						final Player pl = s.getPlayer();
 						if (pl != null) {
@@ -425,13 +425,13 @@ public class Invasion extends Arena {
 			//night
 			isDay = false;
 			time = (short) (ccl * 20 + 60);
-			cnt = Math.max((KD_NIGHT - (ccl << 1)) / pls, 1);
+			cnt = Math.max((KD_NIGHT - (ccl << 1)) / (pls + 2), 1);
 //			final ArrayList<Player> pls = new ArrayList<>();
 			for (final Shooter sh : shtrs.keySet()) {
 				sh.item(8, ItemUtil.air);
 				final Player p = sh.getPlayer();
 				if (p != null) {
-					Utils.sendTtlSbTtl(p, "§4Ночь", "§7Крепитесь и защищайте точки!", 50);
+					Utils.sendTtlSbTtl(p, "§4Ночь", "§7Крепись и защищай точки!", 60);
 					PM.getOplayer(p).score.getSideBar().update(STAGE, "§7Cтадия: §5Ночь §7(" + getTime(time, "§5") + "§7)");
 					p.playSound(p.getLocation(), "info.night", 10f, 1f);
 				}
@@ -459,14 +459,14 @@ public class Invasion extends Arena {
 			//day
 			isDay = true;
 			time = (short) (ccl * 10 + 60);
-			cnt = Math.max((KD_DAY - (ccl << 1)) / pls, 1);
+			cnt = Math.max((KD_DAY - (ccl << 1)) / (pls + 2), 1);
 			ccl++;
 			for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
 				final Shooter sh = e.getKey();
 				final LivingEntity le = sh.getEntity();
 				if (sh instanceof PlShooter) {
 					final Player p = (Player) le;
-					Utils.sendTtlSbTtl(p, "§3День", "§7Закупайтесь и ломайте спавнеры!", 80);
+					Utils.sendTtlSbTtl(p, "§3День", "§7Закупайся и ломай спавнеры!", 80);
 					PM.getOplayer(p).score.getSideBar().update(STAGE, "§7Cтадия: §dДень §7(" + getTime(time, "§d") + "§7)");
 					p.playSound(p.getLocation(), "info.day", 10f, 1f);
 					if (e.getValue() == Team.SPEC) continue;

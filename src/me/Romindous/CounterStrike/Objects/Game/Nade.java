@@ -11,7 +11,6 @@ import me.Romindous.CounterStrike.Objects.Shooter;
 import org.bukkit.*;
 import org.bukkit.block.BlockType;
 import org.bukkit.entity.*;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.potion.PotionEffect;
@@ -25,7 +24,9 @@ import ru.komiss77.utils.NumUtil;
 import ru.komiss77.version.Nms;
 
 public class Nade {
-	
+
+	public static final int DECOY_DUR = 40;
+
 	public Snowball prj;
 	public int tm;
   
@@ -189,8 +190,9 @@ public class Nade {
 				break;
 			case DECOY:
 				X = loc.getBlockX(); Y = loc.getBlockY(); Z = loc.getBlockZ();
-				final GunType gt = sh == null ? null : GunType.fast(sh.item(EquipmentSlot.HAND));
-				Main.decoys.add(BVec.of(w, X, Y, Z, (byte) 40, (byte) (gt == null ? GunType.USP : gt).ordinal()));
+				final GunType gt = sh == null ? null : GunType.fast(sh.item(0));
+				final GunType fgt = gt == null ? GunType.USP : gt;
+				Main.decoys.add(BVec.of(w, X, Y, Z, (byte) (DECOY_DUR / fgt.cld), (byte) fgt.ordinal()));
 				break;
 		}
 	}

@@ -275,12 +275,8 @@ public class MainLis implements Listener {
 		final Player p = e.getPlayer();
 		final ItemStack it = p.getInventory().getItemInMainHand();
 		final GunType gt = GunType.fast(it);
-		if (gt == null || !gt.snp) {
-			if (e.isSneaking()) return;
-			Utils.zoom(p, false);
-			return;
-		}
-		Utils.zoom(p, e.isSneaking() && !Main.hasDur(it));
+		Utils.spy(p, gt != null && gt.snp, e.isSneaking());
+//		Utils.zoom(p, e.isSneaking() && !Main.hasDur(it));
 	}
 	
 	@EventHandler

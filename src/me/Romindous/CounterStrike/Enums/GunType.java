@@ -17,7 +17,7 @@ import ru.komiss77.modules.items.ItemBuilder;
 public enum GunType {
 	
 	AWP(	6, 	24, 	50.0F, 	1.0F, 	0.5F, 	1, 0.08F, 	true, 60, true, 50, 1650, "§f鉰鉱", 4),
-	SCAR(	14, 	10, 	5.0F, 	0.5F, 	0.10F, 	3, 0.05F, 	true, 40, true, 60, 1500, "§f鉺鉻", 12),
+	SCAR(	14, 	10, 	5.5F, 	0.5F, 	0.10F, 	3, 0.05F, 	true, 40, true, 60, 1500, "§f鉺鉻", 12),
 	NGV(	60, 	3, 	4.0F, 	0.25F, 0.15F, 	2, 0.04F, 	false, 80, true, 60, 1350, "§f鉾鉿", 14),
 	M4A1(	30, 	2, 	5.0F, 	0.1F, 	0.05F, 	0, 0.03F, 	false, 40, true, 30, 1300, "§f鉴鉵", 9),
 	AK47(	30, 	3, 	6.0F, 	0.15F, 0.08F, 	0, 0.04F, 	false, 50, true, 40, 1250, "§f鉲鉳", 1),
@@ -25,8 +25,8 @@ public enum GunType {
 	MP5(	40, 	1, 	1.5F, 	0.15F, 0.12F, 	0, 0.01F, 	false, 40, true, 50, 900, "§f銃銄", 5),
 	NOVA(	10, 	12, 	3.0F, 	0.2F, 	0.20F, 	6, 0.08F, 	false, 50, true, 70, 600, "§f鉼鉽", 7),
 	SG13(	8, 	16, 	2.5F, 	0.0F, 	0.16F, 	8, 0.08F, 	false, 40, true, 80, 750, "§f鉶鉷", 17),
-	DGL(	8, 	12, 	13.0F, 	0.1F, 	0.05F, 	0, 0.04F, 	false, 40, false, 100, 400, "§f銂", 52),
-	TP9(	6, 	8, 	5.5F, 	0.15F, 0.025F, 	2, 0.03F, 	false, 30, false, 80, 350, "§f銀", 44),
+	DGL(	8, 	12, 	12.8F, 	0.1F, 	0.025F, 	0, 0.04F, 	false, 40, false, 100, 400, "§f銂", 52),
+	TP9(	6, 	8, 	4.0F, 	0.15F, 0.02F, 	2, 0.03F, 	false, 30, false, 80, 250, "§f銀", 44),
 	USP(	12, 	4, 	4.5F, 	0.1F, 	0.04F, 	0, 0.02F, 	false, 20, false, 120, 150, "§f銁", 35);
 
 	public final byte amo;

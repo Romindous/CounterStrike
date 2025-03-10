@@ -69,6 +69,8 @@ public final class Main extends JavaPlugin implements Listener {
 	public static YamlConfiguration ars;
 	public static final SecureRandom srnd = new SecureRandom();
 	public static final LivingEntity[] emt = new LivingEntity[0];
+
+	public static final ItemStack spy = Main.mkItm(ItemType.SPYGLASS, "§0О.О", Shooter.SCP_MDL);
 	public static final ItemStack bmb = Main.mkItm(ItemType.GOLDEN_APPLE, "§4§lС*4 §c\u926e",
 			Defusable.BOMB_MDL, "§dПКМ §7- Заложить бомбу", "§7Можно установить на точку §5A §7или §5B");
 	public static final ItemStack tHelm = new ItemBuilder(ItemType.LEATHER_HELMET).name("§cШапка Террориста §f\u9267")
@@ -169,10 +171,11 @@ public final class Main extends JavaPlugin implements Listener {
 					if (w == null) {li.remove(); continue;}
 					final byte[] vals = loc.vals();
 					if (vals.length != 2) {li.remove(); continue;}
-					w.spawnParticle(Particle.SOUL, loc.center(w), 2, 0.2D, 0.2D, 0.2D, 0.0D, null, false);
+					w.spawnParticle(Particle.SOUL, loc.center(w),
+						2, 0.2D, 0.2D, 0.2D, 0.0D, null, false);
 					final GunType gt = GunType.values()[vals[1]];
-					if ((tick & 16) == 0 && vals[0]-- == 0) {li.remove(); continue;}
-					if (tick % gt.cld == 0) {
+					if ((tick & 31) > 15 && tick % gt.cld == 0) {
+						if (vals[0]-- == 0) {li.remove(); continue;}
 						Main.plyWrldSnd(loc.center(w), gt.snd, 1f);
 					}
 				}

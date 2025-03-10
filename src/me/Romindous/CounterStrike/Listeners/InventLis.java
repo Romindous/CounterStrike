@@ -45,9 +45,6 @@ public class InventLis implements Listener {
 		sh.shtTm(0); sh.count(0);
 		final ItemStack it = sh.item(e.getNewSlot());
 		final ItemStack old = sh.item(e.getPreviousSlot());
-		final GunType ogt = GunType.get(old);
-		if (ogt != null && ogt.snp && p.isSneaking())
-			Utils.zoom(p, false);
 
 		final ItemType bmbTp = Main.bmb.getType().asItemType();
 		if (ItemUtil.is(it, bmbTp)) {
@@ -68,17 +65,15 @@ public class InventLis implements Listener {
 			sh.arena().indSpawn(p, sh, false);
 
 		final GunType gt = GunType.get(it);
-		if (gt != null) {
-			p.getWorld().playSound(p.getLocation(), gt.prm
-				? Sound.ITEM_ARMOR_EQUIP_IRON : Sound.ITEM_ARMOR_EQUIP_GOLD, 2f, 2f);
-			final Integer dmg = it.getData(DataComponentTypes.DAMAGE);
-			if (Main.hasDur(it)) {
-				sh.count(Main.maxDur(it) - dmg);
-				return;
-			}
-            if (gt.snp) Ostrov.sync(() ->
-				Utils.zoom(p, p.isSneaking()), 1);
+		if (gt == null) {
+			Utils.spy(p, false, p.isSneaking());
+			return;
 		}
+		p.getWorld().playSound(p.getLocation(), gt.prm
+			? Sound.ITEM_ARMOR_EQUIP_IRON : Sound.ITEM_ARMOR_EQUIP_GOLD, 2f, 2f);
+		final Integer dmg = it.getData(DataComponentTypes.DAMAGE);
+		if (Main.hasDur(it)) sh.count(Main.maxDur(it) - dmg);
+		Ostrov.sync(() -> Utils.spy(p, gt.snp, p.isSneaking()), 1);
     }
 
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = false)

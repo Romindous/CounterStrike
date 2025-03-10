@@ -1,5 +1,6 @@
 package me.Romindous.CounterStrike.Listeners;
 
+import io.papermc.paper.event.player.PlayerStopUsingItemEvent;
 import io.papermc.paper.math.Position;
 import me.Romindous.CounterStrike.Enums.GameState;
 import me.Romindous.CounterStrike.Enums.GunType;
@@ -38,6 +39,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ItemType;
 import ru.komiss77.ApiOstrov;
+import ru.komiss77.Ostrov;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.modules.world.BVec;
 import ru.komiss77.objects.IntHashMap;
@@ -78,17 +80,16 @@ public class InterrLis implements Listener {
 		}
 	}
 	
-	/*@EventHandler(priority = EventPriority.HIGHEST)
+	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onStop(final PlayerStopUsingItemEvent e) {
 		final ItemStack it = e.getItem();
         final Player p = e.getPlayer();
         if (!ItemUtil.is(it, ItemType.SPYGLASS)) return;
         final PlShooter sh = Shooter.getPlShooter(p.getName(), true);
         final ItemStack mh = p.getInventory().getItemInMainHand();
-        final GunType gt = GunType.get(mh);
-        if (!p.isSneaking() || !sh.scope()
-			|| sh.shtTm() != 0 || gt == null) return;
-        sh.scope(false);
+        if (!p.isSneaking() || sh.shtTm() != 0) return;
+		final GunType gt = GunType.fast(mh);
+		if (gt == null || !gt.snp) return;
         final boolean hd = Main.hasDur(mh);
         if ((sh.count() != 0 && !hd) || sh.cldwn() != 0) return;
         if (mh.getAmount() == 1) {
@@ -103,52 +104,59 @@ public class InterrLis implements Listener {
 
             mh.setAmount(mh.getAmount() - 1);
         }
-        final int tr = sh.count() < sh.rclTm() ? sh.count() : sh.rclTm();
-        sh.cldwn(gt.cld);
-        for (byte i = gt.brst == 0 ? 1 : gt.brst; i > 0; i--) {
-            sh.shoot(gt, false, tr);
-        }
-        if (gt.cld > 2) p.setCooldown(mh, gt.cld - 1);
-        Main.plyWrldSnd(p, gt.snd, 1.1f - Main.srnd.nextFloat() * 0.2f);
-    }*/
+		sh.cldwn(gt.cld);
+		final int tr = sh.count() < sh.recoil() ? sh.count() : sh.recoil();
+        if (gt.brst == 0) sh.shoot(gt, false, tr, new IntHashMap<>());
+		else {
+			final IntHashMap<Info> info = new IntHashMap<>();
+			for (int i = gt.brst; i != 0; i--) sh.shoot(gt, false, tr, info);
+		}
+		if (gt.cld > 2) p.setCooldown(mh, gt.cld - 1);
+		Main.plyWrldSnd(p, gt.snd, 1.1f - Main.srnd.nextFloat() * 0.2f);
+		Ostrov.sync(() -> {
+			final GunType ngt = GunType.fast(p.getInventory().getItemInMainHand());
+			Utils.spy(p, ngt != null && ngt.snp, p.isSneaking() && !Main.hasDur(mh));
+		}, 2);
+    }
 	
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onInter(final PlayerInteractEvent e) {
-		final Block b;
 		final ItemStack it = e.getItem();
+		final Player pl = e.getPlayer();
 		final NadeType nt = NadeType.getNdTp(it);
 		final GunType gt = GunType.fast(it);
 		final PlShooter sh;
+		final Block b;
 		switch (e.getAction()) {
 		case LEFT_CLICK_AIR:
 		case LEFT_CLICK_BLOCK:
 			if (gt != null) {
 				e.setCancelled(true);
 				if (!Main.hasDur(it) && it.getAmount() != gt.amo) {
-					sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
+					sh = Shooter.getPlShooter(pl.getName(), true);
+					Utils.spy(pl, gt.snp, pl.isSneaking());
 					Main.setDur(it, 0);
 					sh.shtTm(0);
 					sh.count(0);
-					Utils.zoom(e.getPlayer(), false);
 				}
 			} else if (nt != null) {
-				e.getPlayer().setExp((e.getPlayer().getExp() == 1f) ? 0f :
-					(e.getPlayer().getExp() + 0.5F > 1f ? 1f : e.getPlayer().getExp() + 0.5F));
+				pl.setExp((pl.getExp() == 1f) ? 0f :
+					(pl.getExp() + 0.5F > 1f ? 1f : pl.getExp() + 0.5F));
 			}
 			break;
 		case RIGHT_CLICK_AIR:
 		case RIGHT_CLICK_BLOCK:
-			final Player p = e.getPlayer();
-			if (gt != null) {
-				sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
+            if (gt != null) {
+				sh = Shooter.getPlShooter(pl.getName(), true);
 				e.setUseInteractedBlock(Result.DENY);
 				e.setUseItemInHand(Result.DENY);
+				if (gt.snp && pl.isSneaking()) return;
 				final boolean hd = Main.hasDur(it);
 				if (sh.shtTm() == 0) {
 					if ((sh.count() == 0 || hd) && sh.cldwn() == 0) {
-						if (it.getAmount() == 1) {
+						final boolean one = it.getAmount() == 1;
+						if (one) {
 							if (hd) return;
-							sh.count(0);
 							Main.setDur(it, 0);
 						} else {
 							if (hd) {
@@ -160,21 +168,20 @@ public class InterrLis implements Listener {
 						}
 						sh.cldwn(gt.cld);
 						final int tr = sh.count() < sh.recoil() ? sh.count() : sh.recoil();
-						final boolean scp = gt.snp && p.isSneaking();
+						final boolean scp = gt.snp && pl.isSneaking();
 						if (gt.brst == 0) sh.shoot(gt, !scp, tr, new IntHashMap<>());
 						else {
 							final IntHashMap<Info> info = new IntHashMap<>();
 							for (int i = gt.brst; i != 0; i--) sh.shoot(gt, !scp, tr, info);
 						}
-						if (scp) Utils.zoom(p, false);
-						if (gt.snp && p.isSneaking()) p.setSneaking(false);
-						if (gt.cld > 2) p.setCooldown(it, gt.cld - 1);
-						Main.plyWrldSnd(p, gt.snd, 1.1f - Main.srnd.nextFloat() * 0.2f);
+						if (one) sh.count(0);
+						if (gt.cld > 2) pl.setCooldown(it, gt.cld - 1);
+						Main.plyWrldSnd(pl, gt.snd, 1.1f - Main.srnd.nextFloat() * 0.2f);
 					}
 				}
 				sh.shtTm(5);
 			} else if (nt != null) {
-				sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
+				sh = Shooter.getPlShooter(pl.getName(), true);
 				if (sh.arena() != null) {
 					switch (sh.arena().gst) {
 					case BUYTIME:
@@ -195,41 +202,42 @@ public class InterrLis implements Listener {
 							if (tw.tm == ar.shtrs.get(sh)) {
 								if (tw.chgNade(sh.getPlayer().getInventory().getItemInMainHand(), ar)) {
 									it.setAmount(it.getAmount() - 1);
-									p.sendMessage(Main.prf() + "§7Вы зарядили растяжку гранатой!");
-									p.getWorld().playSound(b.getLocation(), Sound.ITEM_CROSSBOW_LOADING_END, 1f, 1f);
-								} else Utils.sendAcBr(p, "§c§lТакая граната уже привязана!");
+									pl.sendMessage(Main.prf() + "§7Вы зарядили растяжку гранатой!");
+									pl.getWorld().playSound(b.getLocation(), Sound.ITEM_CROSSBOW_LOADING_END, 1f, 1f);
+								} else Utils.sendAcBr(pl, "§c§lТакая граната уже привязана!");
 								return;
 							}
 						}
 					}
 				}
 
-				Nade.launch(p, sh, p.getEyeLocation().getDirection().multiply(0.8f * p.getExp() + 0.4f),
-					(int) (nt.time * p.getExp()) + 4, p.getInventory().getHeldItemSlot());
+				final float exp = pl.getExp();
+				Nade.launch(pl, sh, pl.getEyeLocation().getDirection().multiply(exp + 0.4f),
+					(int) (exp * 14f) + 4, pl.getInventory().getHeldItemSlot());
 			} else {
-				e.setUseInteractedBlock(p.getGameMode() == GameMode.CREATIVE ? Result.ALLOW : Result.DENY);
+				e.setUseInteractedBlock(pl.getGameMode() == GameMode.CREATIVE ? Result.ALLOW : Result.DENY);
 				if (it != null) {
 					b = e.getClickedBlock();
 					switch (it.getType()) {
 					case SPYGLASS:
-						e.setUseItemInHand(Result.ALLOW);
+						e.setUseItemInHand(pl.isSneaking() ? Result.ALLOW : Result.DENY);
 						break;
 					case GHAST_TEAR:
-						sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
+						sh = Shooter.getPlShooter(pl.getName(), true);
 						if (sh.arena() == null) {
-							p.playSound(p.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 2f);
-							p.openInventory(Inventories.LBShop);
+							pl.playSound(pl.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 2f);
+							pl.openInventory(Inventories.LBShop);
 						} else {
 							final Team tm = sh.arena().shtrs.get(sh);
 							final Inventory inv;
 							switch (sh.arena().gst) {
 							case BEGINING:
 							case WAITING:
-								p.playSound(p.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 2f);
-								p.openInventory(Inventories.LBShop);
+								pl.playSound(pl.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 2f);
+								pl.openInventory(Inventories.LBShop);
 								break;
 							case BUYTIME:
-								p.playSound(p.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 2f);
+								pl.playSound(pl.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 2f);
 								switch (tm) {
 								case Ts:
 									inv = Inventories.TShop;
@@ -251,12 +259,12 @@ public class InterrLis implements Listener {
 									}
 									break;
 								}
-								p.openInventory(inv);
+								pl.openInventory(inv);
 								break;
 							case ROUND:
 								if (sh.arena() instanceof Defusal && ((Defusal) sh.arena()).isBmbOn()) {
-									Utils.sendAcBr(p, "§c§lВремя закупки вышло, бомба постовлена!");
-								} else if (sh.arena().canOpnShp(p.getLocation(), tm)) {
+									Utils.sendAcBr(pl, "§c§lВремя закупки вышло, бомба постовлена!");
+								} else if (sh.arena().canOpnShp(pl.getLocation(), tm)) {
 									switch (tm) {
 									case Ts:
 										inv = Inventories.TShop;
@@ -278,9 +286,9 @@ public class InterrLis implements Listener {
 										}
 										break;
 									}
-									p.openInventory(inv);
+									pl.openInventory(inv);
 								} else {
-									Utils.sendAcBr(p, "§c§lЗакупатся можно только на спавне!");
+									Utils.sendAcBr(pl, "§c§lЗакупатся можно только на спавне!");
 								}
 								break;
 							case ENDRND:
@@ -296,8 +304,8 @@ public class InterrLis implements Listener {
 					case GOLD_NUGGET:
 					case SHEARS:
 						final boolean kit = ItemUtil.is(it, ItemType.SHEARS);
-						sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
-						if (b != null && sh.arena() != null && p.getGameMode() == GameMode.SURVIVAL) {
+						sh = Shooter.getPlShooter(pl.getName(), true);
+						if (b != null && sh.arena() != null && pl.getGameMode() == GameMode.SURVIVAL) {
 							e.setCancelled(true);
 							final Arena ar = sh.arena();
 							if (BlockType.CRIMSON_BUTTON.equals(b.getType().asBlockType())) {
@@ -306,9 +314,9 @@ public class InterrLis implements Listener {
 									if (bmb != null) {
 										if (bmb.defusing() == null) {
 											bmb.defusing(sh);
-											bmb.inv.open(p, kit);
+											bmb.inv.open(pl, kit, true);
 										} else {
-											ScreenUtil.sendActionBarDirect(p, "§c§lЭту бомбу уже обезвреживают!");
+											ScreenUtil.sendActionBarDirect(pl, "§c§lЭту бомбу уже обезвреживают!");
 										}
 									}
 								}
@@ -318,9 +326,9 @@ public class InterrLis implements Listener {
 									if (mb != null && mb.isAlive()) {
 										if (mb.defusing() == null) {
 											mb.defusing(sh);
-											mb.inv.open(p, kit);
+											mb.inv.open(pl, kit, true);
 										} else {
-											ScreenUtil.sendActionBarDirect(p, "§c§lЭтот спавнер уже обезвреживают!");
+											ScreenUtil.sendActionBarDirect(pl, "§c§lЭтот спавнер уже обезвреживают!");
 										}
 									}
 								}
@@ -329,7 +337,7 @@ public class InterrLis implements Listener {
 						break;
 					case SUGAR:
 						if (b != null) {
-							sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
+							sh = Shooter.getPlShooter(pl.getName(), true);
 							if (sh.arena() != null) {
 								switch (sh.arena().gst) {
 								case BUYTIME:
@@ -345,64 +353,64 @@ public class InterrLis implements Listener {
 							case WEST:
 							case NORTH:
 							case SOUTH:
-								if (crtTrpwr(b, e.getBlockFace(), p)) {
+								if (crtTrpwr(b, e.getBlockFace(), pl)) {
 									it.setAmount(0);
 								}
 								break;
 							default:
-								p.sendMessage(Main.prf() + "§cРастяжку можно закреплять только на стены!");
+								pl.sendMessage(Main.prf() + "§cРастяжку можно закреплять только на стены!");
 								break;
 							}
 						}
 						break;
 					case CAMPFIRE:
 						if (it.hasItemMeta() && TCUtil.strip(it.getItemMeta().displayName()).equals("Выбор Игры")) {
-							Arena.gameInv.open(p);
+							Arena.gameInv.open(pl);
 						}
 						break;
 					case TOTEM_OF_UNDYING:
 						if (it.hasItemMeta() && TCUtil.strip(it.getItemMeta().displayName()).equals("Выбор Обшивки")) {
-							ChosenSkinMenu.open(p);
+							ChosenSkinMenu.open(pl);
 						}
 						break;
 					case NETHER_STAR:
 						if (it.hasItemMeta() && TCUtil.strip(it.getItemMeta().displayName()).equals("Выбор Комманды")) {
-							p.playSound(p.getLocation(), Sound.BLOCK_CONDUIT_ATTACK_TARGET, 1f, 2f);
-							sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
+							pl.playSound(pl.getLocation(), Sound.BLOCK_CONDUIT_ATTACK_TARGET, 1f, 2f);
+							sh = Shooter.getPlShooter(pl.getName(), true);
 							if (sh.arena() != null) {
-								sh.arena().teamInv.open(p);
+								sh.arena().teamInv.open(pl);
 							}
 						}
 						break;
 					case EMERALD:
-						if (MapManager.edits.containsKey(p.getUniqueId())) {
+						if (MapManager.edits.containsKey(pl.getUniqueId())) {
 							SmartInventory.builder().size(3, 9)
-	                        .id("Map "+p.getName()).title("§d§lРедактор Карты")
-	                        .provider(MapManager.edits.get(p.getUniqueId()))
-	                        .build().open(p);
+	                        .id("Map "+ pl.getName()).title("§d§lРедактор Карты")
+	                        .provider(MapManager.edits.get(pl.getUniqueId()))
+	                        .build().open(pl);
 						}
 						break;
 					case HEART_OF_THE_SEA:
 						if (it.hasItemMeta() && TCUtil.strip(it.getItemMeta().displayName()).equals("Боторейка")) {
-							sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
+							sh = Shooter.getPlShooter(pl.getName(), true);
 							if (sh.arena() != null && sh.arena().botInv != null) {
-								p.playSound(p.getLocation(), Sound.BLOCK_BREWING_STAND_BREW, 1f, 1.6f);
-								sh.arena().botInv.open(p);
+								pl.playSound(pl.getLocation(), Sound.BLOCK_BREWING_STAND_BREW, 1f, 1.6f);
+								sh.arena().botInv.open(pl);
 							}
 						}
 						break;
 					case MAGMA_CREAM:
 						if (it.hasItemMeta() && TCUtil.strip(it.getItemMeta().displayName()).equals("Выход в Лобби")) {
-							ApiOstrov.sendToServer(p, "lobby1", "");
+							ApiOstrov.sendToServer(pl, "lobby1", "");
 						}
 						break;
 					case SLIME_BALL:
 						if (it.hasItemMeta() && TCUtil.strip(it.getItemMeta().displayName()).equals("Выход")) {
-							final Arena ar = Shooter.getPlShooter(p.getName(), true).arena();
+							final Arena ar = Shooter.getPlShooter(pl.getName(), true).arena();
 							if (ar == null) {
-								p.sendMessage(Main.prf() + "§cВы не находитесь в игре!");
+								pl.sendMessage(Main.prf() + "§cВы не находитесь в игре!");
 							} else {
-								ar.rmvPl(Shooter.getPlShooter(p.getName(), true));
+								ar.rmvPl(Shooter.getPlShooter(pl.getName(), true));
 							}
 						}
 						break;
@@ -417,7 +425,7 @@ public class InterrLis implements Listener {
 			if (b != null) {
 				final BlockType bt = b.getType().asBlockType();
 				if (bt == BlockType.TRIPWIRE) {
-					sh = Shooter.getPlShooter(e.getPlayer().getName(), true);
+					sh = Shooter.getPlShooter(pl.getName(), true);
 					final Arena ar = sh.arena();
 					if (ar != null) {
 						final TripWire tw = Arena.tblks.get(BVec.of(b.getLocation()));

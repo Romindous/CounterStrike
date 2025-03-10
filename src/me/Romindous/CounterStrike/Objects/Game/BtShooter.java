@@ -826,4 +826,15 @@ public class BtShooter implements Shooter, Botter.Extent {
 		if (dst.getY() > -DlnSq) dst.setY((dst.getY() + 1d) * DlnSq);
 		return dst.normalize().multiply(spd);
 	}
+
+	@Override
+	public int hashCode() {
+		return name().hashCode();
+	}
+
+	@Override
+	public boolean equals(final Object o) {
+		if (this == o) return true;
+		return o instanceof Shooter && ((Shooter) o).name().equals(name());
+	}
 }

@@ -56,7 +56,7 @@ public class Mobber extends Defusable {
 		cs.update();
 
 		ar.mbbrs.put(this.thin(), this);
-		inv = new DefuseMenu(this).fillUp(mt.pow * 0.15f + 0.2f);
+		inv = new DefuseMenu(this).fillUp(mt.pow * 0.1f + 0.25f);
 	}
 
 	public Invasion arena() {
@@ -109,7 +109,7 @@ public class Mobber extends Defusable {
 
 	public void set(final MobType mt) {
 		this.mt = mt;
-		inv.fillUp(mt.pow * 0.15f + 0.2f);
+		inv.fillUp(mt.pow * 0.1f + 0.25f);
 	}
 
 	public enum MobType {

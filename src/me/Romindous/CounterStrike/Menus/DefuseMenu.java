@@ -1,5 +1,6 @@
 package me.Romindous.CounterStrike.Menus;
 
+import me.Romindous.CounterStrike.Main;
 import me.Romindous.CounterStrike.Objects.Defusable;
 import me.Romindous.CounterStrike.Objects.Game.Bomb;
 import me.Romindous.CounterStrike.Objects.Game.Mobber;
@@ -22,6 +23,7 @@ import ru.komiss77.utils.inventory.SmartInventory;
 public class DefuseMenu implements InventoryProvider {
 
 	private static final int MAX_WIRES = 51;
+	private static final int MAX_DST_SQ = 24;
 
 	private final Defusable def;
 	private final String clr;
@@ -39,10 +41,11 @@ public class DefuseMenu implements InventoryProvider {
 		if (def.defusing() instanceof final PlShooter ps)
 			ps.getPlayer().closeInventory();
 		maxLeft = (int) (MAX_WIRES * Math.clamp(full, 0f, 1f));
-		left = maxLeft; return this;
+		left = maxLeft >> (lastKit ? 1 : 0);
+		return this;
 	}
 
-	public void open(final Player pl, final boolean kit) {
+	public void open(final Player pl, final boolean kit, final boolean first) {
 //		if (!psh.equals(def.defusing())) return;
 		if (lastKit) {if (!kit) {
 			left <<= 1; lastKit = false;}
@@ -57,12 +60,13 @@ public class DefuseMenu implements InventoryProvider {
 		} else ttl = "";
 		SmartInventory.builder().id(def.thin() + " Defuse").title(ttl)
 			.provider(this).size(6, 9).build().open(pl);
+		if (first) pl.getWorld().playSound(def.center(pl.getWorld()),
+			Sound.BLOCK_BEEHIVE_SHEAR, 2f, 0.5f);
 	}
 
 	private static final ClickableItem pane = ClickableItem.empty(
 		new ItemBuilder(ItemType.LIGHT_GRAY_STAINED_GLASS_PANE).name("§0.").build());
 	public void init(final Player p, final InventoryContent its) {
-		p.getWorld().playSound(def.center(p.getWorld()), Sound.BLOCK_BEEHIVE_SHEAR, 2f, 0.5f);
 
 		its.set(49, ClickableItem.empty(new ItemBuilder(ItemType.BOWL)
 			.name("§5§lРазрежь провода этого цвета!").model(Defusable.disp(clr)).build()));
@@ -80,6 +84,10 @@ public class DefuseMenu implements InventoryProvider {
 					8, 0d, 0d, 0d, 0.2d, p.getInventory().getItemInMainHand());
 				eye.getWorld().playSound(eye, Sound.BLOCK_TRIPWIRE_CLICK_ON, 1f, 2f);
 				p.swingMainHand(); left--;
+				if (def.distSq(p.getEyeLocation()) > MAX_DST_SQ) {
+					p.sendMessage(Main.prf() + "§cНадо стоять ближе 4 блоков!");
+					return;
+				}
 				if (left < 1) {
 					eye.getWorld().playSound(eye, Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, 2f, 2f);
 					eye.getWorld().playSound(eye, Sound.BLOCK_IRON_TRAPDOOR_CLOSE, 2f, 2f);
@@ -98,6 +106,7 @@ public class DefuseMenu implements InventoryProvider {
 				}
 				its.set(ix, ClickableItem.empty(new ItemBuilder(ItemType.STRING).name("§8~-~-~")
 					.model(Defusable.wire(Defusable.OFF_CLR)).build()));
+				if (def instanceof Mobber) open(p, lastKit, false);
 			}));
 		}
 
@@ -115,7 +124,7 @@ public class DefuseMenu implements InventoryProvider {
 					default -> {}
 				}
 				left = maxLeft;
-				open(p, lastKit);
+				open(p, lastKit, true);
 			});
         }
 		for (int i = left; i != finIxs.length; i++) {
