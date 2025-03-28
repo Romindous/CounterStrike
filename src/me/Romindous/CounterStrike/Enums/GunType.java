@@ -104,8 +104,9 @@ public enum GunType {
 	public ItemBuilder item() {
 		final Key[] keys = new Key[ordinal()];
 		return new ItemBuilder(TYPE).data(KEY, ordinal()).set(DataComponentTypes.CHARGED_PROJECTILES, CHARGE)
-			.set(DataComponentTypes.HIDE_ADDITIONAL_TOOLTIP).set(DataComponentTypes.USE_COOLDOWN, UseCooldown
-				.useCooldown(ordinal() + ENCD).cooldownGroup(skin(DEF_MDL)).build());
+			.hide(DataComponentTypes.CHARGED_PROJECTILES, DataComponentTypes.INTANGIBLE_PROJECTILE)
+			.set(DataComponentTypes.USE_COOLDOWN, UseCooldown.useCooldown(ordinal() + ENCD)
+				.cooldownGroup(skin(DEF_MDL)).build());
 	}
 
 	@Nullable
