@@ -33,6 +33,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 import ru.komiss77.ApiOstrov;
+import ru.komiss77.Ostrov;
 import ru.komiss77.boot.OStrap;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.utils.EntityUtil;
@@ -120,16 +121,14 @@ public class DmgLis implements Listener {
 			prcDmg(tgt, sh, null, sh instanceof PlShooter
 				? dmg : dmg * 0.2d, "§f\u9295", 2);
 		}
-		/*else if (ent instanceof Mob) {
-			final Invasion ar = Invasion.getMobInvasion(ee.getDamager().getEntityId());
-			if (ar != null && e.getEntityType() == EntityType.PLAYER) {
-				e.setCancelled(true);
-				e.setDamage(ent.getEquipment().getChestplate() == null ? e.getDamage() : e.getDamage() * 0.6);
-				e.setDamage(ent.getEquipment().getHelmet() == null ? e.getDamage() : e.getDamage() * 0.8);
-				prcDmg(ent, Shooter.getShooter(ent, false), null, e.getDamage(),
-					Team.SPEC.clr + ee.getDamager().getName() + "§f\u929a", 5);
-			}
-		}*/
+		e.setDamage(0d);
+		e.setCancelled(true);
+		Ostrov.log_warn(tgt.getName()
+			+ " was damaged by " + dt.key().asMinimalString());
+		if (e.getEntityType() != EntityType.PLAYER) return;
+		final Shooter sh = Shooter.getShooter(tgt, false);
+		if (sh == null || sh.arena() == null) return;
+		prcDmg(tgt, sh, null, dmg, "§f乂", 2);
 	}
 
 	public static double prcDmg(final LivingEntity target, final Shooter tgtsh, 

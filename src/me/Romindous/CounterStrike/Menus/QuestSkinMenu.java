@@ -11,6 +11,7 @@ import org.bukkit.inventory.ItemType;
 import ru.komiss77.modules.items.ItemBuilder;
 import ru.komiss77.modules.player.Oplayer;
 import ru.komiss77.modules.player.PM;
+import ru.komiss77.modules.player.Perm;
 import ru.komiss77.utils.inventory.ClickableItem;
 import ru.komiss77.utils.inventory.InventoryContent;
 import ru.komiss77.utils.inventory.InventoryProvider;
@@ -41,7 +42,7 @@ public class QuestSkinMenu implements InventoryProvider {
 			}
 			ChosenSkinMenu.open(pl);
 		}));
-		final boolean dnt = op.hasGroup("warior");
+		final boolean dnt = Perm.isRank(op, 1);
 		final Quest[] qs = Quest.get(gt);
 		for (int i = Math.min(qs.length, MAX_SKINS); i != 0; i--) {
 			final Quest q = qs[i-1];

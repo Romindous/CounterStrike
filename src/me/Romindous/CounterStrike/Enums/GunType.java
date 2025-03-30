@@ -102,7 +102,6 @@ public enum GunType {
 	public static final int ENCD = 100;
 
 	public ItemBuilder item() {
-		final Key[] keys = new Key[ordinal()];
 		return new ItemBuilder(TYPE).data(KEY, ordinal()).set(DataComponentTypes.CHARGED_PROJECTILES, CHARGE)
 			.hide(DataComponentTypes.CHARGED_PROJECTILES, DataComponentTypes.INTANGIBLE_PROJECTILE)
 			.set(DataComponentTypes.USE_COOLDOWN, UseCooldown.useCooldown(ordinal() + ENCD)

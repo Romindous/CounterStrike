@@ -30,6 +30,7 @@ import org.bukkit.util.Vector;
 import ru.komiss77.Ostrov;
 import ru.komiss77.modules.player.Oplayer;
 import ru.komiss77.modules.player.PM;
+import ru.komiss77.modules.player.Perm;
 import ru.komiss77.modules.world.BVec;
 import ru.komiss77.notes.Slow;
 import ru.komiss77.objects.IntHashMap;
@@ -40,7 +41,7 @@ import ru.komiss77.utils.NumUtil;
 
 public class PlShooter implements Shooter {
 
-	private static final double MOB_TRC = 8d;
+	private static final double MOB_TRC = 12d;
 
 	private final Predicate<Player> isAlly = pl -> {
 		final Arena ar = arena();
@@ -77,7 +78,7 @@ public class PlShooter implements Shooter {
 					gs = GunSkin.fromString(skn);
 				}
 				
-				skins.put(gt, gs.has(gs.chosen) || op.hasGroup("warior") 
+				skins.put(gt, gs.has(gs.chosen) || Perm.isRank(op, 1)
 					? gs : new GunSkin(GunType.DEF_MDL, gs.unlocked));
 			}
 		});
@@ -395,7 +396,7 @@ public class PlShooter implements Shooter {
 			}
 		}
 
-		float dmg = gt.dmg;
+		double dmg = gt.dmg;
 		final Arena ar = arena();
 		final boolean brkBlks = ar != null && ar.gst == GameState.ROUND;
 		final World w = ent.getWorld();
@@ -478,14 +479,12 @@ public class PlShooter implements Shooter {
                     dmg *= 2f * (tgt.getEquipment().getHelmet() == null ? 1f : 0.5f);
                     ese = new EntityShootAtEntityEvent(ent, tgt, gt, dmg,
 						true, wallBang, dff && gt.snp, smoke);
-					if (dmg <= 0f) return;//dmg 0, end
                     ese.callEvent();
                     nm = "<red>銑" + NumUtil.abs((int) ((dmg - ese.getDamage()) * 5.0d));
                 } else {
                     dmg *= tgt.getEquipment().getChestplate() == null ? 1f : 0.6f;
                     ese = new EntityShootAtEntityEvent(ent, tgt, gt, dmg,
 						false, wallBang, dff && gt.snp, smoke);
-					if (dmg <= 0f) return;//dmg 0, end
                     ese.callEvent();
                     nm = "<gold>" + NumUtil.abs((int) ((dmg - ese.getDamage()) * 5.0d));
                 }
@@ -495,6 +494,9 @@ public class PlShooter implements Shooter {
                     pl.playSound(loc, Sound.BLOCK_END_PORTAL_FRAME_FILL, 2f, 2f);
 					EntityUtil.indicate(tlc, nm, pl);
                 }
+
+				dmg = ese.getDamage();
+				if (dmg <= 0f) return; //dmg 0, end
             }
         }
 	}

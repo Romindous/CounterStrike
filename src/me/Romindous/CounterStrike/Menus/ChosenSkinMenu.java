@@ -14,6 +14,7 @@ import org.bukkit.inventory.ItemType;
 import ru.komiss77.modules.items.ItemBuilder;
 import ru.komiss77.modules.player.Oplayer;
 import ru.komiss77.modules.player.PM;
+import ru.komiss77.modules.player.Perm;
 import ru.komiss77.utils.inventory.ClickableItem;
 import ru.komiss77.utils.inventory.InventoryContent;
 import ru.komiss77.utils.inventory.InventoryProvider;
@@ -39,7 +40,7 @@ public class ChosenSkinMenu implements InventoryProvider {
 		pl.playSound(pl.getLocation(), Sound.BLOCK_BEEHIVE_SHEAR, 1f, 0.6f);
 		
 		final Inventory inv = its.getInventory();
-		inv.setContents(op.hasGroup("warior") ? dntInv : regInv);
+		inv.setContents(Perm.isRank(op, 1) ? dntInv : regInv);
 
 		its.set(22, ClickableItem.of(clear, e -> {
 			for (final GunType gt : GunType.values()) {

@@ -20,7 +20,6 @@ import org.bukkit.entity.Mob;
 import org.bukkit.potion.PotionEffectType;
 import ru.komiss77.modules.world.AStarPath;
 import ru.komiss77.modules.world.BVec;
-import ru.komiss77.version.Nms;
 
 public class GoalGoToSite implements Goal<Mob> {
 	
@@ -58,45 +57,46 @@ public class GoalGoToSite implements Goal<Mob> {
     @Override
     public void tick() {
     	tick++;
-    	if ((tick & 1) == 0 && ar.gst != GameState.FINISH && !mob.hasPotionEffect(PotionEffectType.BLINDNESS)) {
-    		final Location eyel = mob.getEyeLocation();
-    		final Location lc = mob.getEyeLocation();
+        if ((tick & 1) != 0 || ar.gst == GameState.FINISH
+            || mob.hasPotionEffect(PotionEffectType.BLINDNESS)) return;
+        final Location eyel = mob.getEyeLocation();
+        final Location lc = mob.getEyeLocation();
 
-			LivingEntity tle;
-			if (tgt == null || tgt.isDead()) {//look for tgt
-				tle = null;
-				for (final Entry<Shooter, Team> en : ar.shtrs.entrySet()) {
-					if (en.getKey().isDead()) continue;
-					final LivingEntity le = en.getKey().getEntity();
-					if (le != null && Utils.isSeen(eyel, le)) {
-						tgt = Shooter.getShooter(le, false);
-						Nms.setAggro(mob, true);
-						tle = le;
-						break;
-					}
-				}
-			} else {
-				tle = tgt.getEntity();
-				if (tle == null || !Utils.isSeen(eyel, tle)) {
-					Nms.setAggro(mob, false);
-					tgt = null;
-				}
-			}
-			
-			final Location pthTo;
-			if (tle == null || tgt == null || tgt.isDead()) {
-				ap.tickGo(mt.spd);
-			} else if ((tick & 7) == 0) {//attack
-				pthTo = tle.getEyeLocation();
-				if (lc.distanceSquared(pthTo) < 4d) {
-					mob.swingMainHand();
-					DmgLis.prcDmg(tle, tgt, null, mt.pow * 0.4d + 1d,
-						Team.SPEC.clr + mob.getName() + " §f\u929a", 5);
-				}
-				
-				mob.getPathfinder().moveTo(pthTo, mt.spd);
-			}
-    	}
+        LivingEntity tle;
+        if (tgt == null || tgt.isDead()) {//look for tgt
+            tle = null;
+            for (final Entry<Shooter, Team> en : ar.shtrs.entrySet()) {
+                if (en.getKey().isDead()) continue;
+                final LivingEntity le = en.getKey().getEntity();
+                if (le != null && Utils.isSeen(eyel, le)) {
+                    tgt = Shooter.getShooter(le, false);
+                    mob.setAggressive(true);
+                    tle = le;
+                    break;
+                }
+            }
+        } else {
+            tle = tgt.getEntity();
+            if (tle == null || !Utils.isSeen(eyel, tle)) {
+                mob.setAggressive(false);
+                tgt = null;
+            }
+        }
+
+        final Location pthTo;
+        if (tle == null || tgt == null || tgt.isDead()) {
+            ap.tickGo(mt.spd);
+			return;
+        }
+        if ((tick & 7) != 0) return; //attack
+        pthTo = tle.getEyeLocation();
+        if (lc.distanceSquared(pthTo) < 4d) {
+            mob.swingMainHand();
+            DmgLis.prcDmg(tle, tgt, null, mt.pow * 0.4d + 1d,
+                Team.SPEC.clr + mob.getName() + " §f\u929a", 5);
+        }
+
+        mob.getPathfinder().moveTo(pthTo, mt.spd);
     }
 
 	@Override

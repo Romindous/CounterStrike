@@ -451,7 +451,7 @@ public final class Main extends JavaPlugin implements Listener {
 		Ostrov.async(() -> {
 			for (final Player p : org.getWorld().getPlayers()) {
 				if (p.getEntityId() == id) p.playSound(Sound.sound(Key.key(snd), Sound.Source.PLAYER, (float) RESONATE, pt), Sound.Emitter.self());
-				p.playSound(org, snd, (float) (RESONATE / ((int) p.getLocation().distanceSquared(org) + 1)), pt);
+				else p.playSound(org, snd, (float) (RESONATE / ((int) p.getLocation().distanceSquared(org) + 1)), pt);
 			}
 		});
 	}
@@ -464,7 +464,7 @@ public final class Main extends JavaPlugin implements Listener {
 				final Player p = en.getKey().getPlayer();
 				if (p == null || en.getValue() != tm) continue;
 				if (p.getEntityId() == id) p.playSound(Sound.sound(Key.key(snd), Sound.Source.PLAYER, (float) RESONATE, pt), Sound.Emitter.self());
-				p.playSound(src, snd, (float) (RESONATE / ((int) p.getLocation().distanceSquared(org) + 1)), pt);
+				else p.playSound(src, snd, (float) (RESONATE / ((int) p.getLocation().distanceSquared(org) + 1)), pt);
 			}
 		});
 	}
