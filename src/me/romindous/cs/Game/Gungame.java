@@ -572,12 +572,12 @@ public class Gungame extends Arena {
 				
 				if (e.getValue() == wn) {
 					ApiOstrov.addStat(p, Stat.CS_win);
-					ChosenSkinMenu.tryCompleteQuest(e.getKey(), Quest.ГРУЗЧИК, ApiOstrov.getStat(p, Stat.CS_win));
+					ChosenSkinMenu.tryCompleteQuest(e.getKey(), Quest.LOADER, ApiOstrov.getStat(p, Stat.CS_win));
 				} else {
 					ApiOstrov.addStat(p, Stat.CS_loose);
 				}
 				ApiOstrov.addStat(p, Stat.CS_game);
-				ChosenSkinMenu.tryCompleteQuest(sh, Quest.ДУША, ApiOstrov.getStat(p, Stat.CS_game));
+				ChosenSkinMenu.tryCompleteQuest(sh, Quest.PHANTOM, ApiOstrov.getStat(p, Stat.CS_game));
 				sh.clearInv();
 			} else {
 				((BtShooter) sh).own().remove();
@@ -770,7 +770,7 @@ public class Gungame extends Arena {
 			final NadeType nt = nadeFromPts(sh.money());
 			sh.item(2, Main.mkItm(ItemType.BLAZE_ROD, "§fНож \u9298", Shooter.KNIFE_MDL));
 			sh.item(gt.prm ? 0 : 1, gt.item().name((shq == null ? "§5" + gt.name() :
-				"§5" + gt.name() + " '" + Main.nrmlzStr(shq.name()) + "'") + " " + gt.icn)
+				"§5" + gt.name() + " '" + shq.name + "'") + " " + gt.icn)
 			.amount(gt.amo).maxDamage(gt.rtm).model(gt.skin(shq == null ? GunType.DEF_MDL : shq.model)).build());
 			sh.item(nt.prm ? NadeType.prmSlot : NadeType.scdSlot, Inventories.CTShop.getItem(nt.slt).clone());
 		}
@@ -809,8 +809,8 @@ public class Gungame extends Arena {
 		final Player p = sh.getPlayer();
 		if (p != null) {
 			ApiOstrov.addStat(p, Stat.CS_kill);
-			ChosenSkinMenu.tryCompleteQuest(sh, Quest.ЗЕМЛЯ, sh.kills() / Math.max(sh.deaths(), 1));
-			ChosenSkinMenu.tryCompleteQuest(sh, Quest.ТОКСИК, sh.kills());
+			ChosenSkinMenu.tryCompleteQuest(sh, Quest.CRYSTAL, sh.kills() / Math.max(sh.deaths(), 1));
+			ChosenSkinMenu.tryCompleteQuest(sh, Quest.NETHERITE, sh.kills());
 		}
 	}
 

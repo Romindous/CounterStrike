@@ -314,37 +314,35 @@ public class InterrLis implements Listener {
 					case SHEARS:
 						final boolean kit = ItemUtil.is(it, ItemType.SHEARS);
 						sh = Shooter.getPlShooter(pl.getName(), true);
-						if (b != null && sh.arena() != null && pl.getGameMode() == GameMode.SURVIVAL) {
-							e.setCancelled(true);
-							final Arena ar = sh.arena();
-							if (BlockType.CRIMSON_BUTTON.equals(b.getType().asBlockType())) {
-								if (ar instanceof final Defusal df) {
-									final Bomb bmb = df.getBomb();
-									if (bmb != null) {
-										if (bmb.defusing() == null) {
-											bmb.defusing(sh);
-											bmb.inv.open(pl, kit, true);
-										} else {
-											ScreenUtil.sendActionBarDirect(pl, "§c§lЭту бомбу уже обезвреживают!");
-										}
-									}
-								}
-							} else if (BlockType.SPAWNER.equals(b.getType().asBlockType())) {
-								if (ar instanceof final Invasion in && ar.gst == GameState.ROUND) {
-									final Mobber mb = in.mbbrs.get(BVec.of(b).thin());
-									if (mb != null && mb.isAlive()) {
-										if (mb.defusing() == null) {
-											mb.defusing(sh);
-											mb.inv.open(pl, kit, true);
-										} else {
-											ScreenUtil.sendActionBarDirect(pl, "§c§lЭтот спавнер уже обезвреживают!");
-										}
-									}
-								}
-							}
-						}
-						break;
-					case SUGAR:
+                        if (b != null && sh.arena() != null && pl.getGameMode() == GameMode.SURVIVAL) {
+                            e.setCancelled(true);
+                            final Arena ar = sh.arena();
+                            if (BlockType.CRIMSON_BUTTON.equals(b.getType().asBlockType())) {
+                                if (ar instanceof final Defusal df) {
+                                    final Bomb bmb = df.getBomb();
+                                    if (bmb == null) break;
+                                    if (bmb.defusing() == null) {
+                                        bmb.defusing(sh);
+                                        bmb.inv.open(pl, kit, true);
+                                    } else {
+                                        ScreenUtil.sendActionBarDirect(pl, "§c§lБомбу уже обезвреживают!");
+                                    }
+                                }
+                            } else if (BlockType.SPAWNER.equals(b.getType().asBlockType())) {
+                                if (ar instanceof final Invasion in && ar.gst == GameState.ROUND) {
+                                    final Mobber mb = in.mbbrs.get(BVec.of(b).thin());
+                                    if (mb == null || !mb.isAlive()) break;
+                                    if (mb.defusing() == null) {
+                                        mb.defusing(sh);
+                                        mb.inv.open(pl, kit, true);
+                                    } else {
+                                        ScreenUtil.sendActionBarDirect(pl, "§c§lЭтот спавнер уже обезвреживают!");
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                        case SUGAR:
 						if (b != null) {
 							sh = Shooter.getPlShooter(pl.getName(), true);
 							if (sh.arena() != null) {
@@ -465,7 +463,7 @@ public class InterrLis implements Listener {
 				((Defusal) ar).indSts(p);
 				ar.chngMn(sh, 250);
 				ApiOstrov.addStat(p, Stat.CS_bomb);
-				ChosenSkinMenu.tryCompleteQuest(sh, Quest.ОКЕАН, ApiOstrov.getStat(p, Stat.CS_bomb));
+				ChosenSkinMenu.tryCompleteQuest(sh, Quest.SHARD, ApiOstrov.getStat(p, Stat.CS_bomb));
             	e.setCancelled(false);
 			} else {
             	Utils.sendAcBr(p, "§c§lУ тебя не дотягиваются руки!");

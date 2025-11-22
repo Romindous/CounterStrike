@@ -103,7 +103,7 @@ public class InventLis implements Listener {
 						sh = Shooter.getPlShooter(p.getName(), true);
 						final Quest shq = Quest.get(gt, sh.model(gt));
 						sh.item(gt.prm ? 0 : 1, gt.item().name((shq == null ? "§5" + gt.name() :
-								"§5" + gt.name() + " '" + Main.nrmlzStr(shq.name()) + "'") + " " + gt.icn).amount(gt.amo)
+								"§5" + gt.name() + " '" + shq.name + "'") + " " + gt.icn).amount(gt.amo)
 							.maxDamage(gt.rtm).model(gt.skin(shq == null ? GunType.DEF_MDL : shq.model)).build());
 						break;
 					}
@@ -147,7 +147,7 @@ public class InventLis implements Listener {
 							pi.setHeldItemSlot(8);
 							final Quest shq = Quest.get(gt, sh.model(gt));
 							sh.item(gt.prm ? 0 : 1,
-							gt.item().name((shq == null ? "§5" + gt.name() : "§5" + gt.name() + " '" + Main.nrmlzStr(shq.name()) + "'") + " " + gt.icn)
+							gt.item().name((shq == null ? "§5" + gt.name() : "§5" + gt.name() + " '" + shq.name + "'") + " " + gt.icn)
 							.amount(gt.amo).maxDamage(gt.rtm).model(gt.skin(shq == null ? GunType.DEF_MDL : shq.model)).build());
 							p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1f, 1.4f);
 						}

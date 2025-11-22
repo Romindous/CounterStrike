@@ -469,35 +469,6 @@ public final class Main extends JavaPlugin implements Listener {
 		});
 	}
 
-	public static String nrmlzStr(final String s) {
-		final char[] ss = s.toLowerCase().toCharArray();
-		ss[0] = Character.toUpperCase(ss[0]);
-		for (byte i = (byte) (ss.length - 1); i > 0; i--) {
-			switch (ss[i]) {
-				case '_':
-					ss[i] = ' ';
-				case ' ':
-					ss[i + 1] = Character.toUpperCase(ss[i + 1]);
-					break;
-				default:
-					break;
-			}
-		}
-		return String.valueOf(ss);
-	}
-	
-	/*public static void shwHdPls(final Player p) {
-		for (final Player pl : Bukkit.getOnlinePlayers()) {
-			if (p.getWorld().getUID().equals(pl.getWorld().getUID())) {
-				pl.showPlayer(Main.plug, p);
-				p.showPlayer(Main.plug, pl);
-			} else {
-				pl.hidePlayer(Main.plug, p);
-				p.hidePlayer(Main.plug, pl);
-			}
-		}
-	}*/
-
 	public static LivingEntity[] getLEs(final World w) {
 		final LivingEntity[] arr = wlents.get(w.getUID());
 		return arr == null ? emt : arr;

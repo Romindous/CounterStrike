@@ -2,7 +2,6 @@ package me.romindous.cs.Menus;
 
 import java.util.Arrays;
 import me.romindous.cs.Enums.GunType;
-import me.romindous.cs.Main;
 import me.romindous.cs.Objects.Shooter;
 import me.romindous.cs.Objects.Skins.Quest;
 import org.bukkit.Sound;
@@ -92,13 +91,13 @@ public class ChosenSkinMenu implements InventoryProvider {
 	public static void tryCompleteQuest(final Shooter sh, final Quest qst, final int stat) {
 		if (sh.has(qst.gun, qst.model)) return;
 		switch (qst) {
-		case ВОЙ, ДУША, ДЮНА, ЗЕМЛЯ, ЛГБТ, ОКЕАН, ТОКСИК, ГРУЗЧИК, ЛАТУНЬ:
+		case PYROMANCY, PHANTOM, ROOSTER, CRYSTAL, HAPPINESS, SHARD, NETHERITE, LOADER, ICICLE:
 			if (stat < qst.stat) return;
 			break;
-		case ПАНК:
+		case ACID:
 			if (stat > qst.stat) return;
 			break;
-		case КРОВЬ, АЗИМОВ:
+		case SCULK, CYBER:
 			if (stat == 0) return;
 			break;
 		}
@@ -106,7 +105,7 @@ public class ChosenSkinMenu implements InventoryProvider {
 		sh.give(qst.gun, qst.model);
 		final Player p = sh.getPlayer();
 		p.sendMessage("§8=-=-=-=-=-=-=-\n§7Поздравляю! Скин оружия\n§5" + 
-		qst.gun.name() + " §7-§d " + Main.nrmlzStr(qst.toString()) +
+		qst.gun.name() + " §7-§d " + qst.name +
 		"\n§7теперь есть в твоем наборе!\n\n§7Можешь §eвыбрать §7его в лобби!\n§8=-=-=-=-=-=-=-=-=-");
 		p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
 	}

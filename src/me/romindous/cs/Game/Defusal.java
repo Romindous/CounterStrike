@@ -728,7 +728,7 @@ public class Defusal extends Arena {
 			if (p != null) {
 				if (e.getValue() == tm) {
 					ApiOstrov.addStat(p, Stat.CS_win);
-					ChosenSkinMenu.tryCompleteQuest(e.getKey(), Quest.ГРУЗЧИК, ApiOstrov.getStat(p, Stat.CS_win));
+					ChosenSkinMenu.tryCompleteQuest(e.getKey(), Quest.LOADER, ApiOstrov.getStat(p, Stat.CS_win));
 				} else {
 					ApiOstrov.addStat(p, Stat.CS_loose);
 				}
@@ -837,7 +837,7 @@ public class Defusal extends Arena {
 				if (e.getValue() == Team.SPEC) continue;
 
 				ApiOstrov.addStat(p, Stat.CS_game);
-				ChosenSkinMenu.tryCompleteQuest(sh, Quest.ДУША, ApiOstrov.getStat(p, Stat.CS_game));
+				ChosenSkinMenu.tryCompleteQuest(sh, Quest.PHANTOM, ApiOstrov.getStat(p, Stat.CS_game));
 				indSpawn(p, (PlShooter) sh, false);
 				sh.clearInv();
 			} else {
@@ -1057,7 +1057,7 @@ public class Defusal extends Arena {
 		sh.taq(shtrs.get(sh).icn + " ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", shtrs.get(sh).clr);
 		final Player p = sh.getPlayer();
 		if (p != null) {
-			ChosenSkinMenu.tryCompleteQuest(sh, Quest.ВОЙ, sh.kills());
+			ChosenSkinMenu.tryCompleteQuest(sh, Quest.PYROMANCY, sh.kills());
 			ApiOstrov.addStat(p, Stat.CS_kill);
 		}
 	}

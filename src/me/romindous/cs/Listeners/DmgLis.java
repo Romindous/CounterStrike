@@ -249,10 +249,10 @@ public class DmgLis implements Listener {
 							target.getWorld().spawnParticle(Particle.SOUL, target.getLocation()
 								.add(0, 1d, 0), 40, 0.5D, 0.5D, 0.5D, 0.0D, null, false);
 							Main.plyWrldSnd(target, DEATH_SND, 2f);
-							ChosenSkinMenu.tryCompleteQuest(damager, Quest.АЗИМОВ, smoked && blind && head ? 1 : 0);
-							ChosenSkinMenu.tryCompleteQuest(damager, Quest.КРОВЬ, walled ? 1 : 0);
+							ChosenSkinMenu.tryCompleteQuest(damager, Quest.CYBER, smoked && blind && head ? 1 : 0);
+							ChosenSkinMenu.tryCompleteQuest(damager, Quest.SCULK, walled ? 1 : 0);
 							final LivingEntity dle = damager.getEntity();
-							if (dle != null) ChosenSkinMenu.tryCompleteQuest(damager, Quest.ПАНК, (int) dle.getHealth());
+							if (dle != null) ChosenSkinMenu.tryCompleteQuest(damager, Quest.ACID, (int) dle.getHealth());
 							ar.killSh(tgtsh);
 							break;
 						default:

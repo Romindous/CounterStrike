@@ -2,7 +2,6 @@ package me.romindous.cs.Menus;
 
 import java.util.Arrays;
 import me.romindous.cs.Enums.GunType;
-import me.romindous.cs.Main;
 import me.romindous.cs.Objects.Shooter;
 import me.romindous.cs.Objects.Skins.Quest;
 import org.bukkit.Sound;
@@ -48,13 +47,13 @@ public class QuestSkinMenu implements InventoryProvider {
 			final Quest q = qs[i-1];
 			if (!sh.has(gt, q.model) && !dnt) {
 				its.add(ClickableItem.empty(new ItemBuilder(ItemType.GRAY_DYE)
-					.name("§8" + gt.name() + " '" + Main.nrmlzStr(q.name()) + "'")
+					.name("§8" + gt.name() + " '" + q.name + "'")
 					.lore("§7Для получения:").lore(q.msg).build()));
 				continue;
 			}
 			final boolean match = q == shq;
 			its.add(ClickableItem.of(gt.item()
-				.name("§5" + gt.name() + " '" + Main.nrmlzStr(q.name()) + "'")
+				.name("§5" + gt.name() + " '" + q.name + "'")
 				.model(gt.skin(q.model)).glint(match).maxDamage(gt.rtm)
 				.lore(Arrays.asList("§7Для получения: §8(получена)", q.msg, " ",
 					match ? " " : "§6Клик §7==> Выбор")).build(), e -> {
@@ -66,5 +65,4 @@ public class QuestSkinMenu implements InventoryProvider {
 			}));
 		}
 	}
-
 }

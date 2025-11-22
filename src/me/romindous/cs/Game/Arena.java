@@ -243,7 +243,7 @@ public class Arena {
 		sh.money(sh.money() + n);
 		final Player p = sh.getPlayer();
 		if (p == null) return;
-		ChosenSkinMenu.tryCompleteQuest(sh, Quest.ЛАТУНЬ, sh.money());
+		ChosenSkinMenu.tryCompleteQuest(sh, Quest.ICICLE, sh.money());
 		Utils.sendAcBr(p, (n < 0 ? "§5" : "§d+") + n + " §6⛃");
 		PM.getOplayer(p).score.getSideBar().update(MONEY, "§7Монет: §d" + sh.money() + " §6⛃");
 	}

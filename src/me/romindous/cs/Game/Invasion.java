@@ -602,7 +602,7 @@ public class Invasion extends Arena {
 				if (e.getValue() == Team.SPEC) continue;
 
 				ApiOstrov.addStat(p, Stat.CS_game);
-				ChosenSkinMenu.tryCompleteQuest(sh, Quest.ДУША, ApiOstrov.getStat(p, Stat.CS_game));
+				ChosenSkinMenu.tryCompleteQuest(sh, Quest.PHANTOM, ApiOstrov.getStat(p, Stat.CS_game));
 				indSpawn(p, (PlShooter) sh, false);
 				sh.clearInv();
 				winScore(sh, p, CTwn);
@@ -752,7 +752,7 @@ public class Invasion extends Arena {
 			"-" + sh.spwnrs() + "-" + sh.deaths() + "]", Team.CTs.clr);
 		final Player p = sh.getPlayer();
 		if (p != null) {
-			ChosenSkinMenu.tryCompleteQuest(sh, Quest.ДЮНА, sh.kills());
+			ChosenSkinMenu.tryCompleteQuest(sh, Quest.ROOSTER, sh.kills());
 			ApiOstrov.addStat(p, Stat.CS_mobs);
 		}
 	}
@@ -763,7 +763,7 @@ public class Invasion extends Arena {
 			"-" + sh.spwnrs() + "-" + sh.deaths() + "]", Team.CTs.clr);
 		final Player p = sh.getPlayer();
 		if (p != null) {
-			ChosenSkinMenu.tryCompleteQuest(sh, Quest.ЛГБТ, sh.spwnrs());
+			ChosenSkinMenu.tryCompleteQuest(sh, Quest.HAPPINESS, sh.spwnrs());
 			ApiOstrov.addStat(p, Stat.CS_spnrs);
 		}
 	}
