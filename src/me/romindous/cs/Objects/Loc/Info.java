@@ -23,8 +23,8 @@ public interface Info {
         BlockType.MAGENTA_CARPET, BlockType.MOSS_CARPET, BlockType.ORANGE_CARPET, BlockType.PINK_CARPET,
         BlockType.PURPLE_CARPET, BlockType.RED_CARPET, BlockType.WHITE_CARPET, BlockType.YELLOW_CARPET,
 
-        BlockType.WATER, BlockType.IRON_BARS, BlockType.CHAIN, BlockType.STRUCTURE_VOID, BlockType.COBWEB, BlockType.SNOW,
-        BlockType.BARRIER, BlockType.TRIPWIRE, BlockType.LADDER, BlockType.RAIL, BlockType.POWERED_RAIL, BlockType.LAVA,
+        BlockType.WATER, BlockType.IRON_BARS, BlockType.IRON_CHAIN, BlockType.COPPER_CHAIN, BlockType.COPPER_BARS, BlockType.STRUCTURE_VOID, BlockType.COBWEB,
+        BlockType.SNOW, BlockType.BARRIER, BlockType.TRIPWIRE, BlockType.LADDER, BlockType.RAIL, BlockType.POWERED_RAIL, BlockType.LAVA,
         BlockType.DETECTOR_RAIL, BlockType.ACTIVATOR_RAIL, BlockType.CAMPFIRE, BlockType.SOUL_CAMPFIRE);
     Set<BlockType> BANGABLE = Set.of(BlockType.ACACIA_SLAB, BlockType.BIRCH_SLAB, BlockType.CRIMSON_SLAB, BlockType.SPRUCE_SLAB, BlockType.WARPED_SLAB, BlockType.CHERRY_SLAB, BlockType.BAMBOO_SLAB,
         BlockType.DARK_OAK_SLAB, BlockType.OAK_SLAB, BlockType.JUNGLE_SLAB, BlockType.PETRIFIED_OAK_SLAB, BlockType.MANGROVE_SLAB, BlockType.BAMBOO_MOSAIC_SLAB, BlockType.PALE_OAK_SLAB,

@@ -34,6 +34,7 @@ public interface Shooter {
 	byte chestSlt = 49;
 	byte wireSlt = 29;
 	byte kitSlt = 33;
+    byte shopSlt = 8;
 
 	int MAX_DST = 6;
 	int MAX_RCL = 50;

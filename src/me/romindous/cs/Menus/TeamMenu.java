@@ -29,7 +29,7 @@ public class TeamMenu implements InventoryProvider {
 			return;
 		}
 
-		its.fill(ClickableItem.empty(new ItemBuilder(ItemType.CHAIN).name("§0.").build()));
+		its.fill(ClickableItem.empty(new ItemBuilder(ItemType.IRON_CHAIN).name("§0.").build()));
 
 		final ArrayList<String> tlrs = new ArrayList<>();
 		final ArrayList<String> clrs = new ArrayList<>();

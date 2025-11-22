@@ -33,13 +33,14 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 import ru.komiss77.ApiOstrov;
-import ru.komiss77.Ostrov;
 import ru.komiss77.boot.OStrap;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.utils.EntityUtil;
 
 public class DmgLis implements Listener {
 
+    public static final DamageType KILL_TYPE = DamageType.GENERIC_KILL;
+    public static final DamageSource KILL_SOURCE = DamageSource.builder(KILL_TYPE).build();
 	public static final String DEATH_SND = OStrap.keyOf(Sound.BLOCK_ENDER_CHEST_OPEN).asMinimalString();
 	private static final Set<DamageType> IGNORED = Set.of(DamageType.ON_FIRE, DamageType.FREEZE, DamageType.EXPLOSION, DamageType.PLAYER_EXPLOSION, DamageType.FIREWORKS);
 	private static final Set<DamageType> TICKED = Set.of(DamageType.IN_FIRE, DamageType.CAMPFIRE, DamageType.DROWN, DamageType.DRAGON_BREATH, DamageType.INDIRECT_MAGIC);
@@ -48,8 +49,8 @@ public class DmgLis implements Listener {
 	public void onDmg(final EntityDamageEvent e) {
 		final DamageSource ds = e.getDamageSource();
 		final DamageType dt = ds.getDamageType();
-		if (!(e.getEntity() instanceof final LivingEntity tgt)) return;
-		if (e.getEntity().isInvulnerable()) return;
+		if (!(e.getEntity() instanceof final LivingEntity tgt)
+            || e.getEntity().isInvulnerable() || KILL_TYPE.equals(dt)) return;
 		if (IGNORED.contains(dt)) {
 			e.setDamage(0d);
 			e.getEntity().setFireTicks(0);
@@ -123,8 +124,7 @@ public class DmgLis implements Listener {
 		}
 		e.setDamage(0d);
 		e.setCancelled(true);
-		Ostrov.log_warn(tgt.getName()
-			+ " was damaged by " + dt.key().asMinimalString());
+//		Ostrov.log_warn(tgt.getName() + " was damaged by " + dt.key().asMinimalString());
 		if (e.getEntityType() != EntityType.PLAYER) return;
 		final Shooter sh = Shooter.getShooter(tgt, false);
 		if (sh == null || sh.arena() == null) return;
@@ -198,9 +198,10 @@ public class DmgLis implements Listener {
 							inv.chngMn(damager, rwd << Mobber.MobType.get(target.getType()).pow >> 2);
 						}
 					case BEGINING:
+//                        Bukkit.getOnlinePlayers().forEach(p -> p.sendMessage("killed " + target.getName()));
 						inv.TMbs.remove(target.getEntityId());
-						target.getWorld().spawnParticle(Particle.SOUL, target.getLocation()
-							.add(0, 1d, 0), 40, 0.5D, 0.5D, 0.5D, 0.0D, null, false);
+                        target.getWorld().spawnParticle(Particle.SOUL, EntityUtil.center(target),
+                            40, 0.5D, 0.5D, 0.5D, 0.0D, null, false);
 						Main.plyWrldSnd(target, DEATH_SND, 2f);
 						target.remove();
 					default:

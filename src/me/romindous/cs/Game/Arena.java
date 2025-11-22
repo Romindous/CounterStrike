@@ -75,6 +75,7 @@ public class Arena {
 		w.setTime(6000L);
 		Main.addLEWorld(w);
 		w.setDifficulty(Difficulty.EASY);
+        w.setGameRule(GameRule.LOCATOR_BAR, false);
 		w.setGameRule(GameRule.DO_MOB_SPAWNING, false);
 		w.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
 		w.setGameRule(GameRule.NATURAL_REGENERATION, false);

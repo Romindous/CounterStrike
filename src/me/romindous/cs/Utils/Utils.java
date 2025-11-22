@@ -70,6 +70,7 @@ public class Utils {
     }
 
     public static boolean isSeen(final Location from, final LivingEntity le) {
+        if (!le.getWorld().getUID().equals(from.getWorld().getUID())) return false;
         return LocUtil.trace(from, EntityUtil.center(le).subtract(from).toVector(),
             (bp, bd) -> !seeThru(bd.getMaterial().asBlockType())).endDst();
     }

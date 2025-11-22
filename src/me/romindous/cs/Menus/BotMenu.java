@@ -30,9 +30,9 @@ public class BotMenu implements InventoryProvider {
 			}
     	}
     	
-    	its.set(0, ClickableItem.empty(new ItemBuilder(ItemType.CHAIN).name("§0.").build()));
+    	its.set(0, ClickableItem.empty(new ItemBuilder(ItemType.IRON_CHAIN).name("§0.").build()));
     	its.set(4, ClickableItem.empty(new ItemBuilder(ItemType.END_CRYSTAL).name("§cНет §7<=-=> §aДа").build()));
-    	its.set(8, ClickableItem.empty(new ItemBuilder(ItemType.CHAIN).name("§0.").build()));
+    	its.set(8, ClickableItem.empty(new ItemBuilder(ItemType.IRON_CHAIN).name("§0.").build()));
     	
     	if (ar.bots) {
         	its.set(Main.srnd.nextInt(3) + 1, ClickableItem.of(new ItemBuilder(ItemType.PINK_DYE).name("§7Клик -> §cВыключить Ботов!").build(), e -> {

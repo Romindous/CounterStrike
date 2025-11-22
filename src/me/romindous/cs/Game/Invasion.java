@@ -8,6 +8,7 @@ import java.util.Map.Entry;
 import io.papermc.paper.math.Position;
 import me.romindous.cs.Enums.GameState;
 import me.romindous.cs.Enums.GameType;
+import me.romindous.cs.Listeners.DmgLis;
 import me.romindous.cs.Listeners.MainLis;
 import me.romindous.cs.Main;
 import me.romindous.cs.Menus.ChosenSkinMenu;
@@ -22,6 +23,7 @@ import me.romindous.cs.Objects.Skins.Quest;
 import me.romindous.cs.Utils.Utils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.util.TriState;
 import org.bukkit.*;
 import org.bukkit.FireworkEffect.Type;
 import org.bukkit.block.Block;
@@ -50,7 +52,7 @@ import ru.komiss77.version.Nms;
 
 public class Invasion extends Arena {
 
-	private final int KD_NIGHT = 60, KD_DAY = 100;
+    private final int KD_NIGHT = 60, KD_DAY = 100;
 	private final String A_HP = "ahp", B_HP = "bhp";
 	
 	public final HashMap<Integer, WeakReference<Mob>> TMbs;
@@ -431,6 +433,7 @@ public class Invasion extends Arena {
 				sh.item(8, ItemUtil.air);
 				final Player p = sh.getPlayer();
 				if (p != null) {
+                    indSpawn(p, (PlShooter) sh, false);
 					Utils.sendTtlSbTtl(p, "§4Ночь", "§7Крепись и защищай точки!", 60);
 					PM.getOplayer(p).score.getSideBar().update(STAGE, "§7Cтадия: §5Ночь §7(" + getTime(time, "§5") + "§7)");
 					p.playSound(p.getLocation(), "info.night", 10f, 1f);
@@ -464,7 +467,7 @@ public class Invasion extends Arena {
 			for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
 				final Shooter sh = e.getKey();
 				final LivingEntity le = sh.getEntity();
-				if (sh instanceof PlShooter) {
+				if (sh instanceof final PlShooter psh) {
 					final Player p = (Player) le;
 					Utils.sendTtlSbTtl(p, "§3День", "§7Закупайся и ломай спавнеры!", 80);
 					PM.getOplayer(p).score.getSideBar().update(STAGE, "§7Cтадия: §dДень §7(" + getTime(time, "§d") + "§7)");
@@ -475,21 +478,22 @@ public class Invasion extends Arena {
 						p.setGameMode(GameMode.SURVIVAL);
 						p.teleport(Main.getNrLoc(w, ClassUtil.rndElmt(CTSpawns)));
 					}
+                    indSpawn(p, psh, p.getInventory().getHeldItemSlot() == Shooter.shopSlt);
 				} else {
 					if (sh.isDead()) {
 						sh.teleport(le, Main.getNrLoc(w, ClassUtil.rndElmt(CTSpawns)));
 					}
 				}
 				chngMn(sh, 250);
-				sh.item(8, Main.mkItm(ItemType.GHAST_TEAR, "§5Магазин", Shooter.SHOP_MDL));
+				sh.item(Shooter.shopSlt, Main.mkItm(ItemType.GHAST_TEAR, "§5Магазин", Shooter.SHOP_MDL));
 				sh.getEntity().addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, time * 20 + 10, 1));
 			}
 			
 			for (final WeakReference<Mob> mbr : TMbs.values()) {
 				final Mob mb = mbr.get();
 				if (mb != null) {
-					mb.setFireTicks(10);
-					mb.damage(100d);
+                    mb.setVisualFire(TriState.TRUE);
+					mb.damage(mb.getHealth() + 1d, DmgLis.KILL_SOURCE);
 				}
 			}
 			TMbs.clear();

@@ -214,7 +214,7 @@ public class InventLis implements Listener {
 							if (sh.money() - Shooter.helmPrc < 0) {
 								p.sendMessage(Main.prf() + "§cУ вас не хватает денег для покупки этого!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
-							} else if (pi.getHelmet() != null) {
+							} else if (!ItemUtil.isBlank(pi.getHelmet(), false)) {
 								p.sendMessage(Main.prf() + "§cУ вас уже есть шлем!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else {
@@ -227,7 +227,7 @@ public class InventLis implements Listener {
 							if (sh.money() - Shooter.chestPrc < 0) {
 								p.sendMessage(Main.prf() + "§cУ вас не хватает денег для покупки этого!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
-							} else if (pi.getChestplate() != null) {
+							} else if (!ItemUtil.isBlank(pi.getChestplate(), false)) {
 								p.sendMessage(Main.prf() + "§cУ вас уже есть нагрудник!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else {

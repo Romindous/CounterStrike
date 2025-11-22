@@ -18,10 +18,7 @@ import me.romindous.cs.Objects.Shooter;
 import me.romindous.cs.Objects.Skins.Quest;
 import me.romindous.cs.Utils.Inventories;
 import me.romindous.cs.Utils.Utils;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Sound;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockType;
@@ -43,6 +40,7 @@ import ru.komiss77.Ostrov;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.modules.world.BVec;
 import ru.komiss77.objects.IntHashMap;
+import ru.komiss77.utils.EntityUtil;
 import ru.komiss77.utils.ItemUtil;
 import ru.komiss77.utils.ScreenUtil;
 import ru.komiss77.utils.TCUtil;
@@ -53,32 +51,36 @@ public class InterrLis implements Listener {
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onEntIntr(final EntityInteractEvent e) {
 		final Block b = e.getBlock();
-		if (e.getEntity() instanceof Mob) {
-			e.setCancelled(true);
-			final Invasion ar = Invasion.getMobInvasion(e.getEntity().getEntityId());
-			if (ar != null && ar.gst == GameState.ROUND) {
-				final BlockType bt = b.getType().asBlockType();
-				if (bt == BlockType.WARPED_PRESSURE_PLATE) {
-					if (BVec.of(ar.ads.getLocation()).distAbs(BVec.of(b)) == 0) {
-						ar.hrtSt(true, (byte) (2 + Mobber.MobType.get(e.getEntityType()).pow << 1));
-						e.getEntity().remove();
-					} else if (BVec.of(ar.bds.getLocation()).distAbs(BVec.of(b)) == 0) {
-						ar.hrtSt(false, (byte) (2 + Mobber.MobType.get(e.getEntityType()).pow << 1));
-						e.getEntity().remove();
-					}
-				} else if (bt == BlockType.TRIPWIRE) {
-					final TripWire tw = Arena.tblks.get(BVec.of(b.getLocation()));
-					if (tw != null) {
-						e.setCancelled(true);
-						if (tw.tm == Team.CTs) {
-							tw.remove(); ar.tws.remove(tw);
-							tw.trigger(b.getLocation().add(0.5d, 0d, 0.5d));
-						}
-					}
-				}
-			}
-		}
-	}
+        if (e.getEntity() instanceof Player) return;
+        e.setCancelled(true);
+        if (!(e.getEntity() instanceof final Mob mb)) return;
+        final Invasion ar = Invasion.getMobInvasion(mb.getEntityId());
+        if (ar == null || ar.gst != GameState.ROUND) return;
+        final BlockType bt = b.getType().asBlockType();
+        if (bt == BlockType.WARPED_PRESSURE_PLATE) {
+            if (BVec.of(ar.ads.getLocation()).distAbs(BVec.of(b)) == 0) {
+                e.setCancelled(true);
+                ar.hrtSt(true, (byte) (2 + Mobber.MobType.get(e.getEntityType()).pow << 1));
+                mb.getWorld().spawnParticle(Particle.SOUL, EntityUtil.center(mb),
+                    40, 0.5D, 0.5D, 0.5D, 0.0D, null, false);
+                mb.remove();
+            } else if (BVec.of(ar.bds.getLocation()).distAbs(BVec.of(b)) == 0) {
+                e.setCancelled(true);
+                ar.hrtSt(false, (byte) (2 + Mobber.MobType.get(e.getEntityType()).pow << 1));
+                mb.getWorld().spawnParticle(Particle.SOUL, EntityUtil.center(mb),
+                    40, 0.5D, 0.5D, 0.5D, 0.0D, null, false);
+                mb.remove();
+            }
+        } else if (bt == BlockType.TRIPWIRE) {
+            final TripWire tw = Arena.tblks.get(BVec.of(b.getLocation()));
+            if (tw == null) return;
+            e.setCancelled(true);
+            if (tw.tm != Team.CTs) return;
+            tw.remove();
+            ar.tws.remove(tw);
+            tw.trigger(b.getLocation().add(0.5d, 0d, 0.5d));
+        }
+    }
 	
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onStop(final PlayerStopUsingItemEvent e) {
@@ -429,26 +431,25 @@ public class InterrLis implements Listener {
 			break;   
 		case PHYSICAL:
 			b = e.getClickedBlock();
-			if (b != null) {
-				final BlockType bt = b.getType().asBlockType();
-				if (bt == BlockType.TRIPWIRE) {
-					sh = Shooter.getPlShooter(pl.getName(), true);
-					final Arena ar = sh.arena();
-					if (ar != null) {
-						final TripWire tw = Arena.tblks.get(BVec.of(b.getLocation()));
-						if (tw != null) {
-							e.setCancelled(true);
-							if (ar.name.equals(sh.arena().name) && ar.shtrs.get(sh) != tw.tm) {
-								tw.remove(); ar.tws.remove(tw);
-								tw.trigger(b.getLocation().add(0.5d, 0d, 0.5d));
-							}
-						}
-					}
-				} else if (bt == BlockType.WARPED_PRESSURE_PLATE || bt == BlockType.FARMLAND) {
-					e.setCancelled(true);
-				}
-			}
-			break;
+            if (b == null) break;
+            final BlockType bt = b.getType().asBlockType();
+            if (bt == BlockType.TRIPWIRE) {
+                sh = Shooter.getPlShooter(pl.getName(), true);
+                final Arena ar = sh.arena();
+                if (ar != null) {
+                    final TripWire tw = Arena.tblks.get(BVec.of(b.getLocation()));
+                    if (tw != null) {
+                        e.setCancelled(true);
+                        if (ar.name.equals(sh.arena().name) && ar.shtrs.get(sh) != tw.tm) {
+                            tw.remove(); ar.tws.remove(tw);
+                            tw.trigger(b.getLocation().add(0.5d, 0d, 0.5d));
+                        }
+                    }
+                }
+            } else if (bt == BlockType.WARPED_PRESSURE_PLATE || bt == BlockType.FARMLAND) {
+                e.setCancelled(true);
+            }
+            break;
 		}
 	}
 
