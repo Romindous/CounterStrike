@@ -428,16 +428,22 @@ public class Defusal extends Arena {
 					((BtShooter) sh).willBuy = true;
 					sh.clearInv();
 				}
+
+                final Location lc;
 				switch (e.getValue()) {
 				case Ts:
-					sh.teleport(sh.getEntity(), Main.getNrLoc(w, ClassUtil.rndElmt(TSpawns)));
+                    lc = Main.getNrLoc(w, ClassUtil.rndElmt(TSpawns));
+                    lc.getChunk().load();
+					sh.teleport(sh.getEntity(), lc);
 					if (bc == null || sh.kills() > bc.kills()) bc = sh;
 					sh.item(Shooter.shopSlt, Main.mkItm(ItemType.GHAST_TEAR, "§5Магазин", Shooter.SHOP_MDL));
 					sh.item(2, Main.mkItm(ItemType.BLAZE_ROD, "§fНож \u9298", Shooter.KNIFE_MDL));
 					chngMn(sh, 550);
 					break;
 				case CTs:
-					sh.teleport(sh.getEntity(), Main.getNrLoc(w, ClassUtil.rndElmt(CTSpawns)));
+                    lc = Main.getNrLoc(w, ClassUtil.rndElmt(CTSpawns));
+                    lc.getChunk().load();
+                    sh.teleport(sh.getEntity(), lc);
 					sh.item(7, Main.mkItm(ItemType.GOLD_NUGGET, "§eКусачки §f\u9268", Defusable.PLIERS_MDL));
 					sh.item(Shooter.shopSlt, Main.mkItm(ItemType.GHAST_TEAR, "§5Магазин", Shooter.SHOP_MDL));
 					sh.item(2, Main.mkItm(ItemType.BLAZE_ROD, "§fНож \u9298", Shooter.KNIFE_MDL));
@@ -447,9 +453,9 @@ public class Defusal extends Arena {
 					break;
 				}
 				sh.taq(e.getValue().icn + " ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", e.getValue().clr);
-				sh.getEntity().addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS,
+                sh.getEntity().addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS,
 					240, 240, true, false, false));
-				sh.getEntity().addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING,
+                sh.getEntity().addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING,
 					40, 2, true, false, false));
 			}
 		} else {
