@@ -30,6 +30,8 @@ public interface Shooter {
 	short wirePrc = 150;
 	short kitPrc = 200;
 	short knifRwd = 200;
+    short bmbRwd = 250;
+    short spwnrRwd = 150;
 	byte helmSlt = 40;
 	byte chestSlt = 49;
 	byte wireSlt = 29;

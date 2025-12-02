@@ -1,28 +1,7 @@
 package me.romindous.cs.Menus;
 
-import me.romindous.cs.Main;
-import me.romindous.cs.Objects.Defusable;
-import me.romindous.cs.Objects.Game.Bomb;
-import me.romindous.cs.Objects.Game.Mobber;
-import me.romindous.cs.Objects.Game.PlShooter;
-import org.bukkit.Location;
-import org.bukkit.Particle;
-import org.bukkit.Sound;
-import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemType;
-import ru.komiss77.ApiOstrov;
-import ru.komiss77.Ostrov;
-import ru.komiss77.enums.Stat;
-import ru.komiss77.modules.items.ItemBuilder;
-import ru.komiss77.utils.ClassUtil;
-import ru.komiss77.utils.inventory.ClickableItem;
-import ru.komiss77.utils.inventory.InventoryContent;
-import ru.komiss77.utils.inventory.InventoryProvider;
-import ru.komiss77.utils.inventory.SmartInventory;
+public class DefuseMenu {/*
 
-public class DefuseMenu implements InventoryProvider {
-
-	private static final int MAX_WIRES = 51;
 	private static final int MAX_DST_SQ = 24;
 
 	private final Defusable def;
@@ -172,4 +151,4 @@ public class DefuseMenu implements InventoryProvider {
 		return ar;
 	}
 
-}
+*/}

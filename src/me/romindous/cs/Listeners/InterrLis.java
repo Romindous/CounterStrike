@@ -323,7 +323,7 @@ public class InterrLis implements Listener {
                                     if (bmb == null) break;
                                     if (bmb.defusing() == null) {
                                         bmb.defusing(sh);
-                                        bmb.inv.open(pl, kit, true);
+                                        bmb.display(pl, kit);
                                     } else {
                                         ScreenUtil.sendActionBarDirect(pl, "§c§lБомбу уже обезвреживают!");
                                     }
@@ -334,7 +334,7 @@ public class InterrLis implements Listener {
                                     if (mb == null || !mb.isAlive()) break;
                                     if (mb.defusing() == null) {
                                         mb.defusing(sh);
-                                        mb.inv.open(pl, kit, true);
+                                        mb.display(pl, kit);
                                     } else {
                                         ScreenUtil.sendActionBarDirect(pl, "§c§lЭтот спавнер уже обезвреживают!");
                                     }

@@ -1,15 +1,25 @@
 package me.romindous.cs.Objects.Game;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.time.Duration;
+import java.util.*;
+import io.papermc.paper.dialog.Dialog;
 import io.papermc.paper.math.Position;
+import io.papermc.paper.registry.data.dialog.ActionButton;
+import io.papermc.paper.registry.data.dialog.DialogBase;
+import io.papermc.paper.registry.data.dialog.action.DialogAction;
+import io.papermc.paper.registry.data.dialog.body.DialogBody;
+import io.papermc.paper.registry.data.dialog.input.DialogInput;
+import io.papermc.paper.registry.data.dialog.input.SingleOptionDialogInput;
+import io.papermc.paper.registry.data.dialog.input.TextDialogInput;
+import io.papermc.paper.registry.data.dialog.type.DialogType;
+import me.romindous.cs.Game.Arena;
 import me.romindous.cs.Game.Defusal;
 import me.romindous.cs.Main;
-import me.romindous.cs.Menus.DefuseMenu;
 import me.romindous.cs.Objects.Defusable;
 import me.romindous.cs.Objects.Shooter;
+import me.romindous.cs.Utils.Utils;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickCallback;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
@@ -18,9 +28,13 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemType;
 import org.bukkit.util.Transformation;
 import org.joml.Vector3f;
+import ru.komiss77.ApiOstrov;
 import ru.komiss77.Ostrov;
+import ru.komiss77.enums.Stat;
+import ru.komiss77.modules.items.ItemBuilder;
 import ru.komiss77.modules.world.BVec;
 import ru.komiss77.utils.ItemUtil;
 import ru.komiss77.utils.NumUtil;
@@ -31,7 +45,6 @@ public class Bomb extends Defusable {
 
 	public static final int WIRE_TIME = 5;
 
-	public final DefuseMenu inv;
 	public final TextDisplay title;
 	private final Defusal ar;
 	private Shooter defusing;
@@ -52,7 +65,6 @@ public class Bomb extends Defusable {
 		title.setTransformation(new Transformation(atr.getTranslation(), 
 			atr.getLeftRotation(), new Vector3f(1.6f, 1.6f, 1.6f), atr.getRightRotation()));
 		defusing = null;
-		inv = new DefuseMenu(this).fillUp(0.4f);
 	}
 
 	public Defusal arena() {
@@ -135,4 +147,92 @@ public class Bomb extends Defusable {
 			}
 		}, 200);
 	}
+
+    public void display(final Player pl, final boolean kit) { //extends EntityEvent
+        pl.getWorld().playSound(center(pl.getWorld()),
+            Sound.BLOCK_BEEHIVE_SHEAR, 2f, 0.5f);
+        final Dialog dg = kit ? Dialog.create(builder -> builder.empty()
+            .base(DialogBase.builder(TCUtil.form("<gradient:light_purple:aqua><bold>Меню Разминировки")).body(List.of(DialogBody.item(new ItemBuilder(ItemType.SHEARS).glint(true).build(),
+                        DialogBody.plainMessage(TCUtil.form("<mint>=> <beige>Для Разминировки")), true, false, 16, 16),
+                    DialogBody.plainMessage(TCUtil.form("<gold>Поставь правильные настройки и разрежь провода!"))))
+                .inputs(List.of(
+                    DialogInput.singleOption(CODE, 200, Arrays.stream(OPTIONS).map(o -> o.entry(ch_cond)).toList(), TCUtil.form("<sky>Код Бомбы"), false),
+                    DialogInput.numberRange(VOLTS, 250, TCUtil.form("<white>Настрой кусачки на [<aqua>"
+                        + volts + " V<white>]"), "%s, сейчас: %s V", 0f, MAX_VOLTS, (float) ch_volts, 1f),
+                    DialogInput.bool(CHECK, TCUtil.form("\n<beige>> " + (check ? "<green>Нужна Галочка" : "<red>Не Нужна Галочка") + "\n")).initial(ch_check).build(),
+                    DialogInput.text("text", 1, TCUtil.form("<beige>Разрежь <mithril>цвет проводов<beige>, которых <gold>" + (check ? "больше" : "меньше") + " <beige>всего!"),
+                        true, "", 1, TextDialogInput.MultilineOptions.create(1, 1)),
+                    DialogInput.singleOption("wires", 160, List.of(SingleOptionDialogInput.OptionEntry.create("wires", TCUtil.form(genWires(color, check)), false)
+                    ), TCUtil.form("<beige>Провода"), false)
+                )).build())
+            .type(DialogType.multiAction(List.of(
+                ActionButton.builder(TCUtil.form("<red>⎨ <u>Красный</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.RED)).build(),
+                ActionButton.builder(TCUtil.form("<yellow>⎨ <u>Желтый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.YELLOW)).build(),
+                ActionButton.builder(TCUtil.form("<green>⎨ <u>Зеленый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.GREEN)).build(),
+                ActionButton.builder(TCUtil.form("<blue>⎨ <u>Синий</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.BLUE)).build()
+            ), ActionButton.builder(TCUtil.form("Выход")).width(1).action(DialogAction.customClick((res, au) -> pl.sendMessage("????"),
+                ClickCallback.Options.builder().uses(1).lifetime(Duration.ofDays(1)).build())).build(), 4))
+        ) : Dialog.create(builder -> builder.empty()
+            .base(DialogBase.builder(TCUtil.form("<gradient:light_purple:aqua><bold>Меню Разминировки")).body(List.of(DialogBody.item(new ItemBuilder(ItemType.SHEARS).glint(true).build(),
+                        DialogBody.plainMessage(TCUtil.form("<mint>=> <beige>Для Разминировки")), true, false, 16, 16),
+                    DialogBody.plainMessage(TCUtil.form("<gold>Поставь правильные настройки и разрежь провода!\n\n<beige><bold>Серийный Код Бомбы:</bold>\n<pink><u>" + code)),
+                    DialogBody.plainMessage(TCUtil.form("\n<beige>Выбери Параметр:"))))
+                .inputs(List.of(
+                    DialogInput.singleOption(CODE, 200, Arrays.stream(OPTIONS).map(o -> o.entry(ch_cond)).toList(), TCUtil.form("<sky>Код Бомбы"), false),
+                    DialogInput.numberRange(VOLTS, 250, TCUtil.form("<white>Настрой кусачки на [<aqua>"
+                        + volts + " V<white>]"), "%s, сейчас: %s V", 0f, MAX_VOLTS, (float) ch_volts, 1f),
+                    DialogInput.bool(CHECK, TCUtil.form("\n<beige>> " + (check ? "<green>Нужна Галочка" : "<red>Не Нужна Галочка") + "\n")).initial(ch_check).build(),
+                    DialogInput.text("text", 1, TCUtil.form("<beige>Разрежь <mithril>цвет проводов<beige>, которых <gold>" + (check ? "больше" : "меньше") + " <beige>всего!"),
+                        true, "", 1, TextDialogInput.MultilineOptions.create(1, 1)),
+                    DialogInput.singleOption("wires", 160, List.of(SingleOptionDialogInput.OptionEntry.create("wires", TCUtil.form(genWires(color, check)), false)
+                    ), TCUtil.form("<beige>Провода"), false)
+                )).build())
+            .type(DialogType.multiAction(List.of(
+                ActionButton.builder(TCUtil.form("<red>⎨ <u>Красный</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.RED)).build(),
+                ActionButton.builder(TCUtil.form("<yellow>⎨ <u>Желтый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.YELLOW)).build(),
+                ActionButton.builder(TCUtil.form("<green>⎨ <u>Зеленый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.GREEN)).build(),
+                ActionButton.builder(TCUtil.form("<blue>⎨ <u>Синий</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.BLUE)).build()
+            ), ActionButton.builder(TCUtil.form("Выход")).width(1).action(DialogAction.customClick((res, au) -> pl.sendMessage("????"),
+                ClickCallback.Options.builder().uses(1).lifetime(Duration.ofDays(1)).build())).build(), 4))
+        );
+        pl.showDialog(dg);
+    }
+
+    protected DialogAction.CustomClickAction genAction(final Player pl, final WColor clr) {
+        return DialogAction.customClick((res, au) -> {
+            final String code = res.getText(CODE);
+            if (code != null) ch_cond = Condition.parse(code);
+            final Boolean chb = res.getBoolean(CHECK);
+            if (chb != null) ch_check = chb;
+            final Float fvl = res.getFloat(VOLTS);
+            if (fvl != null) ch_volts = fvl.intValue();
+            if (cond != ch_cond) {
+                Utils.sendTtlSbTtl(pl, Arena.Team.Ts.clr + "-" + Bomb.WIRE_TIME + " сек",
+                    "<beige>Выбран не тот <mithril>параметр<beige>!", 40);
+                ar.wrngWire();
+                return;
+            }
+            if (volts != ch_volts) {
+                Utils.sendTtlSbTtl(pl, Arena.Team.Ts.clr + "-" + Bomb.WIRE_TIME + " сек",
+                    "<beige>Кусачки <mithril>настроены <beige>неправильно!", 40);
+                ar.wrngWire();
+                return;
+            }
+            if (check != ch_check) {
+                Utils.sendTtlSbTtl(pl, Arena.Team.Ts.clr + "-" + Bomb.WIRE_TIME + " сек",
+                    "<beige>Условия <mithril>галочки<beige> не соблюдены!", 40);
+                ar.wrngWire();
+                return;
+            }
+            if (color != clr) {
+                Utils.sendTtlSbTtl(pl, Arena.Team.Ts.clr + "-" + Bomb.WIRE_TIME + " сек",
+                    "<beige>Разрезан не тот <mithril>цвет <beige>проводов!", 40);
+                ar.wrngWire();
+                return;
+            }
+            ApiOstrov.addStat(pl, Stat.CS_bomb);
+            ar.chngMn(defusing, Shooter.bmbRwd);
+            ar.defuse();
+        }, ClickCallback.Options.builder().uses(1).lifetime(Duration.ofDays(1)).build());
+    }
 }

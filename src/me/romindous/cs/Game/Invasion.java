@@ -779,15 +779,6 @@ public class Invasion extends Arena {
 		}
 	}
 	
-	public void rmvSpnr(final Mobber mb, final Shooter sh) {
-		if (mb != null) {
-			mb.defusing(null);
-			chngMn(sh, 150);
-			addSpDfs(sh);
-			dieSpnr(mb);
-		}
-	}
-	
 	public void dieSpnr(final Mobber mb) {
 		mb.setDef();
 		for (final Mobber m : mbbrs.values()) {
