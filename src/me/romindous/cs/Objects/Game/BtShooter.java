@@ -494,11 +494,11 @@ public class BtShooter implements Shooter, Botter.Extent {
 				final EntityShootAtEntityEvent ese;
                 //dmg 0, end
                 if (hst) {
-					dmg *= 2f * (tgt.getEquipment().getHelmet() == null ? 1f : 0.5f);
+					dmg *= 2f * (ItemUtil.isBlank(tgt.getEquipment().getHelmet(), false) ? 1f : 0.5f);
 					ese = new EntityShootAtEntityEvent(ent, tgt, gt, dmg,
 						true, wallBang, dff && gt.snp, smoke);
                 } else {
-					dmg *= tgt.getEquipment().getChestplate() == null ? 1f : 0.6f;
+					dmg *= ItemUtil.isBlank(tgt.getEquipment().getHelmet(), false) ? 1f : 0.6f;
 					ese = new EntityShootAtEntityEvent(ent, tgt, gt, dmg,
 						false, wallBang, dff && gt.snp, smoke);
                 }

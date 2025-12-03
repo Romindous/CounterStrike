@@ -19,6 +19,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 import ru.komiss77.modules.world.BVec;
 import ru.komiss77.utils.EntityUtil;
+import ru.komiss77.utils.ItemUtil;
 import ru.komiss77.utils.LocUtil;
 import ru.komiss77.utils.NumUtil;
 import ru.komiss77.version.Nms;
@@ -54,11 +55,11 @@ public class Nade {
 				if (sh == null) {
 					for (final Entity e : prj.getNearbyEntities(5d, 5d, 5d)) {
 						if (e instanceof final Mob mb) {
-							final double d = 12d - mb.getLocation().distanceSquared(loc) * 0.4d * (mb.getEquipment().getChestplate() == null ? 1d : 0.4d);
+							final double d = 12d - mb.getLocation().distanceSquared(loc) * 0.4d * (ItemUtil.isBlank(mb.getEquipment().getHelmet(), false) ? 1d : 0.4d);
 							DmgLis.prcDmg(mb, Shooter.getShooter(mb, false), null, d, NadeType.FRAG.icn, 2,
 									NadeType.nadeRwd, false, false, false, false, false);
 						} else if (e instanceof final Player pl && pl.getGameMode() == GameMode.SURVIVAL) {
-							final double d = 20d - e.getLocation().distanceSquared(loc) * 0.4d * (pl.getInventory().getChestplate() == null ? 1d : 0.4d);
+							final double d = 20d - e.getLocation().distanceSquared(loc) * 0.4d * (ItemUtil.isBlank(pl.getEquipment().getHelmet(), false) ? 1d : 0.4d);
 							DmgLis.prcDmg(pl, Shooter.getShooter(pl, false), null, d, NadeType.FRAG.icn, 2,
 									NadeType.nadeRwd, false, false, false, false, false);
 						}

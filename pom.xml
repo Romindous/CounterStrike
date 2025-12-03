@@ -80,7 +80,7 @@
           <artifactId>ru.komiss77</artifactId>
           <version>1.0</version>
           <scope>system</scope>
-          <systemPath>C:/Users/Rom/Downloads/new_test/plugins/Ostrov.jar</systemPath>
+          <systemPath>C:/Users/Romindous/Downloads/new_test/plugins/Ostrov.jar</systemPath>
       </dependency>
       <!--<dependency>
           <groupId>org.bukkit</groupId>

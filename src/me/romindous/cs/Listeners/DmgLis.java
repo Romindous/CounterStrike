@@ -36,6 +36,7 @@ import ru.komiss77.ApiOstrov;
 import ru.komiss77.boot.OStrap;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.utils.EntityUtil;
+import ru.komiss77.utils.ItemUtil;
 
 public class DmgLis implements Listener {
 
@@ -66,7 +67,7 @@ public class DmgLis implements Listener {
 				if (!(e instanceof EntityShootAtEntityEvent) && dmgr instanceof final HumanEntity he) {
 					e.setCancelled(he.getGameMode() != GameMode.CREATIVE);
 					EntityUtil.indicate(tgt.getEyeLocation(), "§6"
-						+ (tgt.getEquipment().getChestplate() == null ? dmg : dmg * 0.5d) * 5, (Player) dmgr);
+						+ (ItemUtil.isBlank(tgt.getEquipment().getChestplate(), false) ? dmg : dmg * 0.5d) * 5, (Player) dmgr);
 				}
 				return;
 			}
@@ -85,7 +86,7 @@ public class DmgLis implements Listener {
 				case BONE:
 				case BLAZE_ROD:
 					if (tgt.getNoDamageTicks() != 0) return;
-					final double knfDmg = tgt.getEquipment().getChestplate() == null ? 3d : 2d;
+					final double knfDmg = ItemUtil.isBlank(tgt.getEquipment().getChestplate(), false) ? 3d : 2d;
 					e.setDamage(knfDmg);
 					prcDmg(tgt, Shooter.getShooter(tgt, false), sh, knfDmg, "§f\u9298", 5,
 						Shooter.knifRwd, false, false, false, false, false);

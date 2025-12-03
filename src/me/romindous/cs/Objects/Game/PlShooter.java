@@ -476,13 +476,13 @@ public class PlShooter implements Shooter {
                 final EntityShootAtEntityEvent ese;
                 final Location tlc = tgt.getEyeLocation();
                 if (hst) {
-                    dmg *= 2f * (tgt.getEquipment().getHelmet() == null ? 1f : 0.5f);
+                    dmg *= 2f * (ItemUtil.isBlank(tgt.getEquipment().getHelmet(), false) ? 1f : 0.5f);
                     ese = new EntityShootAtEntityEvent(ent, tgt, gt, dmg,
 						true, wallBang, dff && gt.snp, smoke);
                     ese.callEvent();
                     nm = "<red>銑" + NumUtil.abs((int) ((dmg - ese.getDamage()) * 5.0d));
                 } else {
-                    dmg *= tgt.getEquipment().getChestplate() == null ? 1f : 0.6f;
+                    dmg *= ItemUtil.isBlank(tgt.getEquipment().getHelmet(), false) ? 1f : 0.6f;
                     ese = new EntityShootAtEntityEvent(ent, tgt, gt, dmg,
 						false, wallBang, dff && gt.snp, smoke);
                     ese.callEvent();

@@ -45,6 +45,7 @@ import ru.komiss77.modules.items.ItemBuilder;
 import ru.komiss77.modules.player.PM;
 import ru.komiss77.modules.world.BVec;
 import ru.komiss77.notes.Slow;
+import ru.komiss77.objects.IntHashMap;
 import ru.komiss77.utils.ClassUtil;
 import ru.komiss77.utils.ItemUtil;
 import ru.komiss77.utils.TCUtil;
@@ -55,8 +56,8 @@ public class Invasion extends Arena {
     private final int KD_NIGHT = 60, KD_DAY = 100;
 	private final String A_HP = "ahp", B_HP = "bhp";
 	
-	public final HashMap<Integer, WeakReference<Mob>> TMbs;
-	public final HashMap<Integer, Mobber> mbbrs;
+	public final IntHashMap<WeakReference<Mob>> TMbs;
+	public final IntHashMap<Mobber> mbbrs;
 	public final TextDisplay ads, bds;
 	
 	public byte apc;
@@ -69,8 +70,8 @@ public class Invasion extends Arena {
 		final BVec[] TSps, final BVec[] CTSps, final BVec[] spots, final World w,
 		final BVec ast, final BVec bst, final boolean rnd, final boolean bots) {
 		super(name, min, max, TSps, CTSps, spots, w, rnd, bots);
-		this.TMbs = new HashMap<>();
-		this.mbbrs = new HashMap<>();
+		this.TMbs = new IntHashMap<>();
+		this.mbbrs = new IntHashMap<>();
 		this.isDay = true;
 		
 		ads = w.spawn(ast.center(w), TextDisplay.class);
@@ -316,6 +317,10 @@ public class Invasion extends Arena {
 		time = 10;
 		gst = GameState.BEGINING;
 		final Arena ar = this;
+		for (final Entity e : w.getEntities()) {
+			if (e.getType() == EntityType.PLAYER) continue;
+			e.remove();
+		}
 		updateData();
 		tsk = new BukkitRunnable() {
 			@Override
@@ -370,9 +375,6 @@ public class Invasion extends Arena {
 		bpc = 100;
 		isDay = false;
 		gst = GameState.ROUND;
-		for (final Entity e : w.getEntitiesByClasses(Item.class, ArmorStand.class, Turtle.class)) {
-			e.remove();
-		}
 
 		final int pls = shtrs.size();
 		int maxPls = pls;

@@ -347,6 +347,11 @@ public class Defusal extends Arena {
 		time = 30;
 		gst = GameState.BEGINING;
 		final Arena ar = this;
+		for (final Entity e : w.getEntities()) {
+			if (e.getType() == EntityType.PLAYER) continue;
+			e.remove();
+		}
+		updateData();
 		tsk = new BukkitRunnable() {
 			@Override
 			public void run() {

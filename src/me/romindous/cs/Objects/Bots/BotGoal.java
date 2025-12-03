@@ -231,7 +231,7 @@ public class BotGoal implements Goal<Mob> {
                         if ((tick & DEL_TGT) == 0) changeTLoc(getStrfLoc(loc, vc, -2));
                         if (tick % KNIFE_KD == 0) {
                             bsh.own().swingHand(true);
-                            DmgLis.prcDmg(le, bsh.tgtSh, bsh, le.getEquipment().getChestplate() == null ? 3d : 2d,
+                            DmgLis.prcDmg(le, bsh.tgtSh, bsh, ItemUtil.isBlank(le.getEquipment().getChestplate(), false) ? 3d : 2d,
                                 "§f\u9298", 5, Shooter.knifRwd, false, false, false, false, false);
                         }
                     } else {
