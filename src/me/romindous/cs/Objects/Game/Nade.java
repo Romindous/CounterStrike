@@ -10,6 +10,7 @@ import me.romindous.cs.Objects.Loc.Info;
 import me.romindous.cs.Objects.Shooter;
 import org.bukkit.*;
 import org.bukkit.block.BlockType;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
@@ -18,17 +19,16 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 import ru.komiss77.modules.world.BVec;
-import ru.komiss77.utils.EntityUtil;
-import ru.komiss77.utils.ItemUtil;
-import ru.komiss77.utils.LocUtil;
-import ru.komiss77.utils.NumUtil;
+import ru.komiss77.utils.*;
 import ru.komiss77.version.Nms;
 
 public class Nade {
 
 	public static final int DECOY_DUR = 40;
 
-	public Snowball prj;
+    private static final BlockData SNOW = BlockType.POWDER_SNOW.createBlockData();
+
+    public Snowball prj;
 	public int tm;
   
 	public Nade(final Snowball prj, final int tm) {
@@ -106,7 +106,7 @@ public class Nade {
 										if (Nms.fastType(w, x, y, z).isAir()
 											&& !Info.PASSABLE.contains(Nms.fastType(w, x, y - 1, z))) {
 											final BVec bl = BVec.of(w, x, y, z, (byte) nt.time);
-											bl.block(w).setType(Material.FIRE, false);
+											bl.block(w).setBlockData(BlockUtil.air, false);
 											Main.ndBlks.remove(bl);
 											Main.ndBlks.add(bl);
 										}
@@ -135,7 +135,7 @@ public class Nade {
 										final BlockType bt = Nms.fastType(w, x, y, z);
 										if (bt.isAir() || BlockType.FIRE.equals(bt)) {
 											final BVec bl = BVec.of(w, x, y, z, (byte) nt.time);
-											bl.block(w).setType(Material.POWDER_SNOW, false);
+											bl.block(w).setBlockData(SNOW, false);
 											Main.ndBlks.remove(bl);
 											Main.ndBlks.add(bl);
 										}

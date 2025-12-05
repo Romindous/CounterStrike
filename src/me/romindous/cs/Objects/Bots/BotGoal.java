@@ -21,6 +21,7 @@ import me.romindous.cs.Objects.Shooter;
 import me.romindous.cs.Utils.Utils;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockType;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.FaceAttachable;
 import org.bukkit.block.data.FaceAttachable.AttachedFace;
@@ -28,6 +29,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Monster;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemType;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 import org.joml.Math;
@@ -307,8 +309,7 @@ public class BotGoal implements Goal<Mob> {
 												changeTLoc(site, SITE_ACT, false);
 											}
 										} else if (tAct) {
-											if (acttm > ACT_TIME << (bsh.item(EquipmentSlot.HAND)
-												.getType() == Material.SHEARS ? 0 : 1)) {//defused
+											if (acttm > ACT_TIME << (ItemUtil.is(bsh.item(EquipmentSlot.HAND), ItemType.SHEARS) ? 0 : 1)) {//defused
 												df.w.playSound(eyel, Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, 2f, 2f);
 												df.w.playSound(eyel, Sound.BLOCK_IRON_TRAPDOOR_CLOSE, 2f, 2f);
 												bsh.switchToGun();
@@ -422,8 +423,7 @@ public class BotGoal implements Goal<Mob> {
 											}
 										} else if (tAct) {
 //											Bukkit.broadcast(TCUtil.form("a-" + acttm));
-											if (acttm > ACT_TIME << (bsh.item(EquipmentSlot.HAND)
-												.getType() == Material.SHEARS ? 0 : 1)) {//defused
+											if (acttm > ACT_TIME << (ItemUtil.is(bsh.item(EquipmentSlot.HAND), ItemType.SHEARS) ? 0 : 1)) {//defused
 												in.w.playSound(eyel, Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, 2f, 2f);
 												in.w.playSound(eyel, Sound.BLOCK_IRON_TRAPDOOR_CLOSE, 2f, 2f);
 												bsh.switchToGun();
@@ -540,8 +540,8 @@ public class BotGoal implements Goal<Mob> {
     }
  
     private static BlockData crtBtnDt() {
-    	final BlockData dt = Material.CRIMSON_BUTTON.createBlockData();
-    	((FaceAttachable) dt).setAttachedFace(AttachedFace.FLOOR);
+    	final FaceAttachable dt = BlockType.CRIMSON_BUTTON.createBlockData();
+    	dt.setAttachedFace(AttachedFace.FLOOR);
 		return dt;
 	}
 

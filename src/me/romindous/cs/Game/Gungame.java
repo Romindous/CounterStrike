@@ -76,6 +76,8 @@ public class Gungame extends Arena {
 		Main.nrmlzPl(p, true);
 		switch (gst) {
 			case WAITING:
+                final int rm = min - shtrs.size();
+                waitScore(p, rm);
 				chngTeam(sh, Team.SPEC);
 				sh.item(2, new ItemBuilder(ItemType.NETHER_STAR).name("§eВыбор Комманды").build());
 				sh.item(5, new ItemBuilder(ItemType.HEART_OF_THE_SEA).name("§чБоторейка").build());
@@ -96,9 +98,6 @@ public class Gungame extends Arena {
 					}
 					cntBeg();
 				} else {
-					final int rm = min - shtrs.size();
-					waitScore(p, rm);
-					chngTeam(sh, Team.SPEC);
 					for (final Shooter s : shtrs.keySet()) {
 						final Player pl = s.getPlayer();
 						if (pl != null) {
@@ -299,6 +298,9 @@ public class Gungame extends Arena {
 				break;
 			case FINISH:
 				if (shtrs.size() == 0) {
+                    for (final Entity e : w.getEntities()) {
+                        if (e.getType() != EntityType.PLAYER) e.remove();
+                    }
 					this.time = 1;
 				}
 				break;
@@ -313,10 +315,12 @@ public class Gungame extends Arena {
 		time = 30;
 		gst = GameState.BEGINING;
 		final Arena ar = this;
-		for (final Entity e : w.getEntities()) {
-			if (e.getType() == EntityType.PLAYER) continue;
-			e.remove();
-		}
+        for (final Entity e : w.getEntities()) {
+            switch (e.getType()) {
+                case PLAYER, TEXT_DISPLAY: continue;
+                default: e.remove();
+            }
+        }
 		updateData();
 		tsk = new BukkitRunnable() {
 			@Override
@@ -367,9 +371,12 @@ public class Gungame extends Arena {
 	public void cntPrep() {
 		time = 10;
 		gst = GameState.BUYTIME;
-		for (final Entity e : w.getEntitiesByClasses(Item.class, ArmorStand.class, Turtle.class)) {
-			e.remove();
-		}
+        for (final Entity e : w.getEntities()) {
+            switch (e.getType()) {
+                case ITEM, SNOWBALL: e.remove();
+                default:
+            }
+        }
 		updateData();
 		final ArrayList<Shooter> sts = new ArrayList<>();
 		for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
@@ -506,9 +513,12 @@ public class Gungame extends Arena {
 		if (tsk != null) tsk.cancel();
 		time = 10;
 		gst = GameState.FINISH;
-		for (final Entity e : w.getEntitiesByClasses(Item.class, ArmorStand.class, Turtle.class)) {
-			e.remove();
-		}
+        for (final Entity e : w.getEntities()) {
+            switch (e.getType()) {
+                case ITEM, SNOWBALL: e.remove();
+                default:
+            }
+        }
 		updateData();
 
 		for (final Broken bb : brkn) {

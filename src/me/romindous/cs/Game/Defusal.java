@@ -38,6 +38,7 @@ import ru.komiss77.enums.Stat;
 import ru.komiss77.modules.items.ItemBuilder;
 import ru.komiss77.modules.player.PM;
 import ru.komiss77.modules.world.BVec;
+import ru.komiss77.utils.BlockUtil;
 import ru.komiss77.utils.ClassUtil;
 import ru.komiss77.utils.ItemUtil;
 import ru.komiss77.utils.TCUtil;
@@ -111,6 +112,8 @@ public class Defusal extends Arena {
 		Main.nrmlzPl(p, true);
 		switch (gst) {
 			case WAITING:
+                final int rm = min - shtrs.size();
+                waitScore(p, rm);
 				chngTeam(sh, Team.SPEC);
 				sh.item(2, new ItemBuilder(ItemType.NETHER_STAR).name("§eВыбор Комманды").build());
 				sh.item(5, new ItemBuilder(ItemType.HEART_OF_THE_SEA).name("§чБоторейка").build());
@@ -130,8 +133,6 @@ public class Defusal extends Arena {
 					}
 					cntBeg();
 				} else {
-					final int rm = min - shtrs.size();
-					waitScore(p, rm);
 					for (final Shooter s : shtrs.keySet()) {
 						final Player pl = s.getPlayer();
 						if (pl != null) {
@@ -333,6 +334,9 @@ public class Defusal extends Arena {
 				break;
 			case FINISH:
 				if (shtrs.size() == 0) {
+                    for (final Entity e : w.getEntities()) {
+                        if (e.getType() != EntityType.PLAYER) e.remove();
+                    }
 					this.time = 1;
 				}
 				break;
@@ -347,10 +351,12 @@ public class Defusal extends Arena {
 		time = 30;
 		gst = GameState.BEGINING;
 		final Arena ar = this;
-		for (final Entity e : w.getEntities()) {
-			if (e.getType() == EntityType.PLAYER) continue;
-			e.remove();
-		}
+        for (final Entity e : w.getEntities()) {
+            switch (e.getType()) {
+                case PLAYER, TEXT_DISPLAY: continue;
+                default: e.remove();
+            }
+        }
 		updateData();
 		tsk = new BukkitRunnable() {
 			@Override
@@ -409,11 +415,12 @@ public class Defusal extends Arena {
 		CTBns = getBns(Team.CTs);
 		gst = GameState.BUYTIME;
 		updateData();
-
-		for (final Entity e : w.getEntitiesByClasses(Item.class, ArmorStand.class, Turtle.class)) {
-			e.remove();
-		}
-		
+        for (final Entity e : w.getEntities()) {
+            switch (e.getType()) {
+                case ITEM, SNOWBALL: e.remove();
+                default:
+            }
+        }
 		Shooter bc = null;
 		blncTms();
 		if (pstl) {
@@ -762,7 +769,7 @@ public class Defusal extends Arena {
 		
 		if (bmb != null) {
 			bmb.title.remove();
-			bmb.block(w).setType(Material.AIR, false);
+			bmb.block(w).setBlockData(BlockUtil.air, false);
 			bmb = null;
 		}
 		
@@ -806,9 +813,12 @@ public class Defusal extends Arena {
 	private void cntFnsh(final Team wn) {
 		time = 10;
 		gst = GameState.FINISH;
-		for (final Entity e : w.getEntitiesByClasses(Item.class, ArmorStand.class, Turtle.class)) {
-			e.remove();
-		}
+        for (final Entity e : w.getEntities()) {
+            switch (e.getType()) {
+                case ITEM, SNOWBALL: e.remove();
+                default:
+            }
+        }
 		updateData();
 
 		for (final Broken bb : brkn) {
@@ -823,7 +833,7 @@ public class Defusal extends Arena {
 		
 		if (bmb != null) {
 			bmb.title.remove();
-			bmb.block(w).setType(Material.AIR, false);
+			bmb.block(w).setBlockData(BlockUtil.air, false);
 			bmb = null;
 		}
 		
@@ -996,6 +1006,10 @@ public class Defusal extends Arena {
 		sh.drop(le.getLocation());
 		if (sh instanceof PlShooter) {
 			final Player p = sh.getPlayer();
+            if (bmb != null && bmb.defusing() != null) {
+                if (bmb.defusing().getEntity().getEntityId() == p.getEntityId())
+                    bmb.defusing(null);
+            }
 			p.closeInventory();
 			p.setGameMode(GameMode.SPECTATOR);
 			indSpawn(p, (PlShooter) sh, false);
@@ -1099,7 +1113,7 @@ public class Defusal extends Arena {
 			Bukkit.broadcast(Component.text("no"));
 		} else {
 			bmb.title.remove();
-			bmb.block(w).setType(Material.AIR);
+			bmb.block(w).setBlockData(BlockUtil.air);
 			bmb = null;
 			rndWn(Team.CTs, "§9\u926f", "§3§lБомба разминирована!", "defuse");
 		}
@@ -1107,6 +1121,7 @@ public class Defusal extends Arena {
 
 	public void wrngWire() {
 		time -= Bomb.WIRE_TIME;
+        bmb.defusing(null);
 		if (time < 1) {
 			if (tsk != null) {
 				tsk.cancel();

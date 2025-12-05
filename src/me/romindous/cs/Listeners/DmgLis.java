@@ -18,9 +18,9 @@ import me.romindous.cs.Objects.Game.PlShooter;
 import me.romindous.cs.Objects.Shooter;
 import me.romindous.cs.Objects.Skins.Quest;
 import org.bukkit.GameMode;
-import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.block.BlockType;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
 import org.bukkit.entity.*;
@@ -35,6 +35,7 @@ import org.bukkit.util.Vector;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.boot.OStrap;
 import ru.komiss77.enums.Stat;
+import ru.komiss77.utils.BlockUtil;
 import ru.komiss77.utils.EntityUtil;
 import ru.komiss77.utils.ItemUtil;
 
@@ -291,7 +292,7 @@ public class DmgLis implements Listener {
 				vec.setX(-vec.getX());
 				break;
 			case UP:
-				if (nt == NadeType.SMOKE && sb.getLocation().getBlock().getType() == Material.FIRE) {
+				if (nt == NadeType.SMOKE && BlockUtil.is(sb.getLocation().getBlock(), BlockType.FIRE)) {
 					sb.getWorld().playSound(sb.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 2f, 0.8f);
 					nd.explode();
 					return;

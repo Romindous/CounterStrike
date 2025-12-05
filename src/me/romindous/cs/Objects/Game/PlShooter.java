@@ -23,6 +23,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.ItemType;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.BoundingBox;
@@ -35,6 +36,7 @@ import ru.komiss77.modules.world.BVec;
 import ru.komiss77.notes.Slow;
 import ru.komiss77.objects.IntHashMap;
 import ru.komiss77.objects.SortedList;
+import ru.komiss77.utils.BlockUtil;
 import ru.komiss77.utils.EntityUtil;
 import ru.komiss77.utils.ItemUtil;
 import ru.komiss77.utils.NumUtil;
@@ -291,7 +293,7 @@ public class PlShooter implements Shooter {
 						df.indSts(getPlayer());
 					}
 				}
-			} else if (it.getType() == Material.SHEARS) {
+			} else if (ItemUtil.is(it, ItemType.SHEARS)) {
 				w.dropItem(loc, it).setInvulnerable(true);
 			}
 		}
@@ -438,7 +440,7 @@ public class PlShooter implements Shooter {
 				if (brkBlks && !has) {
 					b = w.getBlockAt(bv.x, bv.y, bv.z);
 					ar.brkn.add(new Broken(b));
-					b.setType(Material.AIR, false);
+					b.setBlockData(BlockUtil.air, false);
 					bl = new Location(w, x, y, z);
 					w.playSound(bl, Sound.BLOCK_SHROOMLIGHT_FALL, 2f, 0.8f);
 					w.spawnParticle(Particle.BLOCK, bl,

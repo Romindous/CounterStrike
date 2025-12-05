@@ -40,10 +40,7 @@ import ru.komiss77.Ostrov;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.modules.world.BVec;
 import ru.komiss77.objects.IntHashMap;
-import ru.komiss77.utils.EntityUtil;
-import ru.komiss77.utils.ItemUtil;
-import ru.komiss77.utils.ScreenUtil;
-import ru.komiss77.utils.TCUtil;
+import ru.komiss77.utils.*;
 import ru.komiss77.utils.inventory.SmartInventory;
 
 public class InterrLis implements Listener {
@@ -128,7 +125,7 @@ public class InterrLis implements Listener {
 		}, 2);
     }
 	
-	@EventHandler(priority = EventPriority.HIGHEST)
+	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
 	public void onInter(final PlayerInteractEvent e) {
 		final ItemStack it = e.getItem();
 		final Player pl = e.getPlayer();
@@ -136,6 +133,14 @@ public class InterrLis implements Listener {
 		final GunType gt = GunType.fast(it);
 		final PlShooter sh;
 		final Block b;
+        if (pl.getGameMode() == GameMode.SPECTATOR) {
+            sh = Shooter.getPlShooter(pl.getName(), true);
+            final Arena ar = sh.arena();
+            if (ar == null || ar.shtrs.get(sh) != Team.SPEC) return;
+            pl.playSound(pl.getLocation(), Sound.BLOCK_CONDUIT_ATTACK_TARGET, 1f, 2f);
+            ar.teamInv.open(pl);
+            return;
+        }
 		switch (e.getAction()) {
 		case LEFT_CLICK_AIR:
 		case LEFT_CLICK_BLOCK:
@@ -202,7 +207,7 @@ public class InterrLis implements Listener {
 					}
 				}
 				b = e.getClickedBlock();
-				if (b != null && b.getType() == Material.TRIPWIRE && !nt.prm) {
+				if (b != null && BlockUtil.is(b, BlockType.TRIPWIRE) && !nt.prm) {
 					final Arena ar = sh.arena();
 					if (ar != null) {
 						final TripWire tw = Arena.tblks.get(BVec.of(b.getLocation()));
@@ -413,11 +418,12 @@ public class InterrLis implements Listener {
 						break;
 					case SLIME_BALL:
 						if (it.hasItemMeta() && TCUtil.strip(it.getItemMeta().displayName()).equals("Выход")) {
-							final Arena ar = Shooter.getPlShooter(pl.getName(), true).arena();
+                            sh = Shooter.getPlShooter(pl.getName(), true);
+							final Arena ar = sh.arena();
 							if (ar == null) {
 								pl.sendMessage(Main.prf() + "§cВы не находитесь в игре!");
 							} else {
-								ar.rmvPl(Shooter.getPlShooter(pl.getName(), true));
+								ar.rmvPl(sh);
 							}
 						}
 						break;
@@ -479,9 +485,9 @@ public class InterrLis implements Listener {
 		e.setCancelled(true);
 		final Player p = e.getPlayer();
 		final Arena ar = Shooter.getPlShooter(p.getName(), true).arena();
-		if (e.getItem().getType() == Material.GOLDEN_APPLE && ar != null && ar instanceof Defusal && ar.gst == GameState.ROUND) {
+		if (ItemUtil.is(e.getItem(), ItemType.GOLDEN_APPLE) && ar != null && ar instanceof Defusal && ar.gst == GameState.ROUND) {
 			if (canPlcBmb(p.getLocation(), (Defusal) ar)) {
-				p.getInventory().setItemInMainHand(new ItemStack(Material.CRIMSON_BUTTON));
+				p.getInventory().setItemInMainHand(ItemType.CRIMSON_BUTTON.createItemStack());
 				Main.plnts.put(p, Position.block(p.getLocation().getBlockX(), p.getLocation().getBlockY(), p.getLocation().getBlockZ()));
 				Utils.sendAcBr(p, "§d§lВыбирите место для установки бомбы...");
 			} else {

@@ -1,13 +1,17 @@
 package me.romindous.cs.Objects;
 
 import javax.annotation.Nullable;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import io.papermc.paper.registry.data.dialog.action.DialogAction;
 import io.papermc.paper.registry.data.dialog.input.SingleOptionDialogInput;
 import me.romindous.cs.Game.Arena;
 import net.kyori.adventure.key.Key;
+import net.kyori.adventure.text.event.ClickCallback;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockType;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 import ru.komiss77.Ostrov;
 import ru.komiss77.modules.world.BVec;
@@ -19,6 +23,8 @@ public abstract class Defusable extends BVec {
 
     public static final String OFF_CLR = "off", PLANT = "plant", KIT_MDL = PLANT + "/defuse",
         PLIERS_MDL = PLANT + "/pliers", BOMB_MDL = PLANT + "/bomb", WIRE = "wire", DISP = "disp";
+    public static final BlockData FIRE = BlockType.FIRE.createBlockData();
+    public static final BlockData COAL = BlockType.COAL_BLOCK.createBlockData();
 //    public static final String[] COLORS = {"blue", "green", "red", "yellow"};
 
     public static Key disp(final String clr) {
@@ -38,6 +44,7 @@ public abstract class Defusable extends BVec {
     protected Condition ch_cond;
     protected boolean ch_check;
     protected int ch_volts;
+    protected Shooter defusing;
 
     public Defusable(final Block b) {
         this(BVec.of(b));
@@ -56,6 +63,12 @@ public abstract class Defusable extends BVec {
         code = genCode(ClassUtil.rndElmt(CODES), cond);
     }
 
+    public void mix() {
+        ch_cond = ClassUtil.rndElmt(OPTIONS);
+        ch_volts = MAX_VOLTS >> 1;
+        ch_check = Ostrov.random.nextBoolean();
+    }
+
     public abstract Arena arena();
 
     public abstract @Nullable Shooter defusing();
@@ -64,7 +77,7 @@ public abstract class Defusable extends BVec {
 
     public abstract void display(final Player pl, final boolean kit);
 
-    protected abstract DialogAction.CustomClickAction genAction(final Player pl, final WColor clr);
+    protected abstract DialogAction.CustomClickAction genAction(final Player pl, final WColor clr, boolean kit);
 
     protected enum Condition {
         NUM_SUM("<mithril>Сумма <gold>цифр <mithril>в <pink>коде <mithril>более <gold>20ти"),
@@ -154,5 +167,17 @@ public abstract class Defusable extends BVec {
             }
         }
         return String.join("", ClassUtil.shuffle(wires.toArray(i -> new String[i])));
+    }
+
+    protected DialogAction.CustomClickAction onClose() {
+        return DialogAction.customClick((res, au) -> {
+            final String code = res.getText(CODE);
+            if (code != null) ch_cond = Condition.parse(code);
+            final Boolean chb = res.getBoolean(CHECK);
+            if (chb != null) ch_check = chb;
+            final Float fvl = res.getFloat(VOLTS);
+            if (fvl != null) ch_volts = fvl.intValue();
+            defusing = null;
+        }, ClickCallback.Options.builder().uses(1).lifetime(Duration.ofDays(1)).build());
     }
 }

@@ -36,6 +36,7 @@ import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.ItemType;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Nullable;
@@ -46,6 +47,7 @@ import ru.komiss77.modules.world.BVec;
 import ru.komiss77.notes.Slow;
 import ru.komiss77.objects.IntHashMap;
 import ru.komiss77.objects.SortedList;
+import ru.komiss77.utils.BlockUtil;
 import ru.komiss77.utils.ItemUtil;
 import ru.komiss77.utils.LocUtil;
 import ru.komiss77.utils.NumUtil;
@@ -456,7 +458,7 @@ public class BtShooter implements Shooter, Botter.Extent {
 				if (brkBlks && !has) {
 					b = w.getBlockAt(bv.x, bv.y, bv.z);
 					ar.brkn.add(new Broken(b));
-					b.setType(Material.AIR, false);
+					b.setBlockData(BlockUtil.air, false);
 					bl = new Location(w, x, y, z);
 					w.playSound(bl, Sound.BLOCK_SHROOMLIGHT_FALL, 2f, 0.8f);
 					w.spawnParticle(Particle.BLOCK, bl,
@@ -549,7 +551,7 @@ public class BtShooter implements Shooter, Botter.Extent {
 						df.dropBomb(own.world().dropItem(loc, Main.bmb));
 					}
 				}
-			} else if (it.getType() == Material.SHEARS) {
+			} else if (ItemUtil.is(it, ItemType.SHEARS)) {
 				own.world().dropItem(loc, it).setInvulnerable(true);
 			}
 		}

@@ -15,6 +15,7 @@ import me.romindous.cs.Objects.Game.BtShooter;
 import me.romindous.cs.Objects.Game.PlShooter;
 import me.romindous.cs.Objects.Game.TripWire;
 import me.romindous.cs.Objects.Loc.Broken;
+import me.romindous.cs.Objects.Map.MapBuilder;
 import me.romindous.cs.Objects.Shooter;
 import me.romindous.cs.Objects.Skins.Quest;
 import me.romindous.cs.Utils.Utils;
@@ -196,21 +197,18 @@ public class Arena {
 		updateData();
 		Main.delLEWorld(w);
 		Main.actvarns.remove(name);
+        for (final Entity e : w.getEntities()) {
+            if (e.getType() != EntityType.PLAYER) e.remove();
+        }
 		for (final Shooter sh : shtrs.keySet()) {
-			if (sh instanceof PlShooter) {
-				Main.lobbyPl(sh.getPlayer());
-			}
+			if (sh instanceof PlShooter) Main.lobbyPl(sh.getPlayer());
 		}
 		shtrs.clear();
-		for (final Entity e : w.getEntities()) {
-			if (e.getType() != EntityType.PLAYER) {
-				e.remove();
-			}
-		}
 		
 		if (rnd) {
 			Bukkit.getConsoleSender().sendMessage("removing arena");
-			Main.mapBlds.remove(name).remove(w, 3);
+            final MapBuilder mb = Main.mapBlds.remove(name);
+            if (mb != null) mb.remove(w, 3);
 		}
     }
 

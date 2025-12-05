@@ -1,29 +1,28 @@
 package me.romindous.cs.Enums;
 
-import org.bukkit.Material;
-
 import java.util.EnumSet;
+import org.bukkit.block.BlockType;
 
 public enum TileType {
 	
-	WALL(true, Material.POLISHED_ANDESITE, -1, 0),
-	OPEN(true, Material.POLISHED_ANDESITE, 0, 0),
-	BOX(true, Material.POLISHED_ANDESITE, 1, 0),
-	UPSTS(false, Material.POLISHED_ANDESITE, 1, 0),
-	DWNSTS(false, Material.POLISHED_ANDESITE, 1, 0),
-	HGSTS(true, Material.POLISHED_ANDESITE, 0, 1),
-	HGBOX(true, Material.POLISHED_ANDESITE, 0, 2),
-	HGWALL(true, Material.POLISHED_ANDESITE, 0, 3);
+	WALL(true, BlockType.POLISHED_ANDESITE, -1, 0),
+	OPEN(true, BlockType.POLISHED_ANDESITE, 0, 0),
+	BOX(true, BlockType.POLISHED_ANDESITE, 1, 0),
+	UPSTS(false, BlockType.POLISHED_ANDESITE, 1, 0),
+	DWNSTS(false, BlockType.POLISHED_ANDESITE, 1, 0),
+	HGSTS(true, BlockType.POLISHED_ANDESITE, 0, 1),
+	HGBOX(true, BlockType.POLISHED_ANDESITE, 0, 2),
+	HGWALL(true, BlockType.POLISHED_ANDESITE, 0, 3);
 	//=-=-=-=-
 	//VERY IMPORTANT - besides (0, 0), there can be no other same-number noises, like (1,1), since that will create impossible cases
 	//=-=-=-=-
 	public final boolean generate;
-	public final Material floorMat;
+	public final BlockType floorMat;
 	public final int[] noise;
 	
 	public static final EnumSet<TileType> gns = getGens(EnumSet.allOf(TileType.class));
 	
-	TileType(final boolean generate, final Material floor, final int... noise) {
+	TileType(final boolean generate, final BlockType floor, final int... noise) {
 		this.noise = noise;
 		this.floorMat = floor;
 		this.generate = generate;

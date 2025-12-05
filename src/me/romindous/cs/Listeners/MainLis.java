@@ -12,12 +12,12 @@ import me.romindous.cs.Game.Arena.Team;
 import me.romindous.cs.Game.Defusal;
 import me.romindous.cs.Main;
 import me.romindous.cs.Objects.Defusable;
+import me.romindous.cs.Objects.Game.Mobber;
 import me.romindous.cs.Objects.Game.PlShooter;
 import me.romindous.cs.Objects.Shooter;
 import me.romindous.cs.Utils.Utils;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
-import org.bukkit.Material;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -28,6 +28,8 @@ import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.ItemMergeEvent;
 import org.bukkit.event.player.*;
+import org.bukkit.event.world.EntitiesLoadEvent;
+import org.bukkit.event.world.EntitiesUnloadEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ItemType;
@@ -41,7 +43,7 @@ import ru.komiss77.utils.TCUtil;
 
 public class MainLis implements Listener {
 
-	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onData(final LocalDataLoadEvent e) {
 		final Player p = e.getPlayer();
 		Main.lobbyPl(p);
@@ -149,12 +151,32 @@ public class MainLis implements Listener {
 			default:
 				if (pr.arena() == null) {
 					drop.remove();
-					p.getInventory().setItemInMainHand(new ItemStack(Material.AIR));
+					p.getInventory().setItemInMainHand(ItemUtil.air);
 					return;
 				}
 				break;
 		}
 	}
+
+    private static final Mobber.MobType[] TYPES = Mobber.MobType.values();
+
+    @EventHandler
+    public void onEnt(final EntitiesLoadEvent e) {
+        for (final Entity ent : e.getEntities()) {
+            for (final Mobber.MobType mt : TYPES) {
+                if (mt.type == ent.getType()) ent.remove();
+            }
+        }
+    }
+
+    @EventHandler
+    public void onEnt(final EntitiesUnloadEvent e) {
+        for (final Entity ent : e.getEntities()) {
+            for (final Mobber.MobType mt : TYPES) {
+                if (mt.type == ent.getType()) ent.remove();
+            }
+        }
+    }
    
 	@EventHandler
 	public void onPick(final EntityPickupItemEvent e) {

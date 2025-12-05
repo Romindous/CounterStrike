@@ -9,13 +9,16 @@ import me.romindous.cs.Objects.Shooter;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockType;
 import org.bukkit.block.data.type.Tripwire;
 import org.bukkit.entity.GlowItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Snowball;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.ItemType;
 import ru.komiss77.modules.world.BVec;
- 
+import ru.komiss77.utils.BlockUtil;
+
 public class TripWire {
 
 	private static int cid = 0;
@@ -28,7 +31,7 @@ public class TripWire {
 	public NadeType nt;
    
 	public TripWire(final Block[] bs, Shooter sh, final BlockFace bf, byte i) {
-		final Tripwire tw = (Tripwire) Material.TRIPWIRE.createBlockData();
+		final Tripwire tw = BlockType.TRIPWIRE.createBlockData();
 		tw.setAttached(true);
 		tw.setFace(bf, true);
 		tw.setFace(bf.getOppositeFace(), true);
@@ -64,15 +67,15 @@ public class TripWire {
 		loc.getWorld().spawnParticle(Particle.EXPLOSION, loc, 10, 0.4d, 0.4d, 0.4d);
 		loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_BREAK_BLOCK, 2f, 0.8f);
 		if (this.nt != null) {
-			final Material m = switch (this.nt) {
-				case FRAG -> Material.OAK_SAPLING;
-				case FLAME -> Material.ACACIA_SAPLING;
-				case SMOKE -> Material.DARK_OAK_SAPLING;
-				case FLASH -> Material.BIRCH_SAPLING;
-				case DECOY -> Material.JUNGLE_SAPLING;
+			final ItemType m = switch (this.nt) {
+				case FRAG -> ItemType.OAK_SAPLING;
+				case FLAME -> ItemType.ACACIA_SAPLING;
+				case SMOKE -> ItemType.DARK_OAK_SAPLING;
+				case FLASH -> ItemType.BIRCH_SAPLING;
+				case DECOY -> ItemType.JUNGLE_SAPLING;
 			};
 			final Snowball sb = loc.getWorld().spawn(loc, Snowball.class);
-			sb.setItem(new ItemStack(m));
+			sb.setItem(m.createItemStack());
 			new Nade(sb, 0).explode();
 		} 
 	}
@@ -110,7 +113,7 @@ public class TripWire {
 		for (final BVec r : blks) {
 			Arena.tblks.remove(r);
 			r.center(w).getBlock()
-				.setType(Material.AIR, false);
+				.setBlockData(BlockUtil.air, false);
 		}
 		eif.remove();
 	}

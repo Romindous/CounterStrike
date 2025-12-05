@@ -25,6 +25,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockType;
 import org.bukkit.block.CreatureSpawner;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.*;
@@ -37,15 +38,14 @@ import ru.komiss77.version.Nms;
 
 public class Mobber extends Defusable {
 	
-	public static final BlockData spn = Material
+	public static final BlockData SPAWNER = BlockType
 		.SPAWNER.createBlockData();
 	
-	public static final BlockData dfs = Material
+	public static final BlockData DEFUSED = BlockType
 		.CRYING_OBSIDIAN.createBlockData();
 
 	public final BlockDisplay ind;
 	private final Invasion ar;
-	private Shooter defusing;
 	public MobType mt;
   
 	public Mobber(final BVec loc, final Invasion ar) {
@@ -58,7 +58,7 @@ public class Mobber extends Defusable {
 		mt = MobType.WEAK;
 		
 		final Block b = block(ar.w);
-		b.setType(Material.SPAWNER, false);
+		b.setBlockData(SPAWNER, false);
 		
 		final CreatureSpawner cs = (CreatureSpawner) b.getState();
 		cs.setSpawnedType(mt.type);
@@ -80,6 +80,11 @@ public class Mobber extends Defusable {
 		defusing = sh;
 	}
 
+    public void wrngWire() {
+        defusing = null;
+        spwnMb();
+    }
+
 	public void spwnMb() {
         final Location loc = center(ar.w);
 		final Mob mb = (Mob) ar.w.spawnEntity(Main.getNrLoc(loc), mt.type, false);
@@ -97,8 +102,8 @@ public class Mobber extends Defusable {
 		}
 	}
 
-	public Material getType() {
-		return ind.getBlock().getMaterial();
+	public BlockType getType() {
+		return ind.getBlock().getMaterial().asBlockType();
 	}
 
 	public boolean isAlive() {
@@ -106,12 +111,12 @@ public class Mobber extends Defusable {
 	}
 
 	public void setSpwn() {
-		ind.setBlock(spn);
+		ind.setBlock(SPAWNER);
 		Nms.colorGlow(ind, NamedTextColor.DARK_RED, false);
 	}
 
 	public void setDef() {
-		ind.setBlock(dfs);
+		ind.setBlock(DEFUSED);
 		ind.setGlowing(false);
 		defusing = null;
 	}
@@ -156,22 +161,20 @@ public class Mobber extends Defusable {
                         DialogBody.plainMessage(TCUtil.form("<mint>=> <beige>Для Разминировки")), true, false, 16, 16),
                     DialogBody.plainMessage(TCUtil.form("<gold>Поставь правильные настройки и разрежь провода!"))))
                 .inputs(List.of(
-                    DialogInput.singleOption(CODE, 200, Arrays.stream(OPTIONS).map(o -> o.entry(ch_cond)).toList(), TCUtil.form("<sky>Код Бомбы"), false),
                     DialogInput.numberRange(VOLTS, 250, TCUtil.form("<white>Настрой кусачки на [<aqua>"
                         + volts + " V<white>]"), "%s, сейчас: %s V", 0f, MAX_VOLTS, (float) ch_volts, 1f),
-                    DialogInput.bool(CHECK, TCUtil.form("\n<beige>> " + (check ? "<green>Нужна Галочка" : "<red>Не Нужна Галочка") + "\n")).initial(ch_check).build(),
+//                    DialogInput.bool(CHECK, TCUtil.form("\n<beige>> " + (check ? "<green>Нужна Галочка" : "<red>Не Нужна Галочка") + "\n")).initial(ch_check).build(),
                     DialogInput.text("text", 1, TCUtil.form("<beige>Разрежь <mithril>цвет проводов<beige>, которых <gold>" + (check ? "больше" : "меньше") + " <beige>всего!"),
                         true, "", 1, TextDialogInput.MultilineOptions.create(1, 1)),
                     DialogInput.singleOption("wires", 160, List.of(SingleOptionDialogInput.OptionEntry.create("wires", TCUtil.form(genWires(color, check)), false)
                     ), TCUtil.form("<beige>Провода"), false)
                 )).build())
             .type(DialogType.multiAction(List.of(
-                ActionButton.builder(TCUtil.form("<red>⎨ <u>Красный</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.RED)).build(),
-                ActionButton.builder(TCUtil.form("<yellow>⎨ <u>Желтый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.YELLOW)).build(),
-                ActionButton.builder(TCUtil.form("<green>⎨ <u>Зеленый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.GREEN)).build(),
-                ActionButton.builder(TCUtil.form("<blue>⎨ <u>Синий</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.BLUE)).build()
-            ), ActionButton.builder(TCUtil.form("Выход")).width(1).action(DialogAction.customClick((res, au) -> pl.sendMessage("????"),
-                ClickCallback.Options.builder().uses(1).lifetime(Duration.ofDays(1)).build())).build(), 4))
+                ActionButton.builder(TCUtil.form("<red>⎨ <u>Красный</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.RED, true)).build(),
+                ActionButton.builder(TCUtil.form("<yellow>⎨ <u>Желтый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.YELLOW, true)).build(),
+                ActionButton.builder(TCUtil.form("<green>⎨ <u>Зеленый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.GREEN, true)).build(),
+                ActionButton.builder(TCUtil.form("<blue>⎨ <u>Синий</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.BLUE, true)).build()
+            ), ActionButton.builder(TCUtil.form("Выход")).width(1).action(onClose()).build(), 4))
         ) : Dialog.create(builder -> builder.empty()
             .base(DialogBase.builder(TCUtil.form("<gradient:light_purple:aqua><bold>Меню Разминировки")).body(List.of(DialogBody.item(new ItemBuilder(ItemType.SHEARS).glint(true).build(),
                         DialogBody.plainMessage(TCUtil.form("<mint>=> <beige>Для Разминировки")), true, false, 16, 16),
@@ -181,24 +184,23 @@ public class Mobber extends Defusable {
                     DialogInput.singleOption(CODE, 200, Arrays.stream(OPTIONS).map(o -> o.entry(ch_cond)).toList(), TCUtil.form("<sky>Код Бомбы"), false),
                     DialogInput.numberRange(VOLTS, 250, TCUtil.form("<white>Настрой кусачки на [<aqua>"
                         + volts + " V<white>]"), "%s, сейчас: %s V", 0f, MAX_VOLTS, (float) ch_volts, 1f),
-                    DialogInput.bool(CHECK, TCUtil.form("\n<beige>> " + (check ? "<green>Нужна Галочка" : "<red>Не Нужна Галочка") + "\n")).initial(ch_check).build(),
+//                    DialogInput.bool(CHECK, TCUtil.form("\n<beige>> " + (check ? "<green>Нужна Галочка" : "<red>Не Нужна Галочка") + "\n")).initial(ch_check).build(),
                     DialogInput.text("text", 1, TCUtil.form("<beige>Разрежь <mithril>цвет проводов<beige>, которых <gold>" + (check ? "больше" : "меньше") + " <beige>всего!"),
                         true, "", 1, TextDialogInput.MultilineOptions.create(1, 1)),
                     DialogInput.singleOption("wires", 160, List.of(SingleOptionDialogInput.OptionEntry.create("wires", TCUtil.form(genWires(color, check)), false)
                     ), TCUtil.form("<beige>Провода"), false)
                 )).build())
             .type(DialogType.multiAction(List.of(
-                ActionButton.builder(TCUtil.form("<red>⎨ <u>Красный</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.RED)).build(),
-                ActionButton.builder(TCUtil.form("<yellow>⎨ <u>Желтый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.YELLOW)).build(),
-                ActionButton.builder(TCUtil.form("<green>⎨ <u>Зеленый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.GREEN)).build(),
-                ActionButton.builder(TCUtil.form("<blue>⎨ <u>Синий</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.BLUE)).build()
-            ), ActionButton.builder(TCUtil.form("Выход")).width(1).action(DialogAction.customClick((res, au) -> pl.sendMessage("????"),
-                ClickCallback.Options.builder().uses(1).lifetime(Duration.ofDays(1)).build())).build(), 4))
+                ActionButton.builder(TCUtil.form("<red>⎨ <u>Красный</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.RED, false)).build(),
+                ActionButton.builder(TCUtil.form("<yellow>⎨ <u>Желтый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.YELLOW, false)).build(),
+                ActionButton.builder(TCUtil.form("<green>⎨ <u>Зеленый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.GREEN, false)).build(),
+                ActionButton.builder(TCUtil.form("<blue>⎨ <u>Синий</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.BLUE, false)).build()
+            ), ActionButton.builder(TCUtil.form("Выход")).width(1).action(onClose()).build(), 4))
         );
         pl.showDialog(dg);
     }
 
-    protected DialogAction.CustomClickAction genAction(final Player pl, final WColor clr) {
+    protected DialogAction.CustomClickAction genAction(final Player pl, final WColor clr, final boolean kit) {
         return DialogAction.customClick((res, au) -> {
             final String code = res.getText(CODE);
             if (code != null) ch_cond = Condition.parse(code);
@@ -206,28 +208,28 @@ public class Mobber extends Defusable {
             if (chb != null) ch_check = chb;
             final Float fvl = res.getFloat(VOLTS);
             if (fvl != null) ch_volts = fvl.intValue();
-            if (cond != ch_cond) {
+            if (cond != ch_cond && !kit) {
                 Utils.sendTtlSbTtl(pl, Arena.Team.Ts.clr + "+ Моб",
-                    "<beige>Выбран не тот <mithril>параметр<beige>!", 40);
-                spwnMb();
+                    "<beige>Выбран не тот <mithril>параметр<beige>!", 60);
+                wrngWire();
                 return;
             }
             if (volts != ch_volts) {
                 Utils.sendTtlSbTtl(pl, Arena.Team.Ts.clr + "+ Моб",
-                    "<beige>Кусачки <mithril>настроены <beige>неправильно!", 40);
-                spwnMb();
+                    "<beige>Кусачки <mithril>настроены <beige>неправильно!", 60);
+                wrngWire();
                 return;
             }
-            if (check != ch_check) {
+            /*if (check != ch_check) {
                 Utils.sendTtlSbTtl(pl, Arena.Team.Ts.clr + "+ Моб",
                     "<beige>Условия <mithril>галочки<beige> не соблюдены!", 40);
-                spwnMb();
+                wrngWire();
                 return;
-            }
+            }*/
             if (color != clr) {
                 Utils.sendTtlSbTtl(pl, Arena.Team.Ts.clr + "+ Моб",
-                    "<beige>Разрезан не тот <mithril>цвет <beige>проводов!", 40);
-                spwnMb();
+                    "<beige>Разрезан не тот <mithril>цвет <beige>проводов!", 60);
+                wrngWire();
                 return;
             }
             ar.addSpDfs(defusing);

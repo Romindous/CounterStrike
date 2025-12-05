@@ -11,7 +11,6 @@ import me.romindous.cs.Objects.Shooter;
 import me.romindous.cs.Objects.Skins.Quest;
 import me.romindous.cs.Utils.Utils;
 import org.bukkit.GameMode;
-import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
@@ -132,7 +131,7 @@ public class InventLis implements Listener {
 					final PlayerInventory pi = p.getInventory();
 					if (gt != null) {
 						if (sh.money() - gt.prc < 0) {
-							p.sendMessage(Main.prf() + "§cУ вас не хватает денег для покупки этого!");
+							p.sendMessage(Main.prf() + "§cУ тебя не хватает денег для покупки этого!");
 							((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 						} else {
 							sh.arena().chngMn(sh, -gt.prc);
@@ -154,10 +153,10 @@ public class InventLis implements Listener {
 					} else if (nt != null) {
 						if (nt.prm) {
 							if (sh.money() - nt.prc < 0) {
-								p.sendMessage(Main.prf() + "§cУ вас не хватает денег для покупки этого!");
+								p.sendMessage(Main.prf() + "§cУ тебя не хватает денег для покупки этого!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else if (pi.getItem(NadeType.prmSlot) != null) {
-								p.sendMessage(Main.prf() + "§cУ вас уже есть граната в этом слоту!");
+								p.sendMessage(Main.prf() + "§cУ тебя уже есть граната в этом слоту!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else {
 								sh.arena().chngMn(sh, -nt.prc);
@@ -166,11 +165,11 @@ public class InventLis implements Listener {
 							}
 						} else {
 							if (sh.money() - nt.prc < 0) {
-								p.sendMessage(Main.prf() + "§cУ вас не хватает денег для покупки этого!");
+								p.sendMessage(Main.prf() + "§cУ тебя не хватает денег для покупки этого!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else if (pi.getItem(NadeType.scdSlot) != null &&
 								sh.item(NadeType.scdSlot).getType() != it.getType()) {
-								p.sendMessage(Main.prf() + "§cУ вас уже есть граната в этом слоту!");
+								p.sendMessage(Main.prf() + "§cУ тебя уже есть граната в этом слоту!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else {
 								cp = new ItemBuilder(it).deLore().build();
@@ -178,7 +177,7 @@ public class InventLis implements Listener {
 									sh.arena().chngMn(sh, -nt.prc);
 									p.getWorld().playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1.4f);
 								} else {
-									p.sendMessage(Main.prf() + "§cУ вас уже есть 2 таких гранаты!");
+									p.sendMessage(Main.prf() + "§cУ тебя уже есть 2 таких гранаты!");
 								}
 							}
 						}
@@ -186,10 +185,10 @@ public class InventLis implements Listener {
 						switch (it.getType()) {
 						case SUGAR:
 							if (sh.money() - Shooter.wirePrc < 0) {
-								p.sendMessage(Main.prf() + "§cУ вас не хватает денег для покупки этого!");
+								p.sendMessage(Main.prf() + "§cУ тебя не хватает денег для покупки этого!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else if (pi.getItem(3) != null) {
-								p.sendMessage(Main.prf() + "§cУ вас уже есть граната в этом слоту!");
+								p.sendMessage(Main.prf() + "§cУ тебя уже есть граната в этом слоту!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else {
 								sh.arena().chngMn(sh, -Shooter.wirePrc);
@@ -199,10 +198,10 @@ public class InventLis implements Listener {
 							break;
 						case SHEARS:
 							if (sh.money() - Shooter.kitPrc < 0) {
-								p.sendMessage(Main.prf() + "§cУ вас не хватает денег для покупки этого!");
+								p.sendMessage(Main.prf() + "§cУ тебя не хватает денег для покупки этого!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
-							} else if (pi.getItem(7) != null && pi.getItem(7).getType() == Material.SHEARS) {
-								p.sendMessage(Main.prf() + "§cУ вас уже есть спец. набор!");
+							} else if (ItemUtil.is(pi.getItem(7), ItemType.SHEARS)) {
+								p.sendMessage(Main.prf() + "§cУ тебя уже есть спец. набор!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else {
 								sh.arena().chngMn(sh, -Shooter.kitPrc);
@@ -212,10 +211,10 @@ public class InventLis implements Listener {
 							break;
 						case LEATHER_HELMET:
 							if (sh.money() - Shooter.helmPrc < 0) {
-								p.sendMessage(Main.prf() + "§cУ вас не хватает денег для покупки этого!");
+								p.sendMessage(Main.prf() + "§cУ тебя не хватает денег для покупки этого!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else if (!ItemUtil.isBlank(pi.getHelmet(), false)) {
-								p.sendMessage(Main.prf() + "§cУ вас уже есть шлем!");
+								p.sendMessage(Main.prf() + "§cУ тебя уже есть шлем!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else {
 								sh.arena().chngMn(sh, -Shooter.helmPrc);
@@ -225,10 +224,10 @@ public class InventLis implements Listener {
 							break;
 						case LEATHER_CHESTPLATE:
 							if (sh.money() - Shooter.chestPrc < 0) {
-								p.sendMessage(Main.prf() + "§cУ вас не хватает денег для покупки этого!");
+								p.sendMessage(Main.prf() + "§cУ тебя не хватает денег для покупки этого!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else if (!ItemUtil.isBlank(pi.getChestplate(), false)) {
-								p.sendMessage(Main.prf() + "§cУ вас уже есть нагрудник!");
+								p.sendMessage(Main.prf() + "§cУ тебя уже есть нагрудник!");
 								((Player) p).playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_TURTLE, 1f, 2f);
 							} else {
 								sh.arena().chngMn(sh, -Shooter.chestPrc);

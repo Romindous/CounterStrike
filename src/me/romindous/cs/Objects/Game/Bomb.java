@@ -36,6 +36,7 @@ import ru.komiss77.Ostrov;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.modules.items.ItemBuilder;
 import ru.komiss77.modules.world.BVec;
+import ru.komiss77.utils.BlockUtil;
 import ru.komiss77.utils.ItemUtil;
 import ru.komiss77.utils.NumUtil;
 import ru.komiss77.utils.TCUtil;
@@ -45,9 +46,8 @@ public class Bomb extends Defusable {
 
 	public static final int WIRE_TIME = 5;
 
-	public final TextDisplay title;
+    public final TextDisplay title;
 	private final Defusal ar;
-	private Shooter defusing;
 	
 	private static final Component bnm = TCUtil.form("§l§кБiмба Поставлена!")
 		.appendNewline().append(TCUtil.form("§7Обезвредьте §eкусачками §7или §3спец. набором§7!"));
@@ -82,7 +82,7 @@ public class Bomb extends Defusable {
 	public void expld() {
 		title.remove();
 		final Block b = block(ar.w);
-		b.setType(Material.AIR,false);
+		b.setBlockData(BlockUtil.air,false);
 		final int X = b.getX();
 		final int Y = b.getY();
 		final int Z = b.getZ();
@@ -96,12 +96,12 @@ public class Bomb extends Defusable {
 					final int bnd = x*x + y*y + z*z;
 					if (bnd > 0 && Nms.fastType(ar.w, X + x, Y + y, Z + z).isAir() && Nms.fastType(ar.w, X + x, Y + y - 1, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 6) {
 						for (final Player p : b.getWorld().getPlayers()) {
-							p.sendBlockChange(new Location(ar.w, X + x, Y + y, Z + z), Material.FIRE.createBlockData());
+							p.sendBlockChange(new Location(ar.w, X + x, Y + y, Z + z), FIRE);
 							cls.add(BVec.of(X + x, Y + y, Z + z));
 						} 
 					} else if (Nms.fastType(ar.w, X + x, Y + y, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 10) {
 						for (final Player p : b.getWorld().getPlayers()) {
-							p.sendBlockChange(new Location(ar.w, X + x, Y + y, Z + z), Material.COAL_BLOCK.createBlockData());
+							p.sendBlockChange(new Location(ar.w, X + x, Y + y, Z + z), COAL);
 							cls.add(BVec.of(X + x, Y + y, Z + z));
 						}
 					}
@@ -156,7 +156,6 @@ public class Bomb extends Defusable {
                         DialogBody.plainMessage(TCUtil.form("<mint>=> <beige>Для Разминировки")), true, false, 16, 16),
                     DialogBody.plainMessage(TCUtil.form("<gold>Поставь правильные настройки и разрежь провода!"))))
                 .inputs(List.of(
-                    DialogInput.singleOption(CODE, 200, Arrays.stream(OPTIONS).map(o -> o.entry(ch_cond)).toList(), TCUtil.form("<sky>Код Бомбы"), false),
                     DialogInput.numberRange(VOLTS, 250, TCUtil.form("<white>Настрой кусачки на [<aqua>"
                         + volts + " V<white>]"), "%s, сейчас: %s V", 0f, MAX_VOLTS, (float) ch_volts, 1f),
                     DialogInput.bool(CHECK, TCUtil.form("\n<beige>> " + (check ? "<green>Нужна Галочка" : "<red>Не Нужна Галочка") + "\n")).initial(ch_check).build(),
@@ -166,12 +165,11 @@ public class Bomb extends Defusable {
                     ), TCUtil.form("<beige>Провода"), false)
                 )).build())
             .type(DialogType.multiAction(List.of(
-                ActionButton.builder(TCUtil.form("<red>⎨ <u>Красный</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.RED)).build(),
-                ActionButton.builder(TCUtil.form("<yellow>⎨ <u>Желтый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.YELLOW)).build(),
-                ActionButton.builder(TCUtil.form("<green>⎨ <u>Зеленый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.GREEN)).build(),
-                ActionButton.builder(TCUtil.form("<blue>⎨ <u>Синий</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.BLUE)).build()
-            ), ActionButton.builder(TCUtil.form("Выход")).width(1).action(DialogAction.customClick((res, au) -> pl.sendMessage("????"),
-                ClickCallback.Options.builder().uses(1).lifetime(Duration.ofDays(1)).build())).build(), 4))
+                ActionButton.builder(TCUtil.form("<red>⎨ <u>Красный</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.RED, true)).build(),
+                ActionButton.builder(TCUtil.form("<yellow>⎨ <u>Желтый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.YELLOW, true)).build(),
+                ActionButton.builder(TCUtil.form("<green>⎨ <u>Зеленый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.GREEN, true)).build(),
+                ActionButton.builder(TCUtil.form("<blue>⎨ <u>Синий</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.BLUE, true)).build()
+            ), ActionButton.builder(TCUtil.form("Выход")).width(1).action(onClose()).build(), 4))
         ) : Dialog.create(builder -> builder.empty()
             .base(DialogBase.builder(TCUtil.form("<gradient:light_purple:aqua><bold>Меню Разминировки")).body(List.of(DialogBody.item(new ItemBuilder(ItemType.SHEARS).glint(true).build(),
                         DialogBody.plainMessage(TCUtil.form("<mint>=> <beige>Для Разминировки")), true, false, 16, 16),
@@ -188,17 +186,16 @@ public class Bomb extends Defusable {
                     ), TCUtil.form("<beige>Провода"), false)
                 )).build())
             .type(DialogType.multiAction(List.of(
-                ActionButton.builder(TCUtil.form("<red>⎨ <u>Красный</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.RED)).build(),
-                ActionButton.builder(TCUtil.form("<yellow>⎨ <u>Желтый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.YELLOW)).build(),
-                ActionButton.builder(TCUtil.form("<green>⎨ <u>Зеленый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.GREEN)).build(),
-                ActionButton.builder(TCUtil.form("<blue>⎨ <u>Синий</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.BLUE)).build()
-            ), ActionButton.builder(TCUtil.form("Выход")).width(1).action(DialogAction.customClick((res, au) -> pl.sendMessage("????"),
-                ClickCallback.Options.builder().uses(1).lifetime(Duration.ofDays(1)).build())).build(), 4))
+                ActionButton.builder(TCUtil.form("<red>⎨ <u>Красный</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.RED, false)).build(),
+                ActionButton.builder(TCUtil.form("<yellow>⎨ <u>Желтый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.YELLOW, false)).build(),
+                ActionButton.builder(TCUtil.form("<green>⎨ <u>Зеленый</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.GREEN, false)).build(),
+                ActionButton.builder(TCUtil.form("<blue>⎨ <u>Синий</u> ⎬")).tooltip(TCUtil.form("<beige>Клик - Разрезать")).width(80).action(genAction(pl, WColor.BLUE, false)).build()
+            ), ActionButton.builder(TCUtil.form("Выход")).width(1).action(onClose()).build(), 4))
         );
         pl.showDialog(dg);
     }
 
-    protected DialogAction.CustomClickAction genAction(final Player pl, final WColor clr) {
+    protected DialogAction.CustomClickAction genAction(final Player pl, final WColor clr, final boolean kit) {
         return DialogAction.customClick((res, au) -> {
             final String code = res.getText(CODE);
             if (code != null) ch_cond = Condition.parse(code);
@@ -206,27 +203,27 @@ public class Bomb extends Defusable {
             if (chb != null) ch_check = chb;
             final Float fvl = res.getFloat(VOLTS);
             if (fvl != null) ch_volts = fvl.intValue();
-            if (cond != ch_cond) {
+            if (cond != ch_cond && !kit) {
                 Utils.sendTtlSbTtl(pl, Arena.Team.Ts.clr + "-" + Bomb.WIRE_TIME + " сек",
-                    "<beige>Выбран не тот <mithril>параметр<beige>!", 40);
+                    "<beige>Выбран не тот <mithril>параметр<beige>!", 60);
                 ar.wrngWire();
                 return;
             }
             if (volts != ch_volts) {
                 Utils.sendTtlSbTtl(pl, Arena.Team.Ts.clr + "-" + Bomb.WIRE_TIME + " сек",
-                    "<beige>Кусачки <mithril>настроены <beige>неправильно!", 40);
+                    "<beige>Кусачки <mithril>настроены <beige>неправильно!", 60);
                 ar.wrngWire();
                 return;
             }
             if (check != ch_check) {
                 Utils.sendTtlSbTtl(pl, Arena.Team.Ts.clr + "-" + Bomb.WIRE_TIME + " сек",
-                    "<beige>Условия <mithril>галочки<beige> не соблюдены!", 40);
+                    "<beige>Условия <mithril>галочки<beige> не соблюдены!", 60);
                 ar.wrngWire();
                 return;
             }
             if (color != clr) {
                 Utils.sendTtlSbTtl(pl, Arena.Team.Ts.clr + "-" + Bomb.WIRE_TIME + " сек",
-                    "<beige>Разрезан не тот <mithril>цвет <beige>проводов!", 40);
+                    "<beige>Разрезан не тот <mithril>цвет <beige>проводов!", 60);
                 ar.wrngWire();
                 return;
             }

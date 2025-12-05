@@ -15,7 +15,6 @@ import me.romindous.cs.Objects.Loc.PasteSet;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockType;
@@ -27,6 +26,7 @@ import ru.komiss77.Ostrov;
 import ru.komiss77.modules.world.BVec;
 import ru.komiss77.modules.world.Schematic;
 import ru.komiss77.modules.world.Schematic.Rotate;
+import ru.komiss77.utils.BlockUtil;
 import ru.komiss77.utils.ClassUtil;
 import ru.komiss77.utils.NumUtil;
 import ru.komiss77.version.Nms;
@@ -286,7 +286,7 @@ public class MapBuilder {
 		for (int x = lm.x; x >= 0; x--) {
 			for (int y = lm.y; y >= 0; y--) {
 				for (int z = lm.z; z >= 0; z--) {
-					w.getBlockAt(origin.x + x, origin.y + y - 1, origin.z + z).setType(Material.AIR, false);
+					w.getBlockAt(origin.x + x, origin.y + y - 1, origin.z + z).setBlockData(BlockUtil.air, false);
 				}
 			}
 		}
@@ -327,7 +327,7 @@ public class MapBuilder {
 			for (int y = set.set().height - 1; y >= 0; y--) {
 				for (int x = 0; x < cX; x++) {
 					for (int z = 0; z < cZ; z++) {
-						b.getRelative(x,y,z).setType(set.set().original.floorMat, false);
+						BlockUtil.set(b.getRelative(x,y,z), set.set().original.floorMat, false);
 					}
 				}
 			}
@@ -357,7 +357,7 @@ public class MapBuilder {
 				final int y = cellDims.y - 2;
 				for (int x = cellDims.x - 1; x >= 0; x--) {
 					for (int z = cellDims.z - 1; z >= 0; z--) {
-						set.loc().clone().add(x, y, z).center(ar.w).getBlock().setType(Material.AIR, false);
+						set.loc().clone().add(x, y, z).center(ar.w).getBlock().setBlockData(BlockUtil.air, false);
 					}
 				}
 				break;

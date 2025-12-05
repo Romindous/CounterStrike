@@ -13,10 +13,7 @@ import me.romindous.cs.Listeners.MainLis;
 import me.romindous.cs.Main;
 import me.romindous.cs.Menus.ChosenSkinMenu;
 import me.romindous.cs.Objects.Defusable;
-import me.romindous.cs.Objects.Game.BtShooter;
-import me.romindous.cs.Objects.Game.Mobber;
-import me.romindous.cs.Objects.Game.PlShooter;
-import me.romindous.cs.Objects.Game.TripWire;
+import me.romindous.cs.Objects.Game.*;
 import me.romindous.cs.Objects.Loc.Broken;
 import me.romindous.cs.Objects.Shooter;
 import me.romindous.cs.Objects.Skins.Quest;
@@ -27,6 +24,7 @@ import net.kyori.adventure.util.TriState;
 import org.bukkit.*;
 import org.bukkit.FireworkEffect.Type;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockType;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.*;
 import org.bukkit.entity.Display.Billboard;
@@ -46,6 +44,7 @@ import ru.komiss77.modules.player.PM;
 import ru.komiss77.modules.world.BVec;
 import ru.komiss77.notes.Slow;
 import ru.komiss77.objects.IntHashMap;
+import ru.komiss77.utils.BlockUtil;
 import ru.komiss77.utils.ClassUtil;
 import ru.komiss77.utils.ItemUtil;
 import ru.komiss77.utils.TCUtil;
@@ -80,10 +79,9 @@ public class Invasion extends Arena {
 		ads.text(TCUtil.form("§7Точка §bA§7: §d100%"));
 		ads.setShadowed(true);
 		ads.setSeeThrough(true);
-		ads.setViewRange(0f);
 		final Transformation atr = ads.getTransformation();
 		ads.setTransformation(new Transformation(atr.getTranslation(), 
-			atr.getLeftRotation(), new Vector3f(1.6f, 1.6f, 1.6f), atr.getRightRotation()));
+			atr.getLeftRotation(), new Vector3f(2f, 2f, 2f), atr.getRightRotation()));
 		//Transformation(Vector3f translation, AxisAngle4f leftRotation, Vector3f scale, AxisAngle4f rightRotation)
 		
 		bds = w.spawn(bst.center(w), TextDisplay.class);
@@ -95,7 +93,7 @@ public class Invasion extends Arena {
 		bds.setViewRange(0f);
 		final Transformation btr = bds.getTransformation();
 		bds.setTransformation(new Transformation(btr.getTranslation(), 
-			btr.getLeftRotation(), new Vector3f(1.6f, 1.6f, 1.6f), btr.getRightRotation()));
+			btr.getLeftRotation(), new Vector3f(2f, 2f, 2f), btr.getRightRotation()));
 		
 		cntBeg();
 	}
@@ -144,8 +142,8 @@ public class Invasion extends Arena {
 					chngTeam(sh, Team.SPEC);
 					p.setGameMode(GameMode.SPECTATOR);
 					p.teleport(Main.getNrLoc(w, Main.srnd.nextBoolean() ? ClassUtil.rndElmt(TSpawns) : ClassUtil.rndElmt(CTSpawns)));
-					sh.item(2, new ItemBuilder(ItemType.NETHER_STAR).name("§eВыбор Комманды").build());
-					sh.item(8, new ItemBuilder(ItemType.SLIME_BALL).name("§cВыход").build());
+//					sh.item(2, new ItemBuilder(ItemType.NETHER_STAR).name("§eВыбор Комманды").build());
+//					sh.item(8, new ItemBuilder(ItemType.SLIME_BALL).name("§cВыход").build());
 					for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
 						final Shooter s = e.getKey();
 						final Player pl = s.getPlayer();
@@ -176,6 +174,39 @@ public class Invasion extends Arena {
 		return true;
 	}
 
+    public boolean chngTeam(final Shooter sh, final Team nv) {
+        final Team ptm = shtrs.get(sh);
+        if (ptm != null && ptm == nv) {
+            final Player p = sh.getPlayer();
+            if (p != null) {
+                p.sendMessage(Main.prf() + "§cТы уже в этой комманде!");
+            }
+            return false;
+        }
+
+        shtrs.put(sh, nv);
+        if (sh instanceof PlShooter) PM.getOplayer(sh.getPlayer()).color(nv.color());
+        for (final Entry<Shooter, Team> e : shtrs.entrySet()) {
+            final Player p = e.getKey().getPlayer();
+            if (p != null) {
+                PM.getOplayer(p).score.getSideBar()
+                    .update(T_AMT, Team.Ts.icn + " §7: " + getTmAmt(Team.Ts, true, true)
+                        + (e.getValue() == Team.Ts ? " §7чел. §8✦ Ты" : " §7чел."))
+                    .update(CT_AMT, Team.CTs.icn + " §7: " + getTmAmt(Team.CTs, true, true)
+                        + (e.getValue() == Team.CTs ? " §7чел. §8✦ Ты" : " §7чел."));
+            }
+        }
+        switch (gst) {
+            case WAITING, BEGINING, FINISH:
+                sh.taq("§7<§d" + name + "§7> ", " §7[-.-]", nv.clr);
+                break;
+            case BUYTIME, ROUND, ENDRND:
+                sh.taq(nv.icn + " ", " §7[" + sh.kills() + "-" + sh.deaths() + "]", nv.clr);
+                break;
+        }
+        return true;
+    }
+
 	public void addToTm(final Player p, final PlShooter sh, final Team tm) {
 		p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1, 1);
 		p.teleport(Main.getNrLoc(w, ClassUtil.rndElmt(CTSpawns)));
@@ -190,19 +221,24 @@ public class Invasion extends Arena {
 		cnt = Math.max(((isDay ? KD_DAY : KD_NIGHT) - (ccl << 1)) / (pls + 2), 1);
 		for (final Shooter s : shtrs.keySet()) {
 			final Player pl = s.getPlayer();
-			if (pl != null) {
-				pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел играть!");
-				PM.getOplayer(pl).score.getSideBar()
-						.update(CT_AMT, "§7Защитников: " + Team.CTs.clr
-								+ getTmAmt(Team.CTs, true, true) + " §7чел.")
-						.update(B_HP, "§7Точка §6B §7: §6" + String.valueOf(bpc) + "%");
-			}
-		}
+            if (pl == null) continue;
+            pl.sendMessage(Main.prf() + "§7Игрок §5" + sh.name() + " §7зашел играть!");
+            PM.getOplayer(pl).score.getSideBar()
+                .update(CT_AMT, "§7Защитников: " + Team.CTs.clr
+                    + getTmAmt(Team.CTs, true, true) + " §7чел.")
+                .update(B_HP, "§7Точка §6B §7: §6" + String.valueOf(bpc) + "%");
+        }
 
 		if (pls > 1) {
 			bds.setViewRange(100f);
-			bds.getLocation().getBlock().setType(Material.WARPED_PRESSURE_PLATE, false);
+            BlockUtil.set(bds.getLocation().getBlock(), BlockType.WARPED_PRESSURE_PLATE, false);
 		}
+
+        for (final Shooter s : shtrs.keySet()) {
+            final Player pl = s.getPlayer();
+            if (pl == null) continue;
+            pl.sendMessage("tm bds is " + (pls > 1) + " and " + bds.getViewRange());
+        }
 
 		for (final TripWire tw : tws) {
 			tw.showNade(p);
@@ -287,7 +323,7 @@ public class Invasion extends Arena {
 						}
 					}
 					bds.setViewRange(0f);
-					bds.getLocation().getBlock().setType(Material.AIR, false);
+					bds.getLocation().getBlock().setBlockData(BlockUtil.air, false);
 				} else {
 					cnt = Math.max(((isDay ? KD_DAY : KD_NIGHT) - (ccl << 1)) / (pls + 2), 1);
 					for (final Shooter s : shtrs.keySet()) {
@@ -303,6 +339,9 @@ public class Invasion extends Arena {
 				break;
 			case FINISH:
 				if (shtrs.size() == 0) {
+                    for (final Entity e : w.getEntities()) {
+                        if (e.getType() != EntityType.PLAYER) e.remove();
+                    }
 					this.time = 1;
 				}
 				break;
@@ -318,8 +357,10 @@ public class Invasion extends Arena {
 		gst = GameState.BEGINING;
 		final Arena ar = this;
 		for (final Entity e : w.getEntities()) {
-			if (e.getType() == EntityType.PLAYER) continue;
-			e.remove();
+            switch (e.getType()) {
+                case PLAYER, TEXT_DISPLAY: continue;
+                default: e.remove();
+            }
 		}
 		updateData();
 		tsk = new BukkitRunnable() {
@@ -375,6 +416,12 @@ public class Invasion extends Arena {
 		bpc = 100;
 		isDay = false;
 		gst = GameState.ROUND;
+        for (final Entity e : w.getEntities()) {
+            switch (e.getType()) {
+                case ITEM, SNOWBALL: e.remove();
+                default:
+            }
+        }
 
 		final int pls = shtrs.size();
 		int maxPls = pls;
@@ -405,16 +452,15 @@ public class Invasion extends Arena {
 			sh.taq(Team.CTs.icn + " ", " §7[" + sh.kills() +
 				"-" + sh.spwnrs() + "-" + sh.deaths() + "]", Team.CTs.clr);
 		}
-		
-		ads.setViewRange(100f);
-		ads.getLocation().getBlock().setType(Material.WARPED_PRESSURE_PLATE, false);
+
+        BlockUtil.set(ads.getLocation().getBlock(), BlockType.WARPED_PRESSURE_PLATE, false);
 		if (maxPls > 1) {
 			bds.setViewRange(100f);
-			bds.getLocation().getBlock().setType(Material.WARPED_PRESSURE_PLATE, false);
+            BlockUtil.set(bds.getLocation().getBlock(), BlockType.WARPED_PRESSURE_PLATE, false);
 		}
 		
 		Ostrov.async(() -> ClassUtil.shuffle(spots));
-		for (int i = Math.max(0, (spots.length >> 1) - pls); i != spots.length; i++) {
+		for (int i = Math.max(0, (spots.length >> 1) - maxPls); i != spots.length; i++) {
 			new Mobber(spots[i], this);
 		}
 		swpDayNght();
@@ -451,13 +497,14 @@ public class Invasion extends Arena {
 				}
 				
 				mb.ind.setGlowing(true);
-				if (mb.getType() == Material.SPAWNER) {
+				if (mb.getType() == BlockType.SPAWNER) {
 					final Mobber.MobType[] vls = Mobber.MobType.values();
 					if (mb.mt.ordinal() + 1 != vls.length)
 						mb.set(vls[mb.mt.ordinal() + 1]);
 				} else {
 					mb.setSpwn();
 					mb.set(Mobber.MobType.WEAK);
+                    mb.mix();
 				}
 			}
 		} else {
@@ -505,10 +552,10 @@ public class Invasion extends Arena {
 			@Override
 			public void run() {
 				if (w.getTime() % 24000 != (isDay ? 6000L : 18000L)) {
-					w.setTime(w.getTime() + 1000L);
+					w.setTime(w.getTime() + 2000L);
 				}
 				for (final Mobber mb : mbbrs.values()) {
-					if (mb.isAlive() && mb.getType() == Material.SPAWNER
+					if (mb.isAlive() && mb.getType() == BlockType.SPAWNER
 							&& Main.srnd.nextInt(cnt) == 0 && gst == GameState.ROUND) {
 						mb.spwnMb();
 					}
@@ -564,9 +611,12 @@ public class Invasion extends Arena {
 		if (tsk != null) tsk.cancel();
 		time = 10;
 		gst = GameState.FINISH;
-		for (final Entity e : w.getEntitiesByClasses(Item.class, ArmorStand.class)) {
-			e.remove();
-		}
+        for (final Entity e : w.getEntities()) {
+            switch (e.getType()) {
+                case ITEM, SNOWBALL: e.remove();
+                default:
+            }
+        }
 		updateData();
 
 		for (final Broken bb : brkn) {
@@ -699,9 +749,10 @@ public class Invasion extends Arena {
 	@Override
 	public int getTmAmt(final Team tm, final boolean bots, final boolean alv) {
 		int n = 0;
-		for (final Shooter sh : shtrs.keySet()) {
-			if (alv && sh.isDead()) continue;
-			if (sh instanceof PlShooter || bots) {
+		for (final Entry<Shooter, Team> en : shtrs.entrySet()) {
+            if (en.getValue() != tm) continue;
+            if (alv && en.getKey().isDead()) continue;
+			if (en.getKey() instanceof PlShooter || bots) {
 				n++;
 			}
 		}
@@ -717,6 +768,11 @@ public class Invasion extends Arena {
 				final Player pl = (Player) le;
 				pl.setGameMode(GameMode.SPECTATOR);
 				indSpawn(pl, (PlShooter) sh, false);
+                final Mobber mb = getClsMbbr(BVec.of(pl), true);
+                if (mb != null && mb.defusing() != null) {
+                    if (mb.defusing().getEntity().getEntityId() == pl.getEntityId())
+                        mb.defusing(null);
+                }
 				pl.closeInventory();
 			} else if (sh instanceof BtShooter) {
 				((BtShooter) sh).own().hide(le);
@@ -740,6 +796,11 @@ public class Invasion extends Arena {
 			if (sh instanceof PlShooter) {
 				final Player p = (Player) le;
 				Main.nrmlzPl(p, false);
+                final Mobber mb = getClsMbbr(BVec.of(p), true);
+                if (mb != null && mb.defusing() != null) {
+                    if (mb.defusing().getEntity().getEntityId() == p.getEntityId())
+                        mb.defusing(null);
+                }
 				p.closeInventory();
 			}
 			final Location loc = rnd && gst != GameState.ROUND ?
@@ -793,12 +854,12 @@ public class Invasion extends Arena {
 		for (final Mobber m : mbbrs.values()) {
 			if (m != null) {
 				m.ind.remove();
-				m.block(w).setType(Material.AIR, false);
+                m.block(w).setBlockData(BlockUtil.air, false);
 			}
 		}
-		ads.getLocation().getBlock().setType(Material.AIR, false);
+        ads.getLocation().getBlock().setBlockData(BlockUtil.air, false);
 		ads.remove();
-		bds.getLocation().getBlock().setType(Material.AIR, false);
+        bds.getLocation().getBlock().setBlockData(BlockUtil.air, false);
 		bds.remove();
 	}
 
@@ -821,7 +882,7 @@ public class Invasion extends Arena {
 				final Block b = ads.getLocation().getBlock();
 				b.getWorld().playSound(b.getLocation(), Sound.BLOCK_CONDUIT_DEACTIVATE, 40f, 2f);
 				cntFnsh(false, "§7Точка §bA §7разрушена!", "sitebreak");
-				b.setType(Material.AIR,false);
+				b.setBlockData(BlockUtil.air,false);
 				final int X = b.getX();
 				final int Y = b.getY();
 				final int Z = b.getZ();
@@ -835,12 +896,12 @@ public class Invasion extends Arena {
 							if (bnd > 0 && Nms.fastType(w, X + x, Y + y, Z + z).isAir()
 								&& Nms.fastType(w, X + x, Y + y - 1, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 6) {
 								for (final Player p : b.getWorld().getPlayers()) {
-									p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Material.FIRE.createBlockData());
+									p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Defusable.FIRE);
 									cls.add(BVec.of(X + x, Y + y, Z + z));
 								}
 							} else if (Nms.fastType(w, X + x, Y + y, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 10) {
 								for (final Player p : b.getWorld().getPlayers()) {
-									p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Material.COAL_BLOCK.createBlockData());
+									p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Defusable.COAL);
 									cls.add(BVec.of(X + x, Y + y, Z + z));
 								}
 							}
@@ -877,7 +938,7 @@ public class Invasion extends Arena {
 				final Block b = bds.getLocation().getBlock();
 				b.getWorld().playSound(b.getLocation(), Sound.BLOCK_CONDUIT_DEACTIVATE, 40f, 2f);
 				cntFnsh(false, "§7Точка §6B §7разрушена!", "sitebreak");
-				b.setType(Material.AIR,false);
+				b.setBlockData(BlockUtil.air,false);
 				final int X = b.getX();
 				final int Y = b.getY();
 				final int Z = b.getZ();
@@ -892,12 +953,12 @@ public class Invasion extends Arena {
 							if (bnd > 0 && Nms.fastType(w, X + x, Y + y, Z + z).isAir()
 								&& Nms.fastType(w, X + x, Y + y - 1, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 6) {
 								for (final Player p : b.getWorld().getPlayers()) {
-									p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Material.FIRE.createBlockData());
+									p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Defusable.FIRE);
 									cls.add(BVec.of(X + x, Y + y, Z + z));
 								}
 							} else if (Nms.fastType(w, X + x, Y + y, Z + z).isOccluding() && Main.srnd.nextInt(bnd) < 10) {
 								for (final Player p : b.getWorld().getPlayers()) {
-									p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Material.COAL_BLOCK.createBlockData());
+									p.sendBlockChange(new Location(w, X + x, Y + y, Z + z), Defusable.COAL);
 									cls.add(BVec.of(X + x, Y + y, Z + z));
 								}
 							}
