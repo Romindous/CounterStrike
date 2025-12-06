@@ -26,8 +26,8 @@ public enum GunType {
 	NOVA(	10, 	12, 	3.0F, 	0.2F, 	0.20F, 	6, 0.08F, 	false, 50, true, 70, 600, "§f鉼鉽", 7),
 	SG13(	8, 	16, 	2.5F, 	0.0F, 	0.16F, 	8, 0.08F, 	false, 40, true, 80, 750, "§f鉶鉷", 17),
 	DGL(	8, 	12, 	12.8F, 	0.1F, 	0.025F, 	0, 0.04F, 	false, 40, false, 100, 400, "§f銂", 52),
-	TP9(	6, 	8, 	4.0F, 	0.15F, 0.02F, 	2, 0.03F, 	false, 30, false, 80, 250, "§f銀", 44),
-	USP(	12, 	4, 	4.5F, 	0.1F, 	0.04F, 	0, 0.02F, 	false, 20, false, 120, 150, "§f銁", 35);
+	TP9(	6, 	8, 	4.5F, 	0.15F, 0.02F, 	2, 0.03F, 	false, 20, false, 80, 250, "§f銀", 44),
+	USP(	12, 	4, 	4.0F, 	0.1F, 	0.04F, 	0, 0.02F, 	false, 30, false, 120, 150, "§f銁", 35);
 
 	public final byte amo;
 	public final byte cld;

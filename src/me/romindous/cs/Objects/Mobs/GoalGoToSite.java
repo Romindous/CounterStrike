@@ -57,8 +57,8 @@ public class GoalGoToSite implements Goal<Mob> {
     @Override
     public void tick() {
     	tick++;
-        if ((tick & 1) != 0 || ar.gst == GameState.FINISH
-            || mob.hasPotionEffect(PotionEffectType.BLINDNESS)) return;
+        if ((tick & 1) != 0 || mob.hasPotionEffect(PotionEffectType.BLINDNESS)) return;
+        if (ar.gst == GameState.FINISH) {mob.remove(); return;}
         final Location eyel = mob.getEyeLocation();
         final Location lc = mob.getEyeLocation();
 

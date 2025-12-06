@@ -87,7 +87,7 @@ public class DmgLis implements Listener {
 				case BONE:
 				case BLAZE_ROD:
 					if (tgt.getNoDamageTicks() != 0) return;
-					final double knfDmg = ItemUtil.isBlank(tgt.getEquipment().getChestplate(), false) ? 3d : 2d;
+					final double knfDmg = ItemUtil.isBlank(tgt.getEquipment().getChestplate(), false) ? 5d : 3d;
 					e.setDamage(knfDmg);
 					prcDmg(tgt, Shooter.getShooter(tgt, false), sh, knfDmg, "§f\u9298", 5,
 						Shooter.knifRwd, false, false, false, false, false);
@@ -269,53 +269,61 @@ public class DmgLis implements Listener {
    
 	@EventHandler
 	public void onHit(final ProjectileHitEvent e) {
-		if (e.getEntityType() == EntityType.SNOWBALL) {
-			final Snowball sb = (Snowball) e.getEntity();
-			final Nade nd = Main.nades.remove(sb.getUniqueId());
-			final NadeType nt = NadeType.getNdTp(sb.getItem());
-			if (nd == null || nt == null) return;
-			if (e.getHitEntity() != null || nt.hasPopFace(e.getHitBlockFace())) {
-				e.setCancelled(true);
-				nd.explode();
-				return;
-			}
+        if (e.getEntityType() != EntityType.SNOWBALL) return;
+        final Snowball sb = (Snowball) e.getEntity();
+        final Nade nd = Main.nades.remove(sb.getUniqueId());
+        final NadeType nt = NadeType.getNdTp(sb.getItem());
+        if (nd == null || nt == null) return;
+        if (e.getHitEntity() != null) {
+            e.setCancelled(true);
+            nd.explode();
+            return;
+        }
 
-			final Vector vec = sb.getVelocity();
-			final Snowball nv = (Snowball) sb.getWorld().spawnEntity(sb.getLocation(), EntityType.SNOWBALL);
-			switch (e.getHitBlockFace()) {
-			case NORTH:
-			case SOUTH:
-				vec.setZ(-vec.getZ());
-				break;
-			case EAST:
-			case WEST:
-				vec.setX(-vec.getX());
-				break;
-			case UP:
-				if (nt == NadeType.SMOKE && BlockUtil.is(sb.getLocation().getBlock(), BlockType.FIRE)) {
-					sb.getWorld().playSound(sb.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 2f, 0.8f);
-					nd.explode();
-					return;
-				} 
-				if (vec.length() < 0.3D) {
-					vec.setX(0);
-					vec.setY(0);
-					vec.setZ(0);
-					nv.setGravity(false);
-				} else {
-					vec.setY(-vec.getY());
-				}
-				break;
-			case DOWN:
-				vec.setY(-vec.getY());
-				break;
-			default:
-				break;
-			} 
+        if (nt.hasPopFace(e.getHitBlockFace())) {
+            nd.tm=nd.tm>>1;
+            if (nt.prm) {
+                e.setCancelled(true);
+                nd.explode();
+                return;
+            }
+        }
 
-			vec.multiply(0.6F);
-			nv.setVelocity(vec);
-			nd.chngNd(nv);
-		}
-	}
+        final Vector vec = sb.getVelocity();
+        final Snowball nv = (Snowball) sb.getWorld().spawnEntity(sb.getLocation(), EntityType.SNOWBALL);
+        switch (e.getHitBlockFace()) {
+        case NORTH:
+        case SOUTH:
+            vec.setZ(-vec.getZ());
+            break;
+        case EAST:
+        case WEST:
+            vec.setX(-vec.getX());
+            break;
+        case UP:
+            if (nt == NadeType.SMOKE && BlockUtil.is(sb.getLocation().getBlock(), BlockType.FIRE)) {
+                sb.getWorld().playSound(sb.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 2f, 0.8f);
+                nd.explode();
+                return;
+            }
+            if (vec.length() < 0.3D) {
+                vec.setX(0);
+                vec.setY(0);
+                vec.setZ(0);
+                nv.setGravity(false);
+            } else {
+                vec.setY(-vec.getY());
+            }
+            break;
+        case DOWN:
+            vec.setY(-vec.getY());
+            break;
+        default:
+            break;
+        }
+
+        vec.multiply(0.6F);
+        nv.setVelocity(vec);
+        nd.chngNd(nv);
+    }
 }

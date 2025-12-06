@@ -4,6 +4,7 @@ import java.lang.ref.WeakReference;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import com.destroystokyo.paper.ParticleBuilder;
 import io.papermc.paper.dialog.Dialog;
 import io.papermc.paper.registry.data.dialog.ActionButton;
 import io.papermc.paper.registry.data.dialog.DialogBase;
@@ -126,10 +127,10 @@ public class Mobber extends Defusable {
 	}
 
 	public enum MobType {
-		WEAK(EntityType.ZOMBIE_VILLAGER, 10d, 0.50d),
-		NORM(EntityType.STRAY, 14d, 0.54d),
-		DANG(EntityType.VINDICATOR, 8d, 0.58d),
-		TERM(EntityType.WITHER_SKELETON, 16d, 0.58d);
+		WEAK(EntityType.ZOMBIE_VILLAGER, 16d, 0.50d),
+		NORM(EntityType.STRAY, 18d, 0.54d),
+		DANG(EntityType.VINDICATOR, 12d, 0.56d),
+		TERM(EntityType.WITHER_SKELETON, 24d, 0.58d);
 
 		public final EntityType type;
 		public final double hp;
@@ -162,7 +163,7 @@ public class Mobber extends Defusable {
                     DialogBody.plainMessage(TCUtil.form("<gold>Поставь правильные настройки и разрежь провода!"))))
                 .inputs(List.of(
                     DialogInput.numberRange(VOLTS, 250, TCUtil.form("<white>Настрой кусачки на [<aqua>"
-                        + volts + " V<white>]"), "%s, сейчас: %s V", 0f, MAX_VOLTS, (float) ch_volts, 1f),
+                        + volts + " V<white>]"), "%s, сейчас: %s V", MIN_VOLTS, MAX_VOLTS, (float) ch_volts, 1f),
 //                    DialogInput.bool(CHECK, TCUtil.form("\n<beige>> " + (check ? "<green>Нужна Галочка" : "<red>Не Нужна Галочка") + "\n")).initial(ch_check).build(),
                     DialogInput.text("text", 1, TCUtil.form("<beige>Разрежь <mithril>цвет проводов<beige>, которых <gold>" + (check ? "больше" : "меньше") + " <beige>всего!"),
                         true, "", 1, TextDialogInput.MultilineOptions.create(1, 1)),
@@ -183,7 +184,7 @@ public class Mobber extends Defusable {
                 .inputs(List.of(
                     DialogInput.singleOption(CODE, 200, Arrays.stream(OPTIONS).map(o -> o.entry(ch_cond)).toList(), TCUtil.form("<sky>Код Бомбы"), false),
                     DialogInput.numberRange(VOLTS, 250, TCUtil.form("<white>Настрой кусачки на [<aqua>"
-                        + volts + " V<white>]"), "%s, сейчас: %s V", 0f, MAX_VOLTS, (float) ch_volts, 1f),
+                        + volts + " V<white>]"), "%s, сейчас: %s V", MIN_VOLTS, MAX_VOLTS, (float) ch_volts, 1f),
 //                    DialogInput.bool(CHECK, TCUtil.form("\n<beige>> " + (check ? "<green>Нужна Галочка" : "<red>Не Нужна Галочка") + "\n")).initial(ch_check).build(),
                     DialogInput.text("text", 1, TCUtil.form("<beige>Разрежь <mithril>цвет проводов<beige>, которых <gold>" + (check ? "больше" : "меньше") + " <beige>всего!"),
                         true, "", 1, TextDialogInput.MultilineOptions.create(1, 1)),
@@ -208,15 +209,18 @@ public class Mobber extends Defusable {
             if (chb != null) ch_check = chb;
             final Float fvl = res.getFloat(VOLTS);
             if (fvl != null) ch_volts = fvl.intValue();
+            final Location clc = center(ar.w);
             if (cond != ch_cond && !kit) {
                 Utils.sendTtlSbTtl(pl, Arena.Team.Ts.clr + "+ Моб",
                     "<beige>Выбран не тот <mithril>параметр<beige>!", 60);
+                ar.w.playSound(clc, Sound.BLOCK_GLASS_BREAK, 2f, 2f);
                 wrngWire();
                 return;
             }
             if (volts != ch_volts) {
                 Utils.sendTtlSbTtl(pl, Arena.Team.Ts.clr + "+ Моб",
                     "<beige>Кусачки <mithril>настроены <beige>неправильно!", 60);
+                ar.w.playSound(clc, Sound.BLOCK_GLASS_BREAK, 2f, 2f);
                 wrngWire();
                 return;
             }
@@ -229,9 +233,14 @@ public class Mobber extends Defusable {
             if (color != clr) {
                 Utils.sendTtlSbTtl(pl, Arena.Team.Ts.clr + "+ Моб",
                     "<beige>Разрезан не тот <mithril>цвет <beige>проводов!", 60);
+                ar.w.playSound(clc, Sound.BLOCK_GLASS_BREAK, 2f, 2f);
                 wrngWire();
                 return;
             }
+            ar.w.playSound(clc, Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, 2f, 2f);
+            ar.w.playSound(clc, Sound.BLOCK_IRON_TRAPDOOR_CLOSE, 2f, 2f);
+            new ParticleBuilder(Particle.SCULK_SOUL).count(40).location(clc).extra(0.1f)
+                .offset(0.4d, 0.4d, 0.4d).receivers(100).spawn();
             ar.addSpDfs(defusing);
             ar.chngMn(defusing, Shooter.spwnrRwd);
             ar.dieSpnr(this);

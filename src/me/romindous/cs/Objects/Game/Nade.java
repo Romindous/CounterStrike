@@ -26,6 +26,7 @@ public class Nade {
 
 	public static final int DECOY_DUR = 40;
 
+    private static final BlockData FIRE = BlockType.FIRE.createBlockData();
     private static final BlockData SNOW = BlockType.POWDER_SNOW.createBlockData();
 
     public Snowball prj;
@@ -55,11 +56,11 @@ public class Nade {
 				if (sh == null) {
 					for (final Entity e : prj.getNearbyEntities(5d, 5d, 5d)) {
 						if (e instanceof final Mob mb) {
-							final double d = 12d - mb.getLocation().distanceSquared(loc) * 0.4d * (ItemUtil.isBlank(mb.getEquipment().getHelmet(), false) ? 1d : 0.4d);
+							final double d = 12d - mb.getLocation().distanceSquared(loc) * 0.4d * (ItemUtil.isBlank(mb.getEquipment().getChestplate(), false) ? 1d : 0.4d);
 							DmgLis.prcDmg(mb, Shooter.getShooter(mb, false), null, d, NadeType.FRAG.icn, 2,
 									NadeType.nadeRwd, false, false, false, false, false);
 						} else if (e instanceof final Player pl && pl.getGameMode() == GameMode.SURVIVAL) {
-							final double d = 20d - e.getLocation().distanceSquared(loc) * 0.4d * (ItemUtil.isBlank(pl.getEquipment().getHelmet(), false) ? 1d : 0.4d);
+							final double d = 20d - e.getLocation().distanceSquared(loc) * 0.4d * (ItemUtil.isBlank(pl.getEquipment().getChestplate(), false) ? 1d : 0.4d);
 							DmgLis.prcDmg(pl, Shooter.getShooter(pl, false), null, d, NadeType.FRAG.icn, 2,
 									NadeType.nadeRwd, false, false, false, false, false);
 						}
@@ -68,14 +69,14 @@ public class Nade {
 					for (final Entity e : prj.getNearbyEntities(5d, 5d, 5d)) {
                         switch (e) {
                             case final Mob mb -> {
-                                final double d = 12d - mb.getLocation().distanceSquared(loc) * 0.4d * (mb.getEquipment().getChestplate() == null ? 1d : 0.4d);
+                                final double d = 12d - mb.getLocation().distanceSquared(loc) * 0.4d * (ItemUtil.isBlank(mb.getEquipment().getChestplate(), false) ? 1d : 0.4d);
                                 DmgLis.prcDmg(mb, Shooter.getShooter(mb, false), sh, d, NadeType.FRAG.icn, 2,
                                     NadeType.nadeRwd, false, false, false, false, false);
                                 if (sh instanceof PlShooter)
                                     EntityUtil.indicate(mb.getEyeLocation(), "§6" + (int) (d * 5.0d), (Player) dmgr);
                             }
                             case final Player pl when pl.getGameMode() == GameMode.SURVIVAL -> {
-                                final double d = 20d - e.getLocation().distanceSquared(loc) * 0.4d * (pl.getInventory().getChestplate() == null ? 1d : 0.4d);
+                                final double d = 20d - e.getLocation().distanceSquared(loc) * 0.4d * (ItemUtil.isBlank(pl.getEquipment().getChestplate(), false) ? 1d : 0.4d);
                                 DmgLis.prcDmg(pl, Shooter.getShooter(pl, false), sh, d, NadeType.FRAG.icn, 2,
                                     NadeType.nadeRwd, false, false, false, false, false);
                                 if (sh instanceof PlShooter)
@@ -106,7 +107,7 @@ public class Nade {
 										if (Nms.fastType(w, x, y, z).isAir()
 											&& !Info.PASSABLE.contains(Nms.fastType(w, x, y - 1, z))) {
 											final BVec bl = BVec.of(w, x, y, z, (byte) nt.time);
-											bl.block(w).setBlockData(BlockUtil.air, false);
+											bl.block(w).setBlockData(FIRE, false);
 											Main.ndBlks.remove(bl);
 											Main.ndBlks.add(bl);
 										}

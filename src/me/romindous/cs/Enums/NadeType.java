@@ -9,9 +9,9 @@ public enum NadeType {
 	
 	FRAG(true, 6, 200, "§f鉬", 36),
 	FLAME(true, 20, 150, "§f鉫", 37, BlockFace.UP),
-	SMOKE(false, 28, 80, "§f鉪", 46),
+	SMOKE(false, 28, 80, "§f鉪", 46, BlockFace.WEST, BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.UP),
 	FLASH(false, 4, 50, "§f鉩", 38, BlockFace.WEST, BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH),
-	DECOY(false, 10, 20, "§f鉭", 47);
+	DECOY(false, 10, 20, "§f鉭", 47, BlockFace.WEST, BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.UP);
 
 	public final String name;
 	public final boolean prm;

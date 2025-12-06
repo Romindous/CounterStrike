@@ -15,9 +15,7 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 import ru.komiss77.Ostrov;
 import ru.komiss77.modules.world.BVec;
-import ru.komiss77.utils.ClassUtil;
-import ru.komiss77.utils.StringUtil;
-import ru.komiss77.utils.TCUtil;
+import ru.komiss77.utils.*;
 
 public abstract class Defusable extends BVec {
 
@@ -54,18 +52,16 @@ public abstract class Defusable extends BVec {
         super(loc.x, loc.y, loc.z);
         ClassUtil.shuffle(OPTIONS);
         cond = ClassUtil.rndElmt(OPTIONS);
-        ch_cond = ClassUtil.rndElmt(OPTIONS);
-        volts = Ostrov.random.nextInt(MAX_VOLTS);
-        ch_volts = MAX_VOLTS >> 1;
+        volts = NumUtil.randInt(MIN_VOLTS, MAX_VOLTS);
         check = Ostrov.random.nextBoolean();
-        ch_check = Ostrov.random.nextBoolean();
         color = ClassUtil.rndElmt(COLORS);
         code = genCode(ClassUtil.rndElmt(CODES), cond);
+        mix();
     }
 
     public void mix() {
         ch_cond = ClassUtil.rndElmt(OPTIONS);
-        ch_volts = MAX_VOLTS >> 1;
+        ch_volts = NumUtil.randInt(MIN_VOLTS, MAX_VOLTS);
         ch_check = Ostrov.random.nextBoolean();
     }
 
@@ -122,7 +118,7 @@ public abstract class Defusable extends BVec {
     private static final char[] WIRES = {'⎱', '⎛', '⎜', '⎝', '⎨', '⎫', '⎬', '⎭', '⎰', '⎱'};
     private static final String[] CODES = {"v9FcO1nV4YePiM2ud3Rl", "1Fo5PlecJvqK7pU3s2En", "Fl1Trn8PoYdMf5oI2Vu3", "G4mQeD5oFx7laP2jWtM1"};
 
-    protected static final int MAX_VOLTS = 500;
+    protected static final int MIN_VOLTS = 100, MAX_VOLTS = 500;
     private static final WColor[] COLORS = WColor.values();
 
     protected static final String CODE = "code";

@@ -2,6 +2,7 @@ package me.romindous.cs.Objects.Game;
 
 import java.time.Duration;
 import java.util.*;
+import com.destroystokyo.paper.ParticleBuilder;
 import io.papermc.paper.dialog.Dialog;
 import io.papermc.paper.math.Position;
 import io.papermc.paper.registry.data.dialog.ActionButton;
@@ -115,7 +116,7 @@ public class Bomb extends Defusable {
 			final Location loc = le.getLocation();
 			final int dSq = NumUtil.square(loc.getBlockX() - X)
 				+ NumUtil.square(loc.getBlockZ() - Z);
-			final int idm = NumUtil.sqrt(dSq) * 200 / dSq; if (idm == 0) continue;
+			final int idm = NumUtil.sqrt(dSq) * 200 / (dSq + 1); if (idm == 0) continue;
 			final double d = idm * (ItemUtil.isBlank(sh.item(EquipmentSlot.CHEST), false) ? 1d : 0.4d);
 			if (le.getHealth() - d <= 0) {
 				ar.addDth(sh);
@@ -157,7 +158,7 @@ public class Bomb extends Defusable {
                     DialogBody.plainMessage(TCUtil.form("<gold>Поставь правильные настройки и разрежь провода!"))))
                 .inputs(List.of(
                     DialogInput.numberRange(VOLTS, 250, TCUtil.form("<white>Настрой кусачки на [<aqua>"
-                        + volts + " V<white>]"), "%s, сейчас: %s V", 0f, MAX_VOLTS, (float) ch_volts, 1f),
+                        + volts + " V<white>]"), "%s, сейчас: %s V", MIN_VOLTS, MAX_VOLTS, (float) ch_volts, 1f),
                     DialogInput.bool(CHECK, TCUtil.form("\n<beige>> " + (check ? "<green>Нужна Галочка" : "<red>Не Нужна Галочка") + "\n")).initial(ch_check).build(),
                     DialogInput.text("text", 1, TCUtil.form("<beige>Разрежь <mithril>цвет проводов<beige>, которых <gold>" + (check ? "больше" : "меньше") + " <beige>всего!"),
                         true, "", 1, TextDialogInput.MultilineOptions.create(1, 1)),
@@ -178,7 +179,7 @@ public class Bomb extends Defusable {
                 .inputs(List.of(
                     DialogInput.singleOption(CODE, 200, Arrays.stream(OPTIONS).map(o -> o.entry(ch_cond)).toList(), TCUtil.form("<sky>Код Бомбы"), false),
                     DialogInput.numberRange(VOLTS, 250, TCUtil.form("<white>Настрой кусачки на [<aqua>"
-                        + volts + " V<white>]"), "%s, сейчас: %s V", 0f, MAX_VOLTS, (float) ch_volts, 1f),
+                        + volts + " V<white>]"), "%s, сейчас: %s V", MIN_VOLTS, MAX_VOLTS, (float) ch_volts, 1f),
                     DialogInput.bool(CHECK, TCUtil.form("\n<beige>> " + (check ? "<green>Нужна Галочка" : "<red>Не Нужна Галочка") + "\n")).initial(ch_check).build(),
                     DialogInput.text("text", 1, TCUtil.form("<beige>Разрежь <mithril>цвет проводов<beige>, которых <gold>" + (check ? "больше" : "меньше") + " <beige>всего!"),
                         true, "", 1, TextDialogInput.MultilineOptions.create(1, 1)),
@@ -203,30 +204,39 @@ public class Bomb extends Defusable {
             if (chb != null) ch_check = chb;
             final Float fvl = res.getFloat(VOLTS);
             if (fvl != null) ch_volts = fvl.intValue();
+            final Location clc = center(ar.w);
             if (cond != ch_cond && !kit) {
                 Utils.sendTtlSbTtl(pl, Arena.Team.Ts.clr + "-" + Bomb.WIRE_TIME + " сек",
                     "<beige>Выбран не тот <mithril>параметр<beige>!", 60);
+                ar.w.playSound(clc, Sound.BLOCK_GLASS_BREAK, 2f, 2f);
                 ar.wrngWire();
                 return;
             }
             if (volts != ch_volts) {
                 Utils.sendTtlSbTtl(pl, Arena.Team.Ts.clr + "-" + Bomb.WIRE_TIME + " сек",
                     "<beige>Кусачки <mithril>настроены <beige>неправильно!", 60);
+                ar.w.playSound(clc, Sound.BLOCK_GLASS_BREAK, 2f, 2f);
                 ar.wrngWire();
                 return;
             }
             if (check != ch_check) {
                 Utils.sendTtlSbTtl(pl, Arena.Team.Ts.clr + "-" + Bomb.WIRE_TIME + " сек",
                     "<beige>Условия <mithril>галочки<beige> не соблюдены!", 60);
+                ar.w.playSound(clc, Sound.BLOCK_GLASS_BREAK, 2f, 2f);
                 ar.wrngWire();
                 return;
             }
             if (color != clr) {
                 Utils.sendTtlSbTtl(pl, Arena.Team.Ts.clr + "-" + Bomb.WIRE_TIME + " сек",
                     "<beige>Разрезан не тот <mithril>цвет <beige>проводов!", 60);
+                ar.w.playSound(clc, Sound.BLOCK_GLASS_BREAK, 2f, 2f);
                 ar.wrngWire();
                 return;
             }
+            ar.w.playSound(clc, Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, 2f, 2f);
+            ar.w.playSound(clc, Sound.BLOCK_IRON_TRAPDOOR_CLOSE, 2f, 2f);
+            new ParticleBuilder(Particle.SCULK_SOUL).count(20).location(clc).extra(0.1f)
+                .offset(0.2d, 0.2d, 0.2d).receivers(100).spawn();
             ApiOstrov.addStat(pl, Stat.CS_bomb);
             ar.chngMn(defusing, Shooter.bmbRwd);
             ar.defuse();

@@ -53,7 +53,7 @@ public class BotGoal implements Goal<Mob> {
 
 	private static final int SPOT_DST_SQ = 16;
 	private static final int REACT = 1;
-	private static final int ACT_TIME = 50;
+	private static final int ACT_TIME = 80;
 	private static final int KNIFE_KD = 5;
 	private static final double NEAR_DST_SQ = 8d;
 	private static final BlockData bdt = crtBtnDt();
@@ -348,7 +348,7 @@ public class BotGoal implements Goal<Mob> {
 													bsh.swapTo(7);
 													acttm += DEL_ACT;
 												} else if (tAct) {
-													if (acttm > ACT_TIME) {//planted
+													if (acttm > ACT_TIME >> 1) {//planted
 														final Block b = rplc.getLocation().getBlock();
 														if (b.getType().isAir()) {
 															bsh.switchToGun();
