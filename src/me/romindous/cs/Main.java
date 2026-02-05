@@ -229,8 +229,8 @@ public final class Main extends JavaPlugin implements Listener {
 							if (wn != null && !wn.isEmpty()) {
 								final World w = WorldManager.load(getServer().getConsoleSender(), wn, Environment.NORMAL, Generator.Empty);
 								if (w != null) {
-									w.setGameRule(GameRule.RANDOM_TICK_SPEED, 0);
-									w.setGameRule(GameRule.MOB_GRIEFING, false);
+									w.setGameRule(GameRules.RANDOM_TICK_SPEED, 0);
+									w.setGameRule(GameRules.MOB_GRIEFING, false);
 								}
 							}
 						}
